@@ -8,8 +8,7 @@
     :hint="hint"
     :disabled="disabled"
     :required="required"
-    :size="size"
-    v-bind="$attrs"
+    :size="size"    :autocomplete="autocomplete"    v-bind="$attrs"
     @blur="$emit('blur', $event)"
     @focus="$emit('focus', $event)"
   >
@@ -31,6 +30,7 @@ export interface InputEmailProps {
   size?: 'sm' | 'md' | 'lg'
   disabled?: boolean
   required?: boolean
+  autocomplete?: string
 }
 
 const props = withDefaults(defineProps<InputEmailProps>(), {

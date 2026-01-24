@@ -1,14 +1,15 @@
 <template>
-  <div class="min-h-screen bg-gray-50 py-12">
-    <div class="container mx-auto px-4 max-w-4xl">
-      <div class="text-center mb-12">
-        <h1 class="text-3xl font-bold text-gray-900 mb-4">
-          Teste de Componentes
-        </h1>
-        <p class="text-lg text-gray-600">
-          Avaliação dos componentes BaseButton e BaseInput
-        </p>
-      </div>
+  <NuxtLayout>
+    <div class="min-h-screen bg-gray-50 py-12">
+      <div class="container mx-auto px-4 max-w-4xl">
+        <div class="text-center mb-12">
+          <h1 class="text-3xl font-bold text-gray-900 mb-4">
+            Teste de Componentes
+          </h1>
+          <p class="text-lg text-gray-600">
+            Avaliação dos componentes BaseButton e BaseInput
+          </p>
+        </div>
 
       <!-- BaseButton Tests -->
       <section class="mb-16">
@@ -228,9 +229,12 @@
       </section>
     </div>
   </div>
+  </NuxtLayout>
 </template>
 
 <script setup lang="ts">
+import { ref, computed } from 'vue'
+import { useHead } from '@unhead/vue'
 import { useToast } from 'vue-toastification'
 
 const toast = useToast()

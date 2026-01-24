@@ -17,6 +17,7 @@
         :disabled="disabled"
         :readonly="readonly"
         :required="required"
+        :autocomplete="autocomplete"
         :class="inputClasses"
         :value="modelValue"
         @input="handleInput"
@@ -57,6 +58,7 @@ export interface BaseInputProps {
   disabled?: boolean
   readonly?: boolean
   required?: boolean
+  autocomplete?: string
 }
 
 const props = withDefaults(defineProps<BaseInputProps>(), {
@@ -75,7 +77,11 @@ const emit = defineEmits<{
 
 const slots = useSlots()
 
-const inputId = computed(() => `input-${Math.random().toString(36).substr(2, 9)}`)
+// Contador global para IDs únicos
+let idCounter = 0
+
+// Gera ID fixo e único
+const inputId = `input-${++idCounter}`
 
 const handleInput = (event: Event) => {
   const target = event.target as HTMLInputElement

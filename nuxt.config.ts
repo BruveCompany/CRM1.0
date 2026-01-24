@@ -1,10 +1,21 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  compatibilityDate: '2025-07-15',
-  devtools: { enabled: true },
-  modules: ['@nuxtjs/tailwindcss'],
+  compatibilityDate: '2026-07-15', // Você pode manter sua data, ou usar a do professor se preferir
+  devtools: { 
+    enabled: false,
+    telemetry: false
+  }, // Mantenha como true para desenvolvimento
+  modules: ['@nuxtjs/tailwindcss', '@nuxtjs/supabase', '@pinia/nuxt'],
 
-  // Adicione este bloco aqui
+  supabase: {
+    redirect: true, // <-- ADICIONAR ESTA LINHA!
+    redirectOptions: {
+      login: '/login',
+      callback: '/confirm',
+      exclude: ['/login', '/confirm'] // <-- ADICIONAR '/confirm' AQUI!
+    }
+  },
+
   typescript: {
     tsConfig: {
       compilerOptions: {

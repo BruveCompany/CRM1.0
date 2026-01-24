@@ -9,6 +9,7 @@
     :disabled="disabled"
     :required="required"
     :size="size"
+    :autocomplete="autocomplete"
     v-bind="$attrs"
     @blur="$emit('blur', $event)"
     @focus="$emit('focus', $event)"
@@ -42,6 +43,7 @@ export interface InputPasswordProps {
   size?: 'sm' | 'md' | 'lg'
   disabled?: boolean
   required?: boolean
+  autocomplete?: string
 }
 
 const props = withDefaults(defineProps<InputPasswordProps>(), {
