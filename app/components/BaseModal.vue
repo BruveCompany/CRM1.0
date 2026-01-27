@@ -14,10 +14,7 @@
         <slot />
       </div>
       <div class="border-t px-6 py-3 flex justify-end gap-2">
-        <slot name="footer">
-          <BaseButton variant="secondary" @click="$emit('cancelar')">Cancelar</BaseButton>
-          <BaseButton variant="primary" @click="$emit('confirmar')">Confirmar</BaseButton>
-        </slot>
+        <slot name="footer" />
       </div>
     </div>
   </div>

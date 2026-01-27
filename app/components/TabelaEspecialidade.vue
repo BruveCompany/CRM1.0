@@ -20,7 +20,7 @@
           <td class="px-4 py-2 border-t border-gray-200">{{ item.especialidade }}</td>
           <td class="px-4 py-2 border-t border-gray-200 flex gap-2">
             <template v-if="isAdmin">
-              <button class="p-1 rounded hover:bg-gray-100" title="Editar">
+              <button class="p-1 rounded hover:bg-gray-100" title="Editar" @click="$emit('editar-especialidade', { id: item.id, especialidade: item.especialidade })">
                 <PencilSquareIcon class="w-5 h-5 text-blue-600" />
               </button>
               <button class="p-1 rounded hover:bg-gray-100" title="Deletar">
