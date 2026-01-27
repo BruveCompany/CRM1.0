@@ -3,7 +3,7 @@ import type { User } from '@supabase/supabase-js'
 import type { AgProfile } from '../../shared/types/database'
 
 export const useUserStore = defineStore('user', () => {
-  const supabase = useSupabaseClient<Database>()
+  const supabase = useSupabaseClient()
   const supabaseUser = useSupabaseUser()
   
   // State
@@ -48,13 +48,22 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  async function updateProfile(updates: Database['public']['Tables']['ag_profiles']['Update']) {
+  async function updateProfile(updates: Partial<AgProfile>) {
     if (!supabaseUser.value || !profile.value) {
       throw new Error('Usuário não autenticado')
     }
 
     loading.value = true
     error.value = null
+
+    // Supabase não aceita campos undefined ou campos não atualizáveis (id, created_at)
+    const allowedFields = ['nome', 'role']
+    const filteredUpdates: Record<string, any> = {}
+    for (const key of allowedFields) {
+      if (key in updates) {
+        filteredUpdates[key] = updates[key]
+      }
+    }
 
     try {
       const { data, error: updateError } = await supabase

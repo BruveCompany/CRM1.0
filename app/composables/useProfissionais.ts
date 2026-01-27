@@ -42,9 +42,23 @@ export const useProfissionais = () => {
     return { success: true, data }
   }
 
+  // Deletar especialidade
+  const deletarEspecialidade = async (id: number) => {
+    const { error } = await supabase
+      .from('ag_especialidades')
+      .delete()
+      .eq('id', id)
+    if (error) {
+      console.error(error)
+      return { success: false, message: error.message }
+    }
+    return { success: true }
+  }
+
   return {
     fetchEspecialidades,
     inserirEspecialidade,
-    editarEspecialidade
+    editarEspecialidade,
+    deletarEspecialidade
   }
 }

@@ -7,6 +7,7 @@
         :especialidades="especialidades"
         @add-especialidade="abrirModalAdd"
         @editar-especialidade="abrirModalEditar"
+        @deletar-especialidade="abrirModalDeletar"
       />
       <ModalEspecialidade
         v-model="modalAberto"
@@ -16,6 +17,16 @@
         @confirmar="handleConfirmar"
         :loading="loadingAdd"
       />
+      <!-- Modal de confirmação de exclusão agora padronizado com ModalConfirmacao.vue -->
+      <ModalConfirmacao
+        :model-value="modalDeleteAberto"
+        @update:modelValue="modalDeleteAberto = $event"
+        :titulo="'Confirmar Exclusão'"
+        :mensagem="`Tem certeza que deseja excluir a especialidade ${especialidadeDelete?.especialidade}?`"
+        :loading="loadingDelete"
+        @confirmar="handleConfirmarDelete"
+        @cancelar="modalDeleteAberto = false"
+      />
     </div>
   </NuxtLayout>
 </template>
@@ -24,23 +35,27 @@
 
 //Imports e tipos
 import { ref, onMounted } from 'vue'
-import type { Especialidade } from '../../shared/types/Especialidade'
-import { useProfissionais } from '../composables/useProfissionais'
-import { useNotification } from '../composables/useNotification'
-import TabelaEspecialidade from '../components/TabelaEspecialidade.vue'
-import ModalEspecialidade from '../components/ModalEspecialidade.vue'
+import ModalConfirmacao from '~/components/ModalConfirmacao.vue'
 
-//Estado reativo principal
-const especialidades = ref<Especialidade[]>([])
 const modalAberto = ref(false)
-const loadingAdd = ref(false)
 const isEdicao = ref(false)
 const idEdicao = ref<number | undefined>(undefined)
 const especialidadeEdicao = ref<string>('')
 
+// Adição/edição
+const loadingAdd = ref(false)
+
+// Exclusão
+const modalDeleteAberto = ref(false)
+const especialidadeDelete = ref<{ id: number, especialidade: string } | null>(null)
+const loadingDelete = ref(false)
+
 //Composables e notificações
-const { fetchEspecialidades, inserirEspecialidade, editarEspecialidade } = useProfissionais()
+const { fetchEspecialidades, inserirEspecialidade, editarEspecialidade, deletarEspecialidade } = useProfissionais()
 const { notifySuccess, notifyError } = useNotification()
+
+// Lista de especialidades
+const especialidades = ref<Array<{ id: number, especialidade: string }>>([])
 
 //Abrir modais
 function abrirModalAdd() {
@@ -55,6 +70,11 @@ function abrirModalEditar({ id, especialidade }: { id: number, especialidade: st
   idEdicao.value = id
   especialidadeEdicao.value = especialidade
   modalAberto.value = true
+}
+
+function abrirModalDeletar({ id, especialidade }: { id: number, especialidade: string }) {
+  especialidadeDelete.value = { id, especialidade }
+  modalDeleteAberto.value = true
 }
 
 //Confirmar (adicionar/editar)
@@ -73,6 +93,22 @@ async function handleConfirmar({ especialidade, id }: { especialidade: string, i
     notifySuccess(isEdicao.value ? 'Especialidade editada com sucesso!' : 'Especialidade adicionada com sucesso!')
   } else {
     notifyError(result.message || 'Erro ao salvar especialidade')
+  }
+}
+
+// Confirmar exclusão
+async function handleConfirmarDelete() {
+  if (!especialidadeDelete.value) return
+  loadingDelete.value = true
+  const result = await deletarEspecialidade(especialidadeDelete.value.id)
+  loadingDelete.value = false
+  if (result.success) {
+    modalDeleteAberto.value = false
+    especialidadeDelete.value = null
+    especialidades.value = await fetchEspecialidades()
+    notifySuccess('Especialidade excluída com sucesso!')
+  } else {
+    notifyError(result.message || 'Erro ao excluir especialidade')
   }
 }
 

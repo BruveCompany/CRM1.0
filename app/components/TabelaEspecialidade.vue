@@ -23,7 +23,7 @@
               <button class="p-1 rounded hover:bg-gray-100" title="Editar" @click="$emit('editar-especialidade', { id: item.id, especialidade: item.especialidade })">
                 <PencilSquareIcon class="w-5 h-5 text-blue-600" />
               </button>
-              <button class="p-1 rounded hover:bg-gray-100" title="Deletar">
+              <button class="p-1 rounded hover:bg-gray-100" title="Deletar" @click="$emit('deletar-especialidade', { id: item.id, especialidade: item.especialidade })">
                 <TrashIcon class="w-5 h-5 text-red-600" />
               </button>
             </template>
