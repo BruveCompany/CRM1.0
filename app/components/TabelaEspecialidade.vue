@@ -1,7 +1,12 @@
 <template>
   <div>
-    <div class="flex justify-end mb-4" v-if="isAdmin">
-      <BaseButton variant="primary" @click="$emit('add-especialidade')">
+    <div class="flex justify-end mb-4">
+      <BaseButton
+        variant="primary"
+        @click="isAdmin && $emit('add-especialidade')"
+        :disabled="!isAdmin"
+        :class="!isAdmin ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''"
+      >
         <PlusIcon class="w-5 h-5 mr-2" />
         <span class="font-semibold">Adicionar Especialidade</span>
       </BaseButton>
@@ -11,22 +16,36 @@
         <tr>
           <th class="px-4 py-2 text-left">ID</th>
           <th class="px-4 py-2 text-left">Especialidade</th>
-          <th v-if="isAdmin" class="px-4 py-2 text-left">Ação</th>
+          <th class="px-4 py-2 text-left">Ações</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="item in especialidades" :key="item.id">
+        <tr
+          v-for="item in especialidades"
+          :key="item.id"
+          class="transition-shadow duration-200 hover:shadow-sm hover:bg-gray-50"
+        >
           <td class="px-4 py-2 border-t border-gray-200">{{ item.id }}</td>
           <td class="px-4 py-2 border-t border-gray-200">{{ item.especialidade }}</td>
           <td class="px-4 py-2 border-t border-gray-200 flex gap-2">
-            <template v-if="isAdmin">
-              <button class="p-1 rounded hover:bg-gray-100" title="Editar" @click="$emit('editar-especialidade', { id: item.id, especialidade: item.especialidade })">
-                <PencilSquareIcon class="w-5 h-5 text-blue-600" />
-              </button>
-              <button class="p-1 rounded hover:bg-gray-100" title="Deletar" @click="$emit('deletar-especialidade', { id: item.id, especialidade: item.especialidade })">
-                <TrashIcon class="w-5 h-5 text-red-600" />
-              </button>
-            </template>
+            <button
+              class="p-1 rounded hover:bg-gray-100"
+              :class="!isAdmin ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''"
+              title="Editar"
+              :disabled="!isAdmin"
+              @click="isAdmin && $emit('editar-especialidade', { id: item.id, especialidade: item.especialidade })"
+            >
+              <PencilSquareIcon class="w-5 h-5 text-blue-600" />
+            </button>
+            <button
+              class="p-1 rounded hover:bg-gray-100"
+              :class="!isAdmin ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''"
+              title="Excluir"
+              :disabled="!isAdmin"
+              @click="isAdmin && $emit('deletar-especialidade', { id: item.id, especialidade: item.especialidade })"
+            >
+              <TrashIcon class="w-5 h-5 text-red-600" />
+            </button>
           </td>
         </tr>
       </tbody>

@@ -4,8 +4,7 @@
   <BaseModal :model-value="modelValue" @update:modelValue="$emit('update:modelValue', $event)">
     <template #header>
       <div class="flex flex-col items-start">
-        <h3 class="text-lg font-bold text-black">{{ titulo || 'Confirmar Exclusão' }}</h3>
-        <div class="text-xl font-bold text-black mt-1">Deletar Especialidade</div>
+        <div class="text-xl font-bold text-black mt-1">Excluir Especialidade</div>
       </div>
     </template>
     <div class="py-2 px-2">
@@ -21,8 +20,8 @@
       <div class="text-black text-base font-semibold mt-2 ml-11">Esta ação não pode ser desfeita.</div>
     </div>
     <template #footer>
-      <BaseButton class="!bg-green-600 !text-white hover:!bg-green-700 min-w-[110px]" @click="onCancelar" :disabled="loading">Cancelar</BaseButton>
-      <BaseButton class="!bg-red-600 !text-white hover:!bg-red-700 min-w-[110px]" @click="onConfirmar" :loading="loading">Deletar</BaseButton>
+      <BaseButton class="!bg-gray-600 !text-white hover:!bg-gray-700 min-w-[110px]" @click="onCancelar" :disabled="loading">Cancelar</BaseButton>
+      <BaseButton class="!bg-red-600 !text-white hover:!bg-red-700 min-w-[110px]" @click="onConfirmar" :loading="loading">Excluir</BaseButton>
     </template>
   </BaseModal>
 </template>

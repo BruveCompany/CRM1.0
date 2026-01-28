@@ -1,3 +1,15 @@
+// Tipo Database para Supabase
+export type Database = {
+  public: {
+    Tables: {
+      ag_profiles: {
+        Row: AgProfile
+        Insert: Omit<AgProfile, 'id' | 'created_at'> & { id?: number; created_at?: string }
+        Update: Partial<Omit<AgProfile, 'id' | 'created_at'>>
+      }
+    }
+  }
+}
 // Tipos da base de dados Supabase
 export interface AgProfile {
   id: number

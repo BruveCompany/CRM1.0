@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia'
 import type { User } from '@supabase/supabase-js'
 import type { AgProfile } from '../../shared/types/database'
+import type { Database } from '../../shared/types/database'
 
 export const useUserStore = defineStore('user', () => {
-  const supabase = useSupabaseClient()
+  const supabase = useSupabaseClient<Database>()
   const supabaseUser = useSupabaseUser()
   
   // State
@@ -57,25 +58,29 @@ export const useUserStore = defineStore('user', () => {
     error.value = null
 
     // Supabase não aceita campos undefined ou campos não atualizáveis (id, created_at)
-    const allowedFields = ['nome', 'role']
-    const filteredUpdates: Record<string, any> = {}
+    const allowedFields: Array<keyof AgProfile> = ['nome', 'role']
+    const filteredUpdates: Partial<AgProfile> = {};
     for (const key of allowedFields) {
-      if (key in updates) {
-        filteredUpdates[key] = updates[key]
+      const value = updates[key];
+      if (value !== undefined && value !== null) {
+        filteredUpdates[key] = value as any;
       }
     }
 
     try {
+
       const { data, error: updateError } = await supabase
         .from('ag_profiles')
-        .update(updates)
+        .update(filteredUpdates as any)
         .eq('user_id', supabaseUser.value.id)
         .select()
-        .single()
+        .single();
 
-      if (updateError) throw updateError
+      if (updateError) throw updateError;
 
-      profile.value = data as AgProfile
+      if (data) {
+        profile.value = data as unknown as AgProfile;
+      }
     } catch (err: any) {
       error.value = err.message || 'Erro ao atualizar perfil'
       console.error('Erro ao atualizar perfil:', err)
