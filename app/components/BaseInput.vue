@@ -77,11 +77,8 @@ const emit = defineEmits<{
 
 const slots = useSlots()
 
-// Contador global para IDs únicos
-let idCounter = 0
-
-// Gera ID fixo e único
-const inputId = `input-${++idCounter}`
+// Gera ID único consistente entre SSR e cliente
+const inputId = useId()
 
 const handleInput = (event: Event) => {
   const target = event.target as HTMLInputElement
