@@ -1,5 +1,5 @@
 import type { Especialidade } from '../../shared/types/Especialidade'
-import type { AgProfissional } from '../../shared/types/database'
+import type { AgProfissional, AgPerfil } from '../../shared/types/database'
 
 /**
  * Composable para gerenciamento de profissionais e especialidades
@@ -8,6 +8,23 @@ import type { AgProfissional } from '../../shared/types/database'
  */
 export const useProfissionais = () => {
   const supabase = useSupabaseClient()
+
+  /**
+   * Busca todos os perfis cadastrados (apenas para admin)
+   * Utiliza a RPC function ag_get_all_profiles_if_admin do Supabase
+   * @returns {Promise<AgPerfil[]>} Lista de perfis com id e nome
+   * @throws {Error} Erro ao buscar dados do banco ou se não for admin
+   */
+  const fetchPerfis = async (): Promise<AgPerfil[]> => {
+    const { data: perfisData, error: fetchError } = await supabase.rpc('ag_get_all_profiles_if_admin')
+    
+    if (fetchError) {
+      console.error('Erro ao buscar perfis:', fetchError)
+      throw fetchError
+    }
+
+    return perfisData as AgPerfil[]
+  }
 
   /**
    * Busca todos os profissionais cadastrados no sistema
@@ -128,6 +145,7 @@ export const useProfissionais = () => {
   }
 
   return {
+    fetchPerfis,
     fetchProfissionais,
     fetchEspecialidades,
     fetchEspecialidadeById,

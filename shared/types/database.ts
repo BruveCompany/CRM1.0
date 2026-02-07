@@ -39,15 +39,23 @@ export interface AgEspecialidade {
 // Profissionais - tabela no banco de dados
 export interface AgProfissionalRow {
   id: number
-  nome: string
+  profile_id: number
   especialidade_id: number
 }
 
 // Profissionais - retorno da RPC function com join de especialidades
 export interface AgProfissional {
+  profissional_id: number
+  profile_id: number
+  nome: string
+  especialidade_id: number
+  especialidade: string
+}
+
+// Perfis - retorno da RPC function ag_get_all_profiles_if_admin
+export interface AgPerfil {
   id: number
   nome: string
-  especialidade: string
 }
 
 // Estado do store de usuário

@@ -29,10 +29,10 @@
       <tbody>
         <tr
           v-for="profissional in profissionais"
-          :key="profissional.id"
+          :key="profissional.profissional_id"
           class="tabela-linha transition-shadow duration-200 hover:shadow-sm hover:bg-gray-50"
         >
-          <td class="tabela-coluna px-4 py-2 border-t border-gray-200">{{ profissional.id }}</td>
+          <td class="tabela-coluna px-4 py-2 border-t border-gray-200">{{ profissional.profissional_id }}</td>
           <td class="tabela-coluna px-4 py-2 border-t border-gray-200">{{ profissional.nome }}</td>
           <td class="tabela-coluna px-4 py-2 border-t border-gray-200">{{ profissional.especialidade }}</td>
           <td class="tabela-coluna px-4 py-2 border-t border-gray-200 flex gap-2">
@@ -42,7 +42,7 @@
               :class="!isAdmin ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''"
               title="Editar"
               :disabled="!isAdmin"
-              @click="isAdmin && $emit('editar-profissional', { id: profissional.id, nome: profissional.nome, especialidade: profissional.especialidade })"
+              @click="isAdmin && $emit('editar-profissional', { profissional_id: profissional.profissional_id, profile_id: profissional.profile_id, nome: profissional.nome, especialidade_id: profissional.especialidade_id, especialidade: profissional.especialidade })"
             >
               <PencilSquareIcon class="w-5 h-5 text-blue-600" />
             </button>
@@ -53,7 +53,7 @@
               :class="!isAdmin ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''"
               title="Excluir"
               :disabled="!isAdmin"
-              @click="isAdmin && $emit('deletar-profissional', { id: profissional.id, nome: profissional.nome })"
+              @click="isAdmin && $emit('deletar-profissional', { profissional_id: profissional.profissional_id, nome: profissional.nome })"
             >
               <TrashIcon class="w-5 h-5 text-red-600" />
             </button>
