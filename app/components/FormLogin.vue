@@ -33,12 +33,12 @@
           <input
             type="checkbox"
             v-model="form.remember"
-            class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500"
+            class="rounded border-gray-300 text-primary-600 shadow-sm focus:ring-primary-500"
           />
           <span class="ml-2 text-sm md:text-lg text-gray-600">Lembrar de mim</span>
         </label>
 
-        <a href="#" class="text-sm md:text-lg text-blue-600 hover:text-blue-700">
+        <a href="#" class="text-sm md:text-lg text-primary-600 hover:text-primary-700">
           Esqueceu a senha?
         </a>
       </div>
@@ -56,7 +56,7 @@
 
     <div class="text-center text-sm md:text-lg text-gray-600">
       Não tem uma conta?
-      <a href="#" class="text-blue-600 hover:text-blue-700 font-medium">
+      <a href="#" class="text-primary-600 hover:text-primary-700 font-medium">
         Cadastre-se
       </a>
     </div>

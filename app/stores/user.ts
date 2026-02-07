@@ -71,7 +71,7 @@ export const useUserStore = defineStore('user', () => {
 
       const { data, error: updateError } = await supabase
         .from('ag_profiles')
-        .update(filteredUpdates as any)
+        .update(filteredUpdates as Partial<Database['public']['Tables']['ag_profiles']['Update']>)
         .eq('user_id', supabaseUser.value.id)
         .select()
         .single();
