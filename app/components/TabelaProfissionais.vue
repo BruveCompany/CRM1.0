@@ -1,6 +1,6 @@
 <template>
   <div class="tabela-profissionais-container">
-    <!-- Botão para adicionar novo profissional -->
+    <!-- Botão para criar novo profissional -->
     <div class="flex justify-end mb-4">
       <BaseButton
         variant="primary"
@@ -9,7 +9,7 @@
         :class="!isAdmin ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''"
       >
         <PlusIcon class="w-5 h-5 mr-2" />
-        <span class="font-semibold">Adicionar Profissional</span>
+        <span class="font-semibold">Criar Profissional</span>
       </BaseButton>
     </div>
     

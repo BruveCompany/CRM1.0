@@ -8,7 +8,7 @@
         :class="!isAdmin ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''"
       >
         <PlusIcon class="w-5 h-5 mr-2" />
-        <span class="font-semibold">Adicionar Especialidade</span>
+        <span class="font-semibold">Criar Especialidade</span>
       </BaseButton>
     </div>
     <table class="min-w-full bg-white border-separate border-spacing-0 bg-white rounded-lg">

@@ -1,25 +1,40 @@
 <template>
   <BaseModal :model-value="modelValue" @update:modelValue="$emit('update:modelValue', $event)">
     <template #header>
-      <h3 class="text-lg font-semibold">
+      <h3 class="text-lg font-semibold text-gray-900">
         {{ isEdicao ? 'Editar Especialidade' : 'Nova Especialidade' }}
       </h3>
     </template>
-    <form @submit.prevent="onConfirmar">
-      <div class="mb-4">
+    
+    <form @submit.prevent="onConfirmar" class="space-y-4">
+      <div>
         <BaseInput
           v-model="especialidade"
-          label="Especialidade"
-          placeholder="Digite a especialidade"
+          label="Nome da Especialidade"
+          placeholder="Digite o nome da especialidade"
           required
+          size="md"
         />
       </div>
-      <div class="flex justify-end gap-2 mt-4">
-        <BaseButton variant="secondary" @click="onCancelar" :disabled="props.loading" type="button">Cancelar</BaseButton>
-        <BaseButton variant="primary" type="submit" :loading="props.loading">{{ isEdicao ? 'Salvar' : 'Adicionar' }}</BaseButton>
+      
+      <div class="flex justify-end gap-2.5">
+        <BaseButton 
+          variant="secondary" 
+          @click="onCancelar" 
+          :disabled="props.loading" 
+          type="button"
+        >
+          Cancelar
+        </BaseButton>
+        <BaseButton 
+          variant="primary" 
+          type="submit" 
+          :loading="props.loading"
+        >
+          {{ isEdicao ? 'Salvar' : 'Criar' }}
+        </BaseButton>
       </div>
     </form>
-    <!-- Footer removido, botões só dentro do form -->
   </BaseModal>
 </template>
 
