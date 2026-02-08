@@ -51,7 +51,7 @@ const especialidadeDelete = ref<{ id: number, especialidade: string } | null>(nu
 const loadingDelete = ref(false)
 
 //Composables e notificações
-const { fetchEspecialidades, inserirEspecialidade, editarEspecialidade, deletarEspecialidade } = useProfissionais()
+const { fetchEspecialidades, addEspecialidade, updateEspecialidade, deleteEspecialidade } = useProfissionais()
 const { notifySuccess, notifyError } = useNotification()
 
 // Lista de especialidades
@@ -82,9 +82,9 @@ async function handleConfirmar({ especialidade, id }: { especialidade: string, i
   loadingAdd.value = true
   let result
   if (isEdicao.value && idEdicao.value !== undefined) {
-    result = await editarEspecialidade(idEdicao.value, especialidade)
+    result = await updateEspecialidade(idEdicao.value, especialidade)
   } else {
-    result = await inserirEspecialidade(especialidade)
+    result = await addEspecialidade(especialidade)
   }
   loadingAdd.value = false
   if (result.success) {
@@ -100,7 +100,7 @@ async function handleConfirmar({ especialidade, id }: { especialidade: string, i
 async function handleConfirmarDelete() {
   if (!especialidadeDelete.value) return
   loadingDelete.value = true
-  const result = await deletarEspecialidade(especialidadeDelete.value.id)
+  const result = await deleteEspecialidade(especialidadeDelete.value.id)
   loadingDelete.value = false
   if (result.success) {
     modalDeleteAberto.value = false

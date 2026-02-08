@@ -144,6 +144,96 @@ export const useProfissionais = () => {
     return { success: true }
   }
 
+  /**
+   * Adiciona um novo profissional ao sistema
+   * Insere registro na tabela ag_profissionais com profile_id e especialidade_id
+   * @param {number} profileId - ID do perfil/usuário a ser vinculado como profissional
+   * @param {number} especialidadeId - ID da especialidade do profissional
+   * @returns {Promise<{success: boolean, message?: string}>} Resultado da operação
+   */
+  const addProfissional = async (profileId: number, especialidadeId: number) => {
+    const { error: insertError } = await supabase
+      .from('ag_profissionais')
+      .insert({
+        profile_id: profileId,
+        especialidade_id: especialidadeId
+      } as any)
+    
+    if (insertError) {
+      console.error('Erro ao adicionar profissional:', insertError)
+      
+      // Mensagens de erro mais amigáveis
+      if (insertError.message.includes('row-level security')) {
+        return { success: false, message: 'Você não tem permissão para criar profissionais. Verifique se está logado como administrador.' }
+      } else if (insertError.message.includes('duplicate') || insertError.code === '23505') {
+        return { success: false, message: 'Este usuário já está cadastrado como profissional.' }
+      } else if (insertError.message.includes('foreign key')) {
+        return { success: false, message: 'Usuário ou especialidade inválidos.' }
+      }
+      
+      return { success: false, message: 'Erro ao criar profissional. Tente novamente.' }
+    }
+    
+    return { success: true }
+  }
+
+  /**
+   * Atualiza a especialidade de um profissional existente
+   * ATENÇÃO: Atualiza apenas a especialidade_id, o profile_id não pode ser alterado
+   * @param {number} profissionalId - ID do profissional (ag_profissionais.id)
+   * @param {number} especialidadeId - Novo ID da especialidade
+   * @returns {Promise<{success: boolean, message?: string}>} Resultado da operação
+   */
+  const updateProfissional = async (profissionalId: number, especialidadeId: number) => {
+    const { error: updateError } = await (supabase as any)
+      .from('ag_profissionais')
+      .update({ especialidade_id: especialidadeId })
+      .eq('id', profissionalId)
+    
+    if (updateError) {
+      console.error(`Erro ao atualizar profissional ID ${profissionalId}:`, updateError)
+      
+      // Mensagens de erro mais amigáveis
+      if (updateError.message.includes('row-level security')) {
+        return { success: false, message: 'Você não tem permissão para editar profissionais. Verifique se está logado como administrador.' }
+      } else if (updateError.message.includes('foreign key')) {
+        return { success: false, message: 'Especialidade inválida.' }
+      }
+      
+      return { success: false, message: 'Erro ao atualizar profissional. Tente novamente.' }
+    }
+    
+    return { success: true }
+  }
+
+  /**
+   * Remove um profissional do sistema
+   * ATENÇÃO: Remove apenas da tabela ag_profissionais, não deleta o perfil do usuário
+   * @param {number} profissionalId - ID do profissional a ser removido (ag_profissionais.id)
+   * @returns {Promise<{success: boolean, message?: string}>} Resultado da operação
+   */
+  const deleteProfissional = async (profissionalId: number) => {
+    const { error: deleteError } = await supabase
+      .from('ag_profissionais')
+      .delete()
+      .eq('id', profissionalId)
+    
+    if (deleteError) {
+      console.error(`Erro ao deletar profissional ID ${profissionalId}:`, deleteError)
+      
+      // Mensagens de erro mais amigáveis
+      if (deleteError.message.includes('row-level security')) {
+        return { success: false, message: 'Você não tem permissão para deletar profissionais. Verifique se está logado como administrador.' }
+      } else if (deleteError.message.includes('foreign key') || deleteError.code === '23503') {
+        return { success: false, message: 'Não é possível deletar este profissional pois existem agendamentos vinculados.' }
+      }
+      
+      return { success: false, message: 'Erro ao deletar profissional. Tente novamente.' }
+    }
+    
+    return { success: true }
+  }
+
   return {
     fetchPerfis,
     fetchProfissionais,
@@ -151,6 +241,9 @@ export const useProfissionais = () => {
     fetchEspecialidadeById,
     addEspecialidade,
     updateEspecialidade,
-    deleteEspecialidade
+    deleteEspecialidade,
+    addProfissional,
+    updateProfissional,
+    deleteProfissional
   }
 }

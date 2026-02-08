@@ -31,7 +31,7 @@
           type="submit" 
           :loading="props.loading"
         >
-          {{ isEdicao ? 'Salvar' : 'Criar' }}
+          {{ isEdicao ? 'Atualizar' : 'Criar' }}
         </BaseButton>
       </div>
     </form>
@@ -56,12 +56,20 @@ const props = defineProps<{
 const emit = defineEmits(['update:modelValue', 'confirmar', 'cancelar'])
 
 //Estado reativo
-const especialidade = ref(props.especialidadeInicial || '')
+const especialidade = ref('')
 
 //Watchers
-watch(() => props.especialidadeInicial, (val) => {
-  if (val !== undefined) especialidade.value = val
-})
+watch([() => props.modelValue, () => props.especialidadeInicial, () => props.isEdicao], ([isOpen, inicial, edicao]) => {
+  if (isOpen) {
+    if (edicao && inicial) {
+      // Modo edição: preenche com o valor inicial
+      especialidade.value = inicial
+    } else {
+      // Modo criação: limpa o campo
+      especialidade.value = ''
+    }
+  }
+}, { immediate: true })
 
 //Funções
 function onConfirmar() {

@@ -20,6 +20,17 @@
         @confirmar="salvarProfissional"
         @cancelar="fecharModal"
       />
+      
+      <!-- Modal de confirmação de exclusão -->
+      <ModalConfirmacao
+        :model-value="modalDeleteAberto"
+        @update:modelValue="modalDeleteAberto = $event"
+        titulo="Confirmar Exclusão"
+        :mensagem="`Tem certeza que deseja excluir o profissional &quot;${profissionalDelete?.nome}&quot;?`"
+        :loading="loadingDelete"
+        @confirmar="handleConfirmarDelete"
+        @cancelar="modalDeleteAberto = false"
+      />
     </div>
   </NuxtLayout>
 </template>
@@ -27,9 +38,13 @@
 <script setup lang="ts">
 import type { AgProfissional, AgPerfil } from '../../shared/types/database'
 import type { Especialidade } from '../../shared/types/Especialidade'
+import ModalConfirmacao from '~/components/ModalConfirmacao.vue'
 
 // Composable para gerenciar operações relacionadas a profissionais
-const { fetchProfissionais, fetchPerfis, fetchEspecialidades } = useProfissionais()
+const { fetchProfissionais, fetchPerfis, fetchEspecialidades, addProfissional, updateProfissional, deleteProfissional } = useProfissionais()
+
+// Composable de notificações
+const { notifySuccess, notifyError } = useNotification()
 
 // Estado reativo: lista de profissionais carregados do banco de dados
 const profissionais = ref<AgProfissional[]>([])
@@ -40,11 +55,16 @@ const perfis = ref<AgPerfil[]>([])
 // Estado reativo: lista de especialidades disponíveis para seleção
 const especialidades = ref<Especialidade[]>([])
 
-// Controle do modal
+// Controle do modal de adicionar/editar
 const modalProfissionalAberto = ref(false)
 const isEdicao = ref(false)
 const loadingModal = ref(false)
 const profissionalSelecionado = ref<AgProfissional | null>(null)
+
+// Controle do modal de exclusão
+const modalDeleteAberto = ref(false)
+const profissionalDelete = ref<{ profissional_id: number, nome: string } | null>(null)
+const loadingDelete = ref(false)
 
 /**
  * Lifecycle hook: carrega todos os dados necessários ao montar o componente
@@ -90,9 +110,38 @@ function abrirModalEditar(profissional: AgProfissional) {
 /**
  * Abre modal de confirmação para deletar profissional
  */
-function abrirModalDeletar(profissional: AgProfissional) {
-  // TODO: Implementar modal de confirmação de exclusão
-  console.log('Deletar profissional:', profissional)
+function abrirModalDeletar(dados: { profissional_id: number, nome: string }) {
+  profissionalDelete.value = dados
+  modalDeleteAberto.value = true
+}
+
+/**
+ * Confirma e executa a exclusão do profissional
+ */
+async function handleConfirmarDelete() {
+  if (!profissionalDelete.value) return
+  
+  try {
+    loadingDelete.value = true
+    const resultado = await deleteProfissional(profissionalDelete.value.profissional_id)
+    
+    if (resultado.success) {
+      modalDeleteAberto.value = false
+      profissionalDelete.value = null
+      
+      // Atualiza a lista de profissionais
+      profissionais.value = await fetchProfissionais()
+      
+      notifySuccess('Profissional excluído com sucesso!')
+    } else {
+      notifyError(resultado.message || 'Erro ao excluir profissional')
+    }
+  } catch (error: any) {
+    console.error('Erro ao deletar profissional:', error)
+    notifyError(error.message || 'Erro ao excluir profissional')
+  } finally {
+    loadingDelete.value = false
+  }
 }
 
 /**
@@ -105,11 +154,48 @@ function fecharModal() {
 
 /**
  * Salva profissional (adicionar ou editar)
- * TODO: Implementar lógica de salvamento no banco
  */
-function salvarProfissional(dados: any) {
-  console.log('Salvar profissional:', dados)
-  // A lógica de salvamento será implementada posteriormente
+async function salvarProfissional(dados: { profile_id: number; especialidade_id: number; profissional_id?: number }) {
+  try {
+    loadingModal.value = true
+
+    if (isEdicao.value && dados.profissional_id) {
+      // Editar profissional existente (apenas a especialidade)
+      const resultado = await updateProfissional(dados.profissional_id, dados.especialidade_id)
+      
+      if (resultado.success) {
+        notifySuccess('Profissional atualizado com sucesso!')
+        
+        // Atualiza a lista de profissionais
+        profissionais.value = await fetchProfissionais()
+        
+        // Fecha o modal
+        fecharModal()
+      } else {
+        notifyError(resultado.message || 'Erro ao atualizar profissional')
+      }
+    } else {
+      // Criar novo profissional
+      const resultado = await addProfissional(dados.profile_id, dados.especialidade_id)
+      
+      if (resultado.success) {
+        notifySuccess('Profissional criado com sucesso!')
+        
+        // Atualiza a lista de profissionais
+        profissionais.value = await fetchProfissionais()
+        
+        // Fecha o modal
+        fecharModal()
+      } else {
+        notifyError(resultado.message || 'Erro ao criar profissional')
+      }
+    }
+  } catch (error: any) {
+    console.error('Erro ao salvar profissional:', error)
+    notifyError(error.message || 'Erro ao salvar profissional')
+  } finally {
+    loadingModal.value = false
+  }
 }
 
 useHead({
