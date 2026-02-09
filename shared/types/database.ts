@@ -17,6 +17,11 @@ export type Database = {
         Insert: Omit<AgProfissionalRow, 'id'> & { id?: number }
         Update: Partial<Omit<AgProfissionalRow, 'id'>>
       }
+      ag_clientes: {
+        Row: AgCliente
+        Insert: Omit<AgCliente, 'id' | 'created_at'> & { id?: number; created_at?: string }
+        Update: Partial<Omit<AgCliente, 'id' | 'created_at'>>
+      }
     }
   }
 }
@@ -34,6 +39,28 @@ export interface AgProfile {
 export interface AgEspecialidade {
   id: number
   especialidade: string | null
+}
+
+/**
+ * Interface para dados de clientes
+ * Tabela: ag_clientes
+ * 
+ * @property {number} id - ID único do cliente (gerado automaticamente)
+ * @property {string} created_at - Data/hora de criação do registro
+ * @property {string | null} cpf - CPF do cliente (único, pode ser nulo)
+ * @property {string | null} nome - Nome completo do cliente
+ * @property {string | null} endereco - Endereço do cliente
+ * @property {string | null} email - Email do cliente
+ * @property {string | null} telefone - Telefone do cliente
+ */
+export interface AgCliente {
+  id: number
+  created_at: string
+  cpf: string | null
+  nome: string | null
+  endereco: string | null
+  email: string | null
+  telefone: string | null
 }
 
 // Profissionais - tabela no banco de dados

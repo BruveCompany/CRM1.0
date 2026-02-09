@@ -65,6 +65,23 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * ================= TabelaProfissionais.vue =================
+ * Componente para exibir tabela de profissionais com ações de CRUD
+ * 
+ * Props:
+ * - profissionais: Array de profissionais a serem exibidos
+ * 
+ * Emits:
+ * - add-profissional: Disparado ao clicar no botão de criar profissional
+ * - editar-profissional: Disparado ao clicar no botão de editar (envia objeto completo do profissional)
+ * - deletar-profissional: Disparado ao clicar no botão de excluir (envia {profissional_id, nome})
+ * 
+ * Restrições:
+ * - Botões de ação habilitados apenas para usuários com role 'admin'
+ * ===========================================================
+ */
+
 import type { AgProfissional } from '../../shared/types/database'
 import { PencilSquareIcon, TrashIcon, PlusIcon } from '@heroicons/vue/24/outline'
 import BaseButton from './BaseButton.vue'
@@ -72,13 +89,18 @@ import { storeToRefs } from 'pinia'
 import { useUserStore } from '../stores/user'
 import { computed } from 'vue'
 
-// Verificação de permissão de administrador
+// Store e verificação de admin
 const userStore = useUserStore()
 const { userRole } = storeToRefs(userStore)
+
+/**
+ * Computed que verifica se o usuário logado é admin
+ * @returns {boolean} true se role === 'admin'
+ */
 const isAdmin = computed(() => userRole.value === 'admin')
 
 /**
- * Props do componente TabelaProfissionais
+ * Props do componente
  * @property {AgProfissional[]} profissionais - Lista de profissionais a serem exibidos na tabela
  */
 defineProps<{

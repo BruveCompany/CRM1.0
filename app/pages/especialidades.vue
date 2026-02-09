@@ -3,7 +3,7 @@
   <NuxtLayout>
     <div class="min-h-screen bg-white p-8">
       <h1 class="text-3xl font-bold text-gray-900 mb-6">Especialidades</h1>
-      <TabelaEspecialidade
+      <TabelaEspecialidades
         :especialidades="especialidades"
         @add-especialidade="abrirModalAdd"
         @editar-especialidade="abrirModalEditar"

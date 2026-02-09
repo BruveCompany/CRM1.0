@@ -1,5 +1,5 @@
 import type { Especialidade } from '../../shared/types/Especialidade'
-import type { AgProfissional, AgPerfil } from '../../shared/types/database'
+import type { AgProfissional, AgPerfil, AgCliente } from '../../shared/types/database'
 
 /**
  * Composable para gerenciamento de profissionais e especialidades
@@ -61,6 +61,69 @@ export const useProfissionais = () => {
     }
 
     return especialidadesData as Especialidade[]
+  }
+
+  /**
+   * Busca todos os clientes cadastrados no sistema
+   * Retorna todos os dados do cliente ordenados por nome
+   * @returns {Promise<AgCliente[]>} Lista de clientes
+   * @throws {Error} Erro ao buscar clientes
+   */
+  const fetchClientes = async (): Promise<AgCliente[]> => {
+    const { data: clientesData, error: fetchError } = await supabase
+      .from('ag_clientes')
+      .select('*')
+      .order('nome')
+
+    if (fetchError) {
+      console.error('Erro ao buscar clientes:', fetchError)
+      throw fetchError
+    }
+
+    return clientesData as AgCliente[]
+  }
+
+  /**
+   * Adiciona um novo cliente ao sistema
+   * Insere registro na tabela ag_clientes
+   * @param {string} cpf - CPF do cliente (obrigatório)
+   * @param {string} nome - Nome completo do cliente (obrigatório)
+   * @param {string} [endereco] - Endereço do cliente (opcional)
+   * @param {string} [email] - Email do cliente (opcional)
+   * @param {string} [telefone] - Telefone do cliente (opcional)
+   * @returns {Promise<{success: boolean, message?: string}>} Resultado da operação
+   */
+  const addCliente = async (
+    cpf: string,
+    nome: string,
+    endereco?: string,
+    email?: string,
+    telefone?: string
+  ) => {
+    const { error: insertError } = await supabase
+      .from('ag_clientes')
+      .insert({
+        cpf,
+        nome,
+        endereco: endereco || null,
+        email: email || null,
+        telefone: telefone || null
+      } as any)
+    
+    if (insertError) {
+      console.error('Erro ao adicionar cliente:', insertError)
+      
+      // Mensagens de erro mais amigáveis
+      if (insertError.code === '23505' || insertError.message.includes('duplicate')) {
+        return { success: false, message: 'Já existe um cliente cadastrado com este CPF.' }
+      } else if (insertError.message.includes('row-level security')) {
+        return { success: false, message: 'Você não tem permissão para criar clientes. Verifique se está logado.' }
+      }
+      
+      return { success: false, message: 'Erro ao criar cliente. Tente novamente.' }
+    }
+    
+    return { success: true }
   }
 
   /**
@@ -239,6 +302,8 @@ export const useProfissionais = () => {
     fetchProfissionais,
     fetchEspecialidades,
     fetchEspecialidadeById,
+    fetchClientes,
+    addCliente,
     addEspecialidade,
     updateEspecialidade,
     deleteEspecialidade,

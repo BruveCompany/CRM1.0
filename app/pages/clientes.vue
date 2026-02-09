@@ -2,57 +2,154 @@
   <NuxtLayout>
     <div class="min-h-screen bg-white p-8">
       <h1 class="text-3xl font-bold text-gray-900 mb-6">Clientes</h1>
-      <div class="flex justify-end mb-4">
-        <BaseButton variant="primary">
-          <PlusIcon class="w-5 h-5 mr-2" />
-            <span>Cadastrar Novo Usuário</span>
-        </BaseButton>
-      </div>
       <div v-if="loading" class="text-gray-500">Carregando...</div>
-      <table v-else class="min-w-full bg-white border-separate border-spacing-0 rounded-lg">
-        <thead>
-          <tr>
-              <th class="px-4 py-2 text-left">ID</th>
-              <th class="px-4 py-2 text-left">Nome</th>
-              <th class="px-4 py-2 text-left">Perfil</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="perfil in perfis" :key="perfil.id" class="hover:bg-gray-50">
-            <td class="px-4 py-2 border-t border-gray-200">{{ perfil.id }}</td>
-            <td class="px-4 py-2 border-t border-gray-200">{{ perfil.nome }}</td>
-            <td class="px-4 py-2 border-t border-gray-200">{{ perfil.role }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <TabelaClientes
+        v-else
+        :clientes="clientes"
+        @add-cliente="handleAddCliente"
+        @editar-cliente="handleEditarCliente"
+        @deletar-cliente="handleDeletarCliente"
+      />
+      
+      <!-- Modal de adicionar/editar cliente -->
+      <ModalCliente
+        v-model="modalAberto"
+        :is-edicao="isEdicao"
+        :id="idEdicao"
+        :cliente-inicial="clienteEdicao"
+        @confirmar="handleConfirmar"
+        :loading="loadingModal"
+      />
     </div>
   </NuxtLayout>
 </template>
 
 <script setup lang="ts">
+/**
+ * ================= Página: Clientes =================
+ * Página para gerenciamento de clientes do sistema
+ * 
+ * Funcionalidades:
+ * - Listagem de todos os clientes cadastrados
+ * - Adicionar novo cliente
+ * - Editar cliente existente (TODO)
+ * - Deletar cliente (TODO)
+ * 
+ * Permissões:
+ * - Ações de CRUD disponíveis para qualquer usuário logado
+ * ===================================================
+ */
+
 //Imports
 import { ref, onMounted } from 'vue'
-import { useSupabaseClient } from '#imports'
-import BaseButton from '../components/BaseButton.vue'
-import { PlusIcon } from '@heroicons/vue/24/outline'
+import { useProfissionais } from '../composables/useProfissionais'
+import { useNotification } from '../composables/useNotification'
+import type { AgCliente } from '../../shared/types/database'
+import TabelaClientes from '../components/TabelaClientes.vue'
+import ModalCliente from '../components/ModalCliente.vue'
 
-//Estado
-const perfis = ref<any[]>([])
+//Estado - Listagem
+const clientes = ref<AgCliente[]>([])
 const loading = ref(true)
 
-//Funções
-const supabase = useSupabaseClient()
-async function fetchPerfis() {
+//Estado - Modal
+const modalAberto = ref(false)
+const isEdicao = ref(false)
+const idEdicao = ref<number | undefined>(undefined)
+const clienteEdicao = ref<AgCliente | undefined>(undefined)
+const loadingModal = ref(false)
+
+//Composables
+const { fetchClientes, addCliente } = useProfissionais()
+const { notifySuccess, notifyError } = useNotification()
+
+/**
+ * Carrega a lista de clientes do banco de dados
+ * Chamada automaticamente ao montar o componente
+ */
+async function carregarClientes() {
   loading.value = true
-  const { data, error } = await supabase.from('ag_profiles').select('id, nome, role').order('id', { ascending: true })
-  if (!error && data) {
-    perfis.value = data
+  try {
+    clientes.value = await fetchClientes()
+  } catch (error) {
+    console.error('Erro ao carregar clientes:', error)
+    notifyError('Erro ao carregar clientes')
+  } finally {
+    loading.value = false
   }
-  loading.value = false
+}
+
+/**
+ * Abre o modal para adicionar novo cliente
+ */
+function handleAddCliente() {
+  isEdicao.value = false
+  idEdicao.value = undefined
+  clienteEdicao.value = undefined
+  modalAberto.value = true
+}
+
+/**
+ * Handler para editar cliente existente
+ * TODO: Implementar lógica de edição
+ * @param {AgCliente} cliente - Dados do cliente a ser editado
+ */
+function handleEditarCliente(cliente: AgCliente) {
+  isEdicao.value = true
+  idEdicao.value = cliente.id
+  clienteEdicao.value = cliente
+  modalAberto.value = true
+}
+
+/**
+ * Handler para deletar cliente
+ * TODO: Implementar modal de confirmação e exclusão
+ * @param {AgCliente} cliente - Dados do cliente a ser deletado
+ */
+function handleDeletarCliente(cliente: AgCliente) {
+  console.log('Deletar cliente:', cliente)
+}
+
+/**
+ * Confirma ação do modal (criar ou editar)
+ * @param {Object} dados - Dados do formulário
+ */
+async function handleConfirmar(dados: any) {
+  loadingModal.value = true
+  
+  try {
+    if (isEdicao.value) {
+      // TODO: Implementar updateCliente
+      console.log('Atualizar cliente:', dados)
+      notifyError('Função de edição ainda não implementada')
+    } else {
+      // Criar novo cliente
+      const resultado = await addCliente(
+        dados.cpf,
+        dados.nome,
+        dados.endereco,
+        dados.email,
+        dados.telefone
+      )
+      
+      if (resultado.success) {
+        notifySuccess('Cliente criado com sucesso!')
+        modalAberto.value = false
+        await carregarClientes() // Recarrega a lista
+      } else {
+        notifyError(resultado.message || 'Erro ao criar cliente')
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao salvar cliente:', error)
+    notifyError('Erro ao salvar cliente')
+  } finally {
+    loadingModal.value = false
+  }
 }
 
 //Carregar dados
-onMounted(fetchPerfis)
+onMounted(carregarClientes)
 
 //Head
 useHead({
