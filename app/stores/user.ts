@@ -59,27 +59,27 @@ export const useUserStore = defineStore('user', () => {
 
     // Supabase não aceita campos undefined ou campos não atualizáveis (id, created_at)
     const allowedFields: Array<keyof AgProfile> = ['nome', 'role']
-    const filteredUpdates: Partial<AgProfile> = {};
+    const filteredUpdates: Record<string, string | null> = {}
     for (const key of allowedFields) {
-      const value = updates[key];
+      const value = updates[key]
       if (value !== undefined && value !== null) {
-        filteredUpdates[key] = value as any;
+        filteredUpdates[key] = value as string | null
       }
     }
 
-    try {
-
+    try{
       const { data, error: updateError } = await supabase
         .from('ag_profiles')
-        .update(filteredUpdates as Partial<Database['public']['Tables']['ag_profiles']['Update']>)
+        // @ts-expect-error - Supabase type inference issue
+        .update(filteredUpdates)
         .eq('user_id', supabaseUser.value.id)
         .select()
-        .single();
+        .single()
 
-      if (updateError) throw updateError;
+      if (updateError) throw updateError
 
       if (data) {
-        profile.value = data as unknown as AgProfile;
+        profile.value = data as AgProfile
       }
     } catch (err: any) {
       error.value = err.message || 'Erro ao atualizar perfil'

@@ -46,10 +46,10 @@ export const useProfissionais = () => {
   /**
    * Busca todas as especialidades cadastradas
    * Retorna apenas id e especialidade, ordenado alfabeticamente
-   * @returns {Promise<Especialidade[]>} Lista de especialidades
+   * @returns {Promise<AgEspecialidade[]>} Lista de especialidades
    * @throws {Error} Erro ao buscar especialidades
    */
-  const fetchEspecialidades = async (): Promise<Especialidade[]> => {
+  const fetchEspecialidades = async (): Promise<AgEspecialidade[]> => {
     const { data: especialidadesData, error: fetchError } = await supabase
       .from('ag_especialidades')
       .select('id, especialidade')
@@ -60,7 +60,7 @@ export const useProfissionais = () => {
       throw fetchError
     }
 
-    return especialidadesData as Especialidade[]
+    return especialidadesData as AgEspecialidade[]
   }
 
   /**
@@ -174,10 +174,10 @@ export const useProfissionais = () => {
   /**
    * Busca uma especialidade específica por ID
    * @param {number} especialidadeId - ID da especialidade a ser buscada
-   * @returns {Promise<Especialidade>} Dados da especialidade encontrada
+   * @returns {Promise<AgEspecialidade>} Dados da especialidade encontrada
    * @throws {Error} Erro se especialidade não for encontrada ou erro no banco
    */
-  const fetchEspecialidadeById = async (especialidadeId: number): Promise<Especialidade> => {
+  const fetchEspecialidadeById = async (especialidadeId: number): Promise<AgEspecialidade> => {
     const { data: especialidadeData, error: fetchError } = await supabase
       .from('ag_especialidades')
       .select('id, especialidade')
@@ -189,7 +189,7 @@ export const useProfissionais = () => {
       throw fetchError
     }
 
-    return especialidadeData as Especialidade
+    return especialidadeData as AgEspecialidade
   }
 
   /**
