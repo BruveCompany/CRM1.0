@@ -7,6 +7,11 @@
     </template>
     
     <form @submit.prevent="onConfirmar" class="space-y-4">
+      <!-- Mensagem de erro geral -->
+      <div v-if="errorMessage" class="p-3 bg-red-50 border border-red-200 rounded-lg">
+        <p class="text-sm text-red-600">{{ errorMessage }}</p>
+      </div>
+      
       <!-- Campo CPF com máscara -->
       <div>
         <InputCPF
@@ -129,6 +134,7 @@ const nome = ref('')
 const email = ref('')
 const telefone = ref('')
 const endereco = ref('')
+const errorMessage = ref('')
 
 /**
  * Remove todos os caracteres não numéricos
@@ -174,6 +180,9 @@ function isValidCPF(cpf: string): boolean {
  */
 watch([() => props.modelValue, () => props.clienteInicial, () => props.isEdicao], ([isOpen, inicial, edicao]) => {
   if (isOpen) {
+    // Limpa mensagem de erro ao abrir
+    errorMessage.value = ''
+    
     if (edicao && inicial) {
       // Modo edição: preenche com os valores iniciais
       cpf.value = inicial.cpf || ''
@@ -193,14 +202,36 @@ watch([() => props.modelValue, () => props.clienteInicial, () => props.isEdicao]
 }, { immediate: true })
 
 /**
+ * Limpa mensagem de erro quando usuário modifica os campos
+ */
+watch([cpf, nome], () => {
+  if (errorMessage.value) {
+    errorMessage.value = ''
+  }
+})
+
+/**
  * Submete o formulário e emite evento confirmar com os dados
  */
 function onConfirmar() {
-  // Valida CPF antes de enviar (bloqueia submit silenciosamente)
+  // Limpa erro anterior
+  errorMessage.value = ''
+  
+  // Valida CPF antes de enviar
   const cleaned = removeNonNumeric(cpf.value)
   
-  if (!cleaned || cleaned.length === 0 || cleaned.length !== 11 || !isValidCPF(cpf.value)) {
-    // O InputCPF já exibe a mensagem de erro, aqui apenas bloqueamos o submit
+  if (!cleaned || cleaned.length === 0) {
+    errorMessage.value = 'CPF é obrigatório'
+    return
+  }
+  
+  if (cleaned.length !== 11) {
+    errorMessage.value = 'CPF deve conter 11 dígitos'
+    return
+  }
+  
+  if (!isValidCPF(cpf.value)) {
+    errorMessage.value = 'CPF inválido. Verifique os dígitos verificadores'
     return
   }
   

@@ -342,19 +342,47 @@ export const useProfissionais = () => {
     return { success: true }
   }
 
+  /**
+   * Deleta um cliente do sistema
+   * @param {number} clienteId - ID do cliente a ser removido (ag_clientes.id)
+   * @returns {Promise<{success: boolean, message?: string}>} Resultado da operação
+   */
+  const deleteCliente = async (clienteId: number) => {
+    const { error: deleteError } = await supabase
+      .from('ag_clientes')
+      .delete()
+      .eq('id', clienteId)
+    
+    if (deleteError) {
+      console.error(`Erro ao deletar cliente ID ${clienteId}:`, deleteError)
+      
+      // Mensagens de erro mais amigáveis
+      if (deleteError.message.includes('row-level security')) {
+        return { success: false, message: 'Você não tem permissão para deletar clientes.' }
+      } else if (deleteError.message.includes('foreign key') || deleteError.code === '23503') {
+        return { success: false, message: 'Não é possível deletar este cliente pois existem agendamentos vinculados.' }
+      }
+      
+      return { success: false, message: 'Erro ao deletar cliente. Tente novamente.' }
+    }
+    
+    return { success: true }
+  }
+
   return {
-    fetchPerfis,
     fetchProfissionais,
+    fetchPerfis,
+    addProfissional,
+    updateProfissional,
+    deleteProfissional,
     fetchEspecialidades,
     fetchEspecialidadeById,
-    fetchClientes,
-    addCliente,
-    updateCliente,
     addEspecialidade,
     updateEspecialidade,
     deleteEspecialidade,
-    addProfissional,
-    updateProfissional,
-    deleteProfissional
+    fetchClientes,
+    addCliente,
+    updateCliente,
+    deleteCliente
   }
 }

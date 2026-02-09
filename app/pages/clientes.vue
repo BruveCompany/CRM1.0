@@ -20,6 +20,17 @@
         @confirmar="handleConfirmar"
         :loading="loadingModal"
       />
+      
+      <!-- Modal de confirmação de exclusão -->
+      <ModalConfirmacao
+        :model-value="modalDeleteAberto"
+        @update:modelValue="modalDeleteAberto = $event"
+        titulo="Confirmar Exclusão"
+        :mensagem="`Tem certeza que deseja excluir o cliente &quot;${clienteDelete?.nome}&quot;?`"
+        :loading="loadingDelete"
+        @confirmar="handleConfirmarDelete"
+        @cancelar="modalDeleteAberto = false"
+      />
     </div>
   </NuxtLayout>
 </template>
@@ -47,6 +58,7 @@ import { useNotification } from '../composables/useNotification'
 import type { AgCliente } from '../../shared/types/database'
 import TabelaClientes from '../components/TabelaClientes.vue'
 import ModalCliente from '../components/ModalCliente.vue'
+import ModalConfirmacao from '../components/ModalConfirmacao.vue'
 
 //Estado - Listagem
 const clientes = ref<AgCliente[]>([])
@@ -59,8 +71,13 @@ const idEdicao = ref<number | undefined>(undefined)
 const clienteEdicao = ref<AgCliente | undefined>(undefined)
 const loadingModal = ref(false)
 
+//Estado - Modal de exclusão
+const modalDeleteAberto = ref(false)
+const clienteDelete = ref<{ id: number, nome: string } | null>(null)
+const loadingDelete = ref(false)
+
 //Composables
-const { fetchClientes, addCliente, updateCliente } = useProfissionais()
+const { fetchClientes, addCliente, updateCliente, deleteCliente } = useProfissionais()
 const { notifySuccess, notifyError } = useNotification()
 
 /**
@@ -102,12 +119,40 @@ function handleEditarCliente(cliente: AgCliente) {
 }
 
 /**
- * Handler para deletar cliente
- * TODO: Implementar modal de confirmação e exclusão
- * @param {AgCliente} cliente - Dados do cliente a ser deletado
+ * Abre modal de confirmação para deletar cliente
  */
 function handleDeletarCliente(cliente: AgCliente) {
-  console.log('Deletar cliente:', cliente)
+  clienteDelete.value = { id: cliente.id, nome: cliente.nome || 'Cliente sem nome' }
+  modalDeleteAberto.value = true
+}
+
+/**
+ * Confirma e executa a exclusão do cliente
+ */
+async function handleConfirmarDelete() {
+  if (!clienteDelete.value) return
+  
+  try {
+    loadingDelete.value = true
+    const resultado = await deleteCliente(clienteDelete.value.id)
+    
+    if (resultado.success) {
+      modalDeleteAberto.value = false
+      clienteDelete.value = null
+      
+      // Recarrega a lista de clientes
+      await carregarClientes()
+      
+      notifySuccess('Cliente excluído com sucesso!')
+    } else {
+      notifyError(resultado.message || 'Erro ao excluir cliente')
+    }
+  } catch (error: any) {
+    console.error('Erro ao deletar cliente:', error)
+    notifyError(error.message || 'Erro ao excluir cliente')
+  } finally {
+    loadingDelete.value = false
+  }
 }
 
 /**
