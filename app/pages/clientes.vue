@@ -32,7 +32,7 @@
  * Funcionalidades:
  * - Listagem de todos os clientes cadastrados
  * - Adicionar novo cliente
- * - Editar cliente existente (TODO)
+ * - Editar cliente existente
  * - Deletar cliente (TODO)
  * 
  * Permissões:
@@ -60,7 +60,7 @@ const clienteEdicao = ref<AgCliente | undefined>(undefined)
 const loadingModal = ref(false)
 
 //Composables
-const { fetchClientes, addCliente } = useProfissionais()
+const { fetchClientes, addCliente, updateCliente } = useProfissionais()
 const { notifySuccess, notifyError } = useNotification()
 
 /**
@@ -91,7 +91,7 @@ function handleAddCliente() {
 
 /**
  * Handler para editar cliente existente
- * TODO: Implementar lógica de edição
+ * Abre o modal em modo de edição com os dados do cliente
  * @param {AgCliente} cliente - Dados do cliente a ser editado
  */
 function handleEditarCliente(cliente: AgCliente) {
@@ -118,10 +118,24 @@ async function handleConfirmar(dados: any) {
   loadingModal.value = true
   
   try {
-    if (isEdicao.value) {
-      // TODO: Implementar updateCliente
-      console.log('Atualizar cliente:', dados)
-      notifyError('Função de edição ainda não implementada')
+    if (isEdicao.value && dados.id) {
+      // Editar cliente existente
+      const resultado = await updateCliente(
+        dados.id,
+        dados.cpf,
+        dados.nome,
+        dados.endereco,
+        dados.email,
+        dados.telefone
+      )
+      
+      if (resultado.success) {
+        notifySuccess('Cliente atualizado com sucesso!')
+        modalAberto.value = false
+        await carregarClientes() // Recarrega a lista
+      } else {
+        notifyError(resultado.message || 'Erro ao atualizar cliente')
+      }
     } else {
       // Criar novo cliente
       const resultado = await addCliente(

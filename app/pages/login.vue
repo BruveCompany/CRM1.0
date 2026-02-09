@@ -66,8 +66,17 @@
       <!-- Elementos decorativos modernos -->
       <div class="absolute top-20 right-10 w-72 h-72 bg-success-400/10 rounded-3xl rotate-12 blur-3xl"></div>
       <div class="absolute bottom-20 left-10 w-80 h-80 bg-primary-300/10 rounded-3xl -rotate-12 blur-3xl"></div>
-      <div class="absolute top-1/2 right-1/4 w-40 h-40 bg-success-300/20 rounded-2xl rotate-45"></div>
-      <div class="absolute bottom-1/3 left-1/3 w-32 h-32 border-4 border-success-400/30 rounded-2xl rotate-12"></div>
+      <div class="absolute top-1/2 right-1/4 w-40 h-40 bg-success-300/20 rounded-2xl rotate-45 flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-full h-full p-1 text-success-400/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.3">
+          <rect x="3" y="6" width="18" height="15" rx="2.5" />
+          <path d="M3 10h18M10 10v11M17 10v11" />
+          <path d="M8 4v3M16 4v3" />
+          <path d="M5.5 14l1 1l2-2" stroke-width="0.6" opacity="0.4" />
+          <path d="M12 14l1 1l2-2" stroke-width="0.6" opacity="0.4" />
+          <path d="M5.5 18l1 1l2-2" stroke-width="0.6" opacity="0.4" />
+        </svg>
+      </div>
+      <div class="absolute bottom-1/3 left-1/3 w-32 h-32 bg-success-400/20 border-2 border-success-400/15 rounded-2xl rotate-12"></div>
     </div>
   </div>
 </template>

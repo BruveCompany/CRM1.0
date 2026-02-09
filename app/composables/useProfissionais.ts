@@ -1,4 +1,4 @@
-import type { Especialidade } from '../../shared/types/Especialidade'
+import type { AgEspecialidade } from '../../shared/types/database'
 import type { AgProfissional, AgPerfil, AgCliente } from '../../shared/types/database'
 
 /**
@@ -121,6 +121,51 @@ export const useProfissionais = () => {
       }
       
       return { success: false, message: 'Erro ao criar cliente. Tente novamente.' }
+    }
+    
+    return { success: true }
+  }
+
+  /**
+   * Atualiza os dados de um cliente existente
+   * @param {number} clienteId - ID do cliente a ser atualizado
+   * @param {string} cpf - CPF do cliente
+   * @param {string} nome - Nome completo do cliente
+   * @param {string} [endereco] - Endereço do cliente (opcional)
+   * @param {string} [email] - Email do cliente (opcional)
+   * @param {string} [telefone] - Telefone do cliente (opcional)
+   * @returns {Promise<{success: boolean, message?: string}>} Resultado da operação
+   */
+  const updateCliente = async (
+    clienteId: number,
+    cpf: string,
+    nome: string,
+    endereco?: string,
+    email?: string,
+    telefone?: string
+  ) => {
+    const { error: updateError } = await (supabase as any)
+      .from('ag_clientes')
+      .update({
+        cpf,
+        nome,
+        endereco: endereco || null,
+        email: email || null,
+        telefone: telefone || null
+      })
+      .eq('id', clienteId)
+    
+    if (updateError) {
+      console.error(`Erro ao atualizar cliente ID ${clienteId}:`, updateError)
+      
+      // Mensagens de erro mais amigáveis
+      if (updateError.code === '23505' || updateError.message.includes('duplicate')) {
+        return { success: false, message: 'Já existe um cliente cadastrado com este CPF.' }
+      } else if (updateError.message.includes('row-level security')) {
+        return { success: false, message: 'Você não tem permissão para editar clientes. Verifique se está logado.' }
+      }
+      
+      return { success: false, message: 'Erro ao atualizar cliente. Tente novamente.' }
     }
     
     return { success: true }
@@ -304,6 +349,7 @@ export const useProfissionais = () => {
     fetchEspecialidadeById,
     fetchClientes,
     addCliente,
+    updateCliente,
     addEspecialidade,
     updateEspecialidade,
     deleteEspecialidade,

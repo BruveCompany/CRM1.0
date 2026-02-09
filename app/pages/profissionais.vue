@@ -37,7 +37,7 @@
 
 <script setup lang="ts">
 import type { AgProfissional, AgPerfil } from '../../shared/types/database'
-import type { Especialidade } from '../../shared/types/Especialidade'
+import type { AgEspecialidade } from '../../shared/types/database'
 import ModalConfirmacao from '~/components/ModalConfirmacao.vue'
 
 // Composable para gerenciar operações relacionadas a profissionais
@@ -53,7 +53,7 @@ const profissionais = ref<AgProfissional[]>([])
 const perfis = ref<AgPerfil[]>([])
 
 // Estado reativo: lista de especialidades disponíveis para seleção
-const especialidades = ref<Especialidade[]>([])
+const especialidades = ref<AgEspecialidade[]>([])
 
 // Controle do modal de adicionar/editar
 const modalProfissionalAberto = ref(false)

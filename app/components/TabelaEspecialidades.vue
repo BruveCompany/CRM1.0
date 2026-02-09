@@ -76,7 +76,7 @@
  * ============================================================
  */
 
-import type { Especialidade } from '../../shared/types/Especialidade'
+import type { AgEspecialidade } from '../../shared/types/database'
 import { PencilSquareIcon, TrashIcon, PlusIcon } from '@heroicons/vue/24/outline'
 import BaseButton from './BaseButton.vue'
 import { storeToRefs } from 'pinia'
@@ -95,7 +95,7 @@ const isAdmin = computed(() => userRole.value === 'admin')
 
 /**
  * Props do componente
- * @property {Especialidade[]} especialidades - Lista de especialidades a serem exibidas na tabela
+ * @property {AgEspecialidade[]} especialidades - Lista de especialidades a serem exibidas na tabela
  */
-defineProps<{ especialidades: Especialidade[] }>()
+defineProps<{ especialidades: AgEspecialidade[] }>()
 </script>

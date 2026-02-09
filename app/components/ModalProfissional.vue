@@ -81,13 +81,13 @@ import { ref, watch } from 'vue'
 import BaseModal from './BaseModal.vue'
 import BaseButton from './BaseButton.vue'
 import type { AgProfissional, AgPerfil } from '../../shared/types/database'
-import type { Especialidade } from '../../shared/types/Especialidade'
+import type { AgEspecialidade } from '../../shared/types/database'
 
 // Props
 const props = defineProps<{
   modelValue: boolean
   perfis: AgPerfil[]
-  especialidades: Especialidade[]
+  especialidades: AgEspecialidade[]
   isEdicao?: boolean
   profissionalInicial?: AgProfissional | null
   loading?: boolean

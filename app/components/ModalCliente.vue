@@ -14,7 +14,6 @@
           label="CPF"
           required
           size="md"
-          :disabled="isEdicao"
         />
       </div>
       
@@ -132,6 +131,43 @@ const telefone = ref('')
 const endereco = ref('')
 
 /**
+ * Remove todos os caracteres não numéricos
+ */
+function removeNonNumeric(value: string): string {
+  return value.replace(/\D/g, '')
+}
+
+/**
+ * Valida CPF usando algoritmo oficial dos dígitos verificadores
+ */
+function isValidCPF(cpf: string): boolean {
+  const cleaned = removeNonNumeric(cpf)
+  
+  if (cleaned.length !== 11) return false
+  if (/^(\d)\1{10}$/.test(cleaned)) return false
+  
+  // Valida primeiro dígito verificador
+  let soma = 0
+  for (let i = 0; i < 9; i++) {
+    soma += parseInt(cleaned.charAt(i)) * (10 - i)
+  }
+  let resto = (soma * 10) % 11
+  if (resto === 10 || resto === 11) resto = 0
+  if (resto !== parseInt(cleaned.charAt(9))) return false
+  
+  // Valida segundo dígito verificador
+  soma = 0
+  for (let i = 0; i < 10; i++) {
+    soma += parseInt(cleaned.charAt(i)) * (11 - i)
+  }
+  resto = (soma * 10) % 11
+  if (resto === 10 || resto === 11) resto = 0
+  if (resto !== parseInt(cleaned.charAt(10))) return false
+  
+  return true
+}
+
+/**
  * Watcher para preencher ou limpar campos ao abrir o modal
  * Modo edição: preenche com dados do clienteInicial
  * Modo criação: limpa todos os campos
@@ -160,6 +196,14 @@ watch([() => props.modelValue, () => props.clienteInicial, () => props.isEdicao]
  * Submete o formulário e emite evento confirmar com os dados
  */
 function onConfirmar() {
+  // Valida CPF antes de enviar (bloqueia submit silenciosamente)
+  const cleaned = removeNonNumeric(cpf.value)
+  
+  if (!cleaned || cleaned.length === 0 || cleaned.length !== 11 || !isValidCPF(cpf.value)) {
+    // O InputCPF já exibe a mensagem de erro, aqui apenas bloqueamos o submit
+    return
+  }
+  
   emit('confirmar', {
     id: props.id,
     cpf: cpf.value,
