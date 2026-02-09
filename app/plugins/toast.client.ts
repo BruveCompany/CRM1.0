@@ -1,5 +1,6 @@
 import Toast from 'vue-toastification'
 import 'vue-toastification/dist/index.css'
+import '~/assets/css/toast-custom.css'
 
 export default defineNuxtPlugin((nuxtApp) => {
   const options = {

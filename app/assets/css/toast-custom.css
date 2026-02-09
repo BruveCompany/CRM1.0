@@ -1,0 +1,37 @@
+/* Customização das cores do vue-toastification */
+
+/* Notificação de sucesso - cor turquesa #2DD4BF */
+.Vue-Toastification__toast--success {
+  background-color: #2DD4BF !important;
+}
+
+.Vue-Toastification__progress-bar--success {
+  background-color: #14B8A6 !important; /* Tom mais escuro para a barra de progresso */
+}
+
+/* Notificação de info - mesma cor turquesa */
+.Vue-Toastification__toast--info {
+  background-color: #2DD4BF !important;
+}
+
+.Vue-Toastification__progress-bar--info {
+  background-color: #14B8A6 !important;
+}
+
+/* Notificação de warning - mesma cor turquesa */
+.Vue-Toastification__toast--warning {
+  background-color: #2DD4BF !important;
+}
+
+.Vue-Toastification__progress-bar--warning {
+  background-color: #14B8A6 !important;
+}
+
+/* Erro mantém vermelho (não alterado) */
+.Vue-Toastification__toast--error {
+  background-color: #EF4444 !important;
+}
+
+.Vue-Toastification__progress-bar--error {
+  background-color: #DC2626 !important;
+}
