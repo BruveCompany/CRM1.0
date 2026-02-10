@@ -149,7 +149,7 @@
             class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
           >
             <option value="">--:--</option>
-            <option v-for="hora in horariosDisponiveis" :key="hora" :value="hora">
+            <option v-for="hora in horariosInicioDisponiveis" :key="hora" :value="hora">
               {{ hora }}
             </option>
           </select>
@@ -162,11 +162,11 @@
           </label>
           <select 
             v-model="formData.horaFim"
-            :disabled="!formData.data"
+            :disabled="!formData.horaInicio"
             class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
           >
             <option value="">--:--</option>
-            <option v-for="hora in horariosDisponiveis" :key="'fim-' + hora" :value="hora">
+            <option v-for="hora in horariosFimDisponiveis" :key="'fim-' + hora" :value="hora">
               {{ hora }}
             </option>
           </select>
@@ -220,7 +220,7 @@ import { MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
  */
 
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
-import type { AgCliente } from '../../../shared/types/database'
+import type { AgCliente, AgAgendamento } from '../../../shared/types/database'
 
 interface Props {
   modelValue: boolean
@@ -229,6 +229,7 @@ interface Props {
   profissionalEspecialidade?: string
   diasSemana?: Date[]
   clientes?: AgCliente[]
+  agendamentos?: AgAgendamento[]
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -237,7 +238,8 @@ const props = withDefaults(defineProps<Props>(), {
   profissionalNome: '',
   profissionalEspecialidade: '',
   diasSemana: () => [],
-  clientes: () => []
+  clientes: () => [],
+  agendamentos: () => []
 })
 
 const emit = defineEmits(['update:modelValue', 'salvar'])
@@ -318,10 +320,12 @@ onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickFora)
 })
 
+// ===== Lógica de bloqueio de horários sobrepostos =====
+
 /**
- * Horários disponíveis (08:00 às 22:00 em intervalos de 30min)
+ * Gera todos os horários possíveis (08:00 às 22:00 em intervalos de 30min)
  */
-const horariosDisponiveis = computed(() => {
+const todosHorarios = computed(() => {
   const horarios: string[] = []
   for (let hora = 8; hora <= 22; hora++) {
     horarios.push(`${String(hora).padStart(2, '0')}:00`)
@@ -330,6 +334,88 @@ const horariosDisponiveis = computed(() => {
     }
   }
   return horarios
+})
+
+/**
+ * Converte string de hora ("08:30" ou "08:30:00-03") para minutos totais
+ * Ex: "08:30" → 510, "14:00" → 840
+ */
+function horaParaMinutos(hora: string): number {
+  const partes = hora.split(':')
+  return parseInt(partes[0] || '0', 10) * 60 + parseInt(partes[1] || '0', 10)
+}
+
+/**
+ * Filtra agendamentos existentes para o dia selecionado no formulário.
+ * Retorna array ordenado por hora_inicio para facilitar cálculos.
+ */
+const agendamentosDoDia = computed(() => {
+  if (!formData.value.data) return []
+  return props.agendamentos
+    .filter((ag) => ag.data === formData.value.data)
+    .sort((a, b) => horaParaMinutos(a.hora_inicio || '0') - horaParaMinutos(b.hora_inicio || '0'))
+})
+
+/**
+ * Horários de INÍCIO disponíveis.
+ * Bloqueia qualquer horário que cai dentro de um agendamento existente.
+ * 
+ * Regra: um horário H está bloqueado se existe agendamento onde
+ * H >= hora_inicio E H < hora_fim (está dentro do período ocupado)
+ * 
+ * Ex: Agendamento 08:00-10:00 → bloqueia 08:00, 08:30, 09:00, 09:30
+ *     10:00 fica livre (é o fim, não sobrepõe)
+ */
+const horariosInicioDisponiveis = computed(() => {
+  if (!formData.value.data) return todosHorarios.value
+  
+  const ocupados = agendamentosDoDia.value
+  
+  return todosHorarios.value.filter((horario) => {
+    const minutos = horaParaMinutos(horario)
+    // Verifica se este horário cai dentro de algum agendamento existente
+    return !ocupados.some((ag) => {
+      const inicioAg = horaParaMinutos(ag.hora_inicio || '0')
+      const fimAg = horaParaMinutos(ag.hora_fim || '0')
+      return minutos >= inicioAg && minutos < fimAg
+    })
+  })
+})
+
+/**
+ * Horários de FIM disponíveis.
+ * Após selecionar hora de início, limita o fim para:
+ * - Ser maior que a hora de início
+ * - Não ultrapassar o início do próximo agendamento (evita sobreposição)
+ * 
+ * Ex: Início selecionado = 10:00, próximo agendamento começa às 14:00
+ *     → Fim disponível: 10:30, 11:00, ..., 14:00
+ *     (14:00 é válido pois encosta mas não sobrepõe)
+ * 
+ * Ex: Início selecionado = 15:30, sem agendamento depois
+ *     → Fim disponível: 16:00, ..., 22:00
+ */
+const horariosFimDisponiveis = computed(() => {
+  if (!formData.value.horaInicio) return []
+  
+  const inicioSelecionado = horaParaMinutos(formData.value.horaInicio)
+  const ocupados = agendamentosDoDia.value
+  
+  // Encontra o início do próximo agendamento APÓS o horário selecionado
+  // (teto máximo para o fim do novo agendamento)
+  let tetoMaximo = horaParaMinutos('22:00') // fim do expediente
+  for (const ag of ocupados) {
+    const inicioAg = horaParaMinutos(ag.hora_inicio || '0')
+    if (inicioAg > inicioSelecionado) {
+      tetoMaximo = inicioAg
+      break // já está ordenado, primeiro encontrado é o mais próximo
+    }
+  }
+  
+  return todosHorarios.value.filter((horario) => {
+    const minutos = horaParaMinutos(horario)
+    return minutos > inicioSelecionado && minutos <= tetoMaximo
+  })
 })
 
 /**
@@ -347,13 +433,13 @@ function formatarDataISO(data: Date): string {
  * Ex: "Segunda, 16/02/2026"
  */
 function formatarDiaParaExibicao(data: Date): string {
-  const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
+  const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+  const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
   const diaSemana = diasSemana[data.getDay()]
-  const dia = String(data.getDate()).padStart(2, '0')
-  const mes = String(data.getMonth() + 1).padStart(2, '0')
-  const ano = data.getFullYear()
+  const dia = data.getDate()
+  const mes = meses[data.getMonth()]
   
-  return `${diaSemana}, ${dia}/${mes}/${ano}`
+  return `${diaSemana}, ${dia} ${mes}`
 }
 
 /**
@@ -397,6 +483,21 @@ function handleCancelar() {
     dropdownClienteAberto.value = false
   }, 300) // Aguarda animação do modal fechar
 }
+
+/**
+ * Watch: Quando a data muda, limpa os horários (podem ter disponibilidade diferente)
+ */
+watch(() => formData.value.data, () => {
+  formData.value.horaInicio = ''
+  formData.value.horaFim = ''
+})
+
+/**
+ * Watch: Quando hora início muda, limpa hora fim (novo cálculo de disponíveis)
+ */
+watch(() => formData.value.horaInicio, () => {
+  formData.value.horaFim = ''
+})
 
 /**
  * Watch: Quando o modal fecha, limpa o formulário

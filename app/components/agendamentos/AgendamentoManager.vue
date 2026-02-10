@@ -51,6 +51,7 @@
       :profissional-especialidade="profissionalAtualEspecialidade"
       :dias-semana="agendamentoStore.diasSemana"
       :clientes="clientes"
+      :agendamentos="agendamentos"
       @salvar="handleSalvarAgendamento"
     />
   </div>
