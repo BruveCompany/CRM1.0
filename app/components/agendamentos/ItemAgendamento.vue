@@ -20,6 +20,10 @@
         v-for="agendamento in agendamentosDoDia"
         :key="agendamento.id"
         :agendamento="agendamento"
+        :clientes="clientes"
+        :profissional-nome="profissionalNome"
+        :profissional-especialidade="profissionalEspecialidade"
+        @click="(ag: AgAgendamento) => emit('editar-agendamento', ag)"
       />
     </div>
   </div>
@@ -32,6 +36,7 @@
  * 
  * Props:
  * @param {Date} data - Data do dia para exibir agendamentos
+ * @param {AgCliente[]} clientes - Lista de clientes para resolver nomes
  * 
  * Responsabilidades:
  * - Exibir grid de horários (8h às 22h)
@@ -41,16 +46,25 @@
  */
 
 import SlotAgendamento from './SlotAgendamento.vue'
-import type { AgAgendamento } from '../../../shared/types/database'
+import type { AgAgendamento, AgCliente } from '../../../shared/types/database'
 import { computed } from 'vue'
 import { useAgendamentoStore } from '~/stores/agendamento'
 
 // Interface de propriedades
 interface Props {
-  data: Date // Data do dia para exibir agendamentos
+  data: Date
+  clientes?: AgCliente[]
+  profissionalNome?: string
+  profissionalEspecialidade?: string
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  clientes: () => [],
+  profissionalNome: '',
+  profissionalEspecialidade: ''
+})
+
+const emit = defineEmits(['editar-agendamento'])
 
 // Acesso ao store de agendamentos
 const agendamentoStore = useAgendamentoStore()

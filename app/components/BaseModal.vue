@@ -24,7 +24,7 @@
         </div>
         
         <!-- Body -->
-        <div class="px-5 py-4 overflow-y-auto flex-1 min-h-0" style="-ms-overflow-style: none; scrollbar-width: none;">
+        <div class="px-5 py-3 overflow-y-auto flex-1 min-h-0" style="-ms-overflow-style: none; scrollbar-width: none;">
           <slot />
         </div>
         

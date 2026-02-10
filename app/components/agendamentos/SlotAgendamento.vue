@@ -3,22 +3,30 @@
   <div 
     :style="{ 
       top: `${posicaoTop}px`, 
-      height: `${altura}px` 
+      height: `${altura}px`,
+      backgroundColor: agendamento.cor || '#B4A7F5'
     }"
-    class="absolute left-0 right-0 bg-[#4338CA] text-white rounded px-2 py-1 cursor-pointer hover:bg-[#3730A3] transition-colors overflow-hidden"
+    :title="`${agendamento.titulo}${profissionalNome ? '\nProfissional: ' + profissionalNome : ''}${profissionalEspecialidade ? ' (' + profissionalEspecialidade + ')' : ''}\n${horarioFormatado}${nomeCliente ? '\nCliente: ' + nomeCliente : ''}${agendamento.descricao ? '\n' + agendamento.descricao : ''}`"
+    class="absolute left-0 right-0 text-gray-900 rounded px-2 py-1 cursor-pointer transition-colors overflow-hidden hover:opacity-85"
+    @click="emit('click', agendamento)"
   >
     <!-- Título do agendamento -->
-    <div class="text-xs font-semibold truncate">
+    <div class="text-xs font-bold truncate">
       {{ agendamento.titulo }}
+    </div>
+
+    <!-- Nome do cliente -->
+    <div v-if="nomeCliente" class="text-xs font-medium opacity-80 truncate">
+      {{ nomeCliente }}
     </div>
     
     <!-- Horário -->
-    <div class="text-xs opacity-90 truncate">
+    <div class="text-xs font-medium truncate">
       {{ horarioFormatado }}
     </div>
     
     <!-- Descrição (se houver espaço) -->
-    <div v-if="altura > 50" class="text-xs opacity-75 truncate mt-0.5">
+    <div v-if="altura > 70" class="text-xs font-medium opacity-80 truncate mt-0.5">
       {{ agendamento.descricao }}
     </div>
   </div>
@@ -41,14 +49,32 @@
  * ======================================================
  */
 
-import type { AgAgendamento } from '../../../shared/types/database'
+import type { AgAgendamento, AgCliente } from '../../../shared/types/database'
 import { computed } from 'vue'
 
 interface Props {
   agendamento: AgAgendamento
+  clientes?: AgCliente[]
+  profissionalNome?: string
+  profissionalEspecialidade?: string
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  clientes: () => [],
+  profissionalNome: '',
+  profissionalEspecialidade: ''
+})
+
+const emit = defineEmits(['click'])
+
+/**
+ * Resolve o nome do cliente a partir do cliente_id do agendamento
+ */
+const nomeCliente = computed(() => {
+  if (!props.agendamento.cliente_id) return ''
+  const cliente = props.clientes.find((c) => c.id === props.agendamento.cliente_id)
+  return cliente?.nome || ''
+})
 
 // Altura de cada slot de hora em pixels (h-16 = 64px)
 const ALTURA_HORA = 64

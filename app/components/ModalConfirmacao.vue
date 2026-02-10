@@ -31,14 +31,14 @@
         @click="onCancelar" 
         :disabled="loading"
       >
-        Cancelar
+        {{ textoCancelar }}
       </BaseButton>
       <BaseButton 
         class="!bg-red-600 !text-white hover:!bg-red-700" 
         @click="onConfirmar" 
         :loading="loading"
       >
-        Excluir
+        {{ textoConfirmar }}
       </BaseButton>
     </template>
   </BaseModal>
@@ -50,6 +50,7 @@
 // Imports
 import BaseModal from './BaseModal.vue'
 import BaseButton from './BaseButton.vue'
+import { computed } from 'vue'
 
 // Props e emits
 const props = defineProps<{
@@ -57,7 +58,11 @@ const props = defineProps<{
   titulo?: string
   mensagem?: string
   loading?: boolean
+  textoCancelar?: string
+  textoConfirmar?: string
 }>()
+const textoCancelar = computed(() => props.textoCancelar || 'Cancelar')
+const textoConfirmar = computed(() => props.textoConfirmar || 'Excluir')
 const emit = defineEmits(['update:modelValue', 'confirmar', 'cancelar'])
 
 // Funções

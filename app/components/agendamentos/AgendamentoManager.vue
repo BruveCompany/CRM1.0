@@ -39,6 +39,10 @@
           v-for="(dia, index) in agendamentoStore.diasSemana"
           :key="index"
           :data="dia"
+          :clientes="clientes"
+          :profissional-nome="profissionalAtualNome"
+          :profissional-especialidade="profissionalAtualEspecialidade"
+          @editar-agendamento="handleAbrirEdicao"
         />
       </div>
     </div>
@@ -53,6 +57,16 @@
       :clientes="clientes"
       :agendamentos="agendamentos"
       @salvar="handleSalvarAgendamento"
+    />
+
+    <!-- Modal de Editar Agendamento -->
+    <ModalEditarAgendamento
+      v-model="modalEditarAgendamentoAberto"
+      :agendamento="agendamentoSelecionado"
+      :profissional-nome="profissionalAtualNome"
+      :profissional-especialidade="profissionalAtualEspecialidade"
+      :clientes="clientes"
+      @atualizado="handleAgendamentoAtualizado"
     />
   </div>
 </template>
@@ -130,13 +144,14 @@ import ListaDias from './ListaDias.vue'
 import ReguaHorarios from './ReguaHorarios.vue'
 import ItemAgendamento from './ItemAgendamento.vue'
 import ModalNovoAgendamento from './ModalNovoAgendamento.vue'
+import ModalEditarAgendamento from './ModalEditarAgendamento.vue'
 import BaseButton from '~/components/BaseButton.vue'
 
 // Importações de stores e composables
 import { useAgendamentoStore } from '~/stores/agendamento'
 import { useAgendamento } from '~/composables/useAgendamento'
 import { useProfissionais } from '~/composables/useProfissionais'
-import type { AgCliente, AgProfissional } from '../../../shared/types/database'
+import type { AgCliente, AgProfissional, AgAgendamento } from '../../../shared/types/database'
 
 // Emits (para comunicação com componente pai se necessário)
 const emit = defineEmits(['update:loading', 'error'])
@@ -152,6 +167,8 @@ const { fetchClientes, fetchProfissionais } = useProfissionais()
 const error = ref<string | null>(null)
 const profissionalAtualRef = ref<any>(null)
 const modalNovoAgendamentoAberto = ref(false)
+const modalEditarAgendamentoAberto = ref(false)
+const agendamentoSelecionado = ref<AgAgendamento | null>(null)
 const clientes = ref<AgCliente[]>([])
 const profissionais = ref<AgProfissional[]>([])
 
@@ -341,16 +358,24 @@ function handleNovoAgendamento() {
  * @param dadosAgendamento - Dados do formulário do modal
  */
 function handleSalvarAgendamento(dadosAgendamento: any) {
-  console.log('💾 Salvando novo agendamento:', dadosAgendamento)
-  
-  // TODO: Validar dados
-  // TODO: Salvar no Supabase via composable
-  // TODO: Limpar cache da store (recarregarAgendamentos)
-  // TODO: Mostrar toast de sucesso
-  // TODO: Fechar modal
-  
-  // Por enquanto, apenas fecha o modal
+  console.log('💾 Agendamento salvo:', dadosAgendamento)
   modalNovoAgendamentoAberto.value = false
+}
+
+/**
+ * Abre o modal de edição com o agendamento clicado
+ */
+function handleAbrirEdicao(agendamento: AgAgendamento) {
+  agendamentoSelecionado.value = agendamento
+  modalEditarAgendamentoAberto.value = true
+}
+
+/**
+ * Callback após agendamento ser editado ou cancelado
+ */
+function handleAgendamentoAtualizado() {
+  modalEditarAgendamentoAberto.value = false
+  agendamentoSelecionado.value = null
 }
 
 /**

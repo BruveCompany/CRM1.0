@@ -106,6 +106,7 @@ export interface AgPerfil {
  * @property {string | null} descricao - Descrição do agendamento
  * @property {boolean} cancelado - Status de cancelamento (default: false)
  * @property {string | null} cancelado_as - Data/hora do cancelamento
+ * @property {string | null} cor - Cor hexadecimal do agendamento (default: #3730A3)
  */
 export interface AgAgendamento {
   id: number
@@ -120,6 +121,7 @@ export interface AgAgendamento {
   descricao: string | null
   cancelado: boolean
   cancelado_as: string | null
+  cor: string | null
 }
 
 // Estado do store de usuário
