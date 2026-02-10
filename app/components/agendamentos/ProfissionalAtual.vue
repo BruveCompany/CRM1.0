@@ -33,6 +33,7 @@
  * 1. Busca todos os profissionais cadastrados
  * 2. Se o usuário logado for profissional, exibe seus dados
  * 3. Caso contrário, exibe o primeiro profissional da lista
+ * 4. Define o profissional no store de agendamentos para carregar seus dados
  * 
  * Futuras melhorias:
  * - Adicionar seletor de profissional (dropdown)
@@ -42,11 +43,13 @@
 
 import { useProfissionais } from '~/composables/useProfissionais'
 import { useUserStore } from '~/stores/user'
+import { useAgendamentoStore } from '~/stores/agendamento'
 import type { AgProfissional } from '../../../shared/types/database'
 
 // Composables
 const { fetchProfissionais } = useProfissionais()
 const userStore = useUserStore()
+const agendamentoStore = useAgendamentoStore()
 
 // Estado local do componente
 const profissionais = ref<AgProfissional[]>([]) // Lista completa de profissionais
@@ -63,7 +66,7 @@ const profissionalAtual = computed(() => {
   // Tentar encontrar o profissional logado pelo profile_id
   if (userStore.profile?.id) {
     const profissionalLogado = profissionais.value.find(
-      p => p.profile_id === userStore.profile?.id
+      (p: AgProfissional) => p.profile_id === userStore.profile?.id
     )
     // Se encontrou o profissional logado, retorna ele
     if (profissionalLogado) return profissionalLogado
@@ -72,6 +75,18 @@ const profissionalAtual = computed(() => {
   // Fallback: Se não encontrar ou usuário não for profissional, retorna o primeiro da lista
   return profissionais.value[0]
 })
+
+/**
+ * Watch: Quando o profissional atual mudar, apenas define o ID no store
+ * O carregamento de agendamentos é responsabilidade do AgendamentoManager
+ */
+watch(profissionalAtual, (novoProfissional) => {
+  if (novoProfissional) {
+    console.log('ProfissionalAtual: Definindo profissional', novoProfissional.profissional_id)
+    // Apenas define o profissional no store (sem carregar agendamentos)
+    agendamentoStore.profissionalId = novoProfissional.profissional_id
+  }
+}, { immediate: true })
 
 /**
  * Buscar profissionais ao montar o componente

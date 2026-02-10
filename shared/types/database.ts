@@ -22,6 +22,11 @@ export type Database = {
         Insert: Omit<AgCliente, 'id' | 'created_at'> & { id?: number; created_at?: string }
         Update: Partial<Omit<AgCliente, 'id' | 'created_at'>>
       }
+      ag_agendamentos: {
+        Row: AgAgendamento
+        Insert: Omit<AgAgendamento, 'id' | 'created_at'> & { id?: number; created_at?: string }
+        Update: Partial<Omit<AgAgendamento, 'id' | 'created_at'>>
+      }
     }
   }
 }
@@ -83,6 +88,38 @@ export interface AgProfissional {
 export interface AgPerfil {
   id: number
   nome: string
+}
+
+/**
+ * Interface para dados de agendamentos
+ * Tabela: ag_agendamentos
+ * 
+ * @property {number} id - ID único do agendamento (gerado automaticamente)
+ * @property {string} created_at - Data/hora de criação do registro
+ * @property {string | null} user_id - ID do usuário (FK para auth.users)
+ * @property {number | null} profissional_id - ID do profissional (FK para ag_profissionais)
+ * @property {number | null} cliente_id - ID do cliente (FK para ag_clientes)
+ * @property {string | null} data - Data do agendamento
+ * @property {string | null} hora_inicio - Hora de início do agendamento
+ * @property {string | null} hora_fim - Hora de fim do agendamento
+ * @property {string | null} titulo - Título do agendamento
+ * @property {string | null} descricao - Descrição do agendamento
+ * @property {boolean} cancelado - Status de cancelamento (default: false)
+ * @property {string | null} cancelado_as - Data/hora do cancelamento
+ */
+export interface AgAgendamento {
+  id: number
+  created_at: string
+  user_id: string | null
+  profissional_id: number | null
+  cliente_id: number | null
+  data: string | null
+  hora_inicio: string | null
+  hora_fim: string | null
+  titulo: string | null
+  descricao: string | null
+  cancelado: boolean
+  cancelado_as: string | null
 }
 
 // Estado do store de usuário

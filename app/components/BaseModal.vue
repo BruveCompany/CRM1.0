@@ -2,10 +2,10 @@
   <Transition name="modal">
     <div 
       v-if="modelValue" 
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
       @click.self="$emit('update:modelValue', false)"
     >
-      <div class="bg-white rounded-lg shadow-2xl w-full max-w-md mx-4 transform transition-all">
+      <div :class="['bg-white rounded-lg shadow-2xl w-full mx-4 transform transition-all', maxWidthClass]">
         <!-- Header -->
         <div class="px-5 py-3.5 flex items-center justify-between border-b border-gray-100">
           <slot name="header">
@@ -24,7 +24,7 @@
         </div>
         
         <!-- Body -->
-        <div class="px-5 py-4">
+        <div class="px-5 py-4 overflow-y-auto max-h-[calc(100vh-12rem)]">
           <slot />
         </div>
         
@@ -38,8 +38,25 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{ modelValue: boolean }>()
+const props = withDefaults(defineProps<{ 
+  modelValue: boolean
+  size?: 'sm' | 'md' | 'lg' | 'xl'
+}>(), {
+  size: 'md'
+})
+
 defineEmits(['update:modelValue', 'confirmar', 'cancelar'])
+
+const maxWidthClass = computed(() => {
+  const sizes: Record<string, string> = {
+    sm: 'max-w-sm',
+    md: 'max-w-md',
+    lg: 'max-w-lg',
+    xl: 'max-w-xl'
+  }
+  return sizes[props.size] || 'max-w-md'
+})
+
 import BaseButton from './BaseButton.vue'
 </script>
 

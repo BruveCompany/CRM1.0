@@ -30,6 +30,13 @@ import { useAgendamentoStore } from '~/stores/agendamento'
 // Inicializa a store de agendamento
 const agendamentoStore = useAgendamentoStore()
 
+// Lifecycle hooks
+onMounted(() => {
+  console.log('Página de Agendamentos carregada')
+  console.log('Data de referência:', agendamentoStore.dataReferencia)
+  console.log('Dias da semana:', agendamentoStore.diasSemana)
+})
+
 useHead({
   title: 'Agendamentos'
 })

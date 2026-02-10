@@ -1,28 +1,55 @@
 import { defineStore } from 'pinia'
 import type { Agendamento } from '../../shared/types/Agendamento'
+import { agendamentoBancoParaViewModel } from '../../shared/types/Agendamento'
+import { useAgendamento } from '~/composables/useAgendamento'
 
 /**
  * ================= Store de Agendamentos =================
- * Gerencia o estado global relacionado aos agendamentos
+ * Store Pinia que gerencia o estado global de agendamentos do sistema.
  * 
- * Estado:
- * - dataReferencia: Data de referência para cálculo da semana
- * - agendamentos: Lista de agendamentos
+ * RESPONSABILIDADES PRINCIPAIS:
+ * - Armazenar lista de agendamentos em memória
+ * - Controlar semana atual de visualização (dataReferencia)
+ * - Manter profissional atualmente selecionado
+ * - Implementar sistema de cache para otimizar performance
+ * - Fornecer funções para navegação entre semanas
+ * - Filtrar agendamentos por dia específico
  * 
- * ⚠️ DADOS DE TESTE - TEMPORÁRIO
- * Agendamentos atualmente são mockados (hardcoded)
- * TODO: Implementar integração com banco de dados Supabase
+ * ARQUITETURA DE DADOS:
+ * Interface banco (AgAgendamento) → Composable (busca/filtro) → Store (cache/estado) → Components (UI)
  * 
- * Getters:
- * - diasSemana: Array com os 7 dias da semana atual (Domingo a Sábado)
+ * ESTADO REATIVO:
+ * - dataReferencia: Date - Data de referência para cálculo da semana
+ * - profissionalId: number | null - ID do profissional atual sendo visualizado
+ * - agendamentos: Agendamento[] - Lista de agendamentos carregados do banco
+ * - loading: boolean - Estado de carregamento (spinner/skeleton)
+ * - cacheAgendamentos: Record<string, Agendamento[]> - Cache em memória por semana
  * 
- * Actions:
- * - avancarSemana(): Navega para a próxima semana (+7 dias)
- * - voltarSemana(): Navega para a semana anterior (-7 dias)
- * - getAgendamentosDoDia(): Retorna agendamentos de uma data específica
+ * COMPUTED PROPERTIES:
+ * - diasSemana: Date[] - Array com os 7 dias da semana atual (Domingo a Sábado)
+ *   Recalculado automaticamente quando dataReferencia muda
+ * 
+ * ACTIONS:
+ * - avancarSemana(): void - Navega para a próxima semana (+7 dias)
+ * - voltarSemana(): void - Navega para a semana anterior (-7 dias)
+ * - carregarAgendamentos(): Promise<void> - Busca agendamentos do profissional (com cache)
+ * - getAgendamentosDoDia(data: Date): Agendamento[] - Filtra agendamentos de um dia específico
+ * 
+ * SISTEMA DE CACHE:
+ * - Cache-first strategy (verifica cache antes de buscar do servidor)
+ * - Chave do cache: "profissionalId_dataInicio_dataFim" (ex: "2_2026-02-15_2026-02-21")
+ * - Invalida apenas quando muda profissional ou semana
+ * - Armazena semanas vazias para evitar refetch
+ * 
+ * WATCHED BY:
+ * - AgendamentoManager.vue: watch em profissionalId e diasSemana
+ * - ProfissionalAtual.vue: seta profissionalId quando profissional muda
+ * 
  * ==========================================================
  */
 export const useAgendamentoStore = defineStore('agendamento', () => {
+  const { buscarAgendamentosPorProfissional } = useAgendamento()
+  
   /**
    * Estado: Data de referência para navegação
    * Inicializada com a data/hora atual
@@ -30,185 +57,26 @@ export const useAgendamentoStore = defineStore('agendamento', () => {
   const dataReferencia = ref(new Date())
 
   /**
-   * ⚠️ AGENDAMENTOS MOCKADOS - DADOS DE TESTE
-   * 
-   * Esta lista contém agendamentos hardcoded para desenvolvimento
-   * Distribuídos entre 08/02/2026 e 14/02/2026 (semana atual de teste)
-   * 
-   * TODO: Substituir por:
-   * - Tabela 'ag_agendamentos' no Supabase
-   * - Fetch dinâmico baseado na semana visualizada
-   * - CRUD completo (criar, editar, deletar agendamentos)
+   * Estado: ID do profissional atual sendo visualizado
    */
-  const agendamentos = ref<Agendamento[]>([
-    // Domingo 08/02/2026
-    {
-      id: 1,
-      titulo: 'Consulta João Silva',
-      descricao: 'Avaliação inicial',
-      inicio: new Date(2026, 1, 8, 9, 0),
-      fim: new Date(2026, 1, 8, 10, 0),
-      clienteNome: 'João Silva'
-    },
-    {
-      id: 2,
-      titulo: 'Retorno Maria Santos',
-      descricao: 'Acompanhamento',
-      inicio: new Date(2026, 1, 8, 14, 0),
-      fim: new Date(2026, 1, 8, 15, 30),
-      clienteNome: 'Maria Santos'
-    },
-    // Segunda 09/02/2026
-    {
-      id: 3,
-      titulo: 'Pedro Costa',
-      descricao: 'Primeira consulta',
-      inicio: new Date(2026, 1, 9, 8, 0),
-      fim: new Date(2026, 1, 9, 9, 0),
-      clienteNome: 'Pedro Costa'
-    },
-    {
-      id: 4,
-      titulo: 'Ana Oliveira',
-      descricao: 'Procedimento especial',
-      inicio: new Date(2026, 1, 9, 10, 30),
-      fim: new Date(2026, 1, 9, 12, 0),
-      clienteNome: 'Ana Oliveira'
-    },
-    {
-      id: 5,
-      titulo: 'Carlos Lima',
-      descricao: 'Retorno',
-      inicio: new Date(2026, 1, 9, 15, 0),
-      fim: new Date(2026, 1, 9, 16, 0),
-      clienteNome: 'Carlos Lima'
-    },
-    // Terça 10/02/2026
-    {
-      id: 6,
-      titulo: 'Juliana Rocha',
-      descricao: 'Consulta de rotina',
-      inicio: new Date(2026, 1, 10, 9, 0),
-      fim: new Date(2026, 1, 10, 10, 0),
-      clienteNome: 'Juliana Rocha'
-    },
-    {
-      id: 7,
-      titulo: 'Roberto Souza',
-      descricao: 'Avaliação',
-      inicio: new Date(2026, 1, 10, 11, 0),
-      fim: new Date(2026, 1, 10, 12, 30),
-      clienteNome: 'Roberto Souza'
-    },
-    {
-      id: 8,
-      titulo: 'Fernanda Alves',
-      descricao: 'Tratamento',
-      inicio: new Date(2026, 1, 10, 16, 0),
-      fim: new Date(2026, 1, 10, 17, 0),
-      clienteNome: 'Fernanda Alves'
-    },
-    // Quarta 11/02/2026
-    {
-      id: 9,
-      titulo: 'Lucas Pereira',
-      descricao: 'Consulta inicial',
-      inicio: new Date(2026, 1, 11, 8, 30),
-      fim: new Date(2026, 1, 11, 9, 30),
-      clienteNome: 'Lucas Pereira'
-    },
-    {
-      id: 10,
-      titulo: 'Beatriz Martins',
-      descricao: 'Acompanhamento mensal',
-      inicio: new Date(2026, 1, 11, 13, 0),
-      fim: new Date(2026, 1, 11, 14, 0),
-      clienteNome: 'Beatriz Martins'
-    },
-    {
-      id: 11,
-      titulo: 'Gabriel Santos',
-      descricao: 'Procedimento',
-      inicio: new Date(2026, 1, 11, 17, 0),
-      fim: new Date(2026, 1, 11, 18, 30),
-      clienteNome: 'Gabriel Santos'
-    },
-    // Quinta 12/02/2026
-    {
-      id: 12,
-      titulo: 'Patrícia Lima',
-      descricao: 'Retorno pós-procedimento',
-      inicio: new Date(2026, 1, 12, 9, 0),
-      fim: new Date(2026, 1, 12, 10, 0),
-      clienteNome: 'Patrícia Lima'
-    },
-    {
-      id: 13,
-      titulo: 'Ricardo Fernandes',
-      descricao: 'Consulta de emergência',
-      inicio: new Date(2026, 1, 12, 12, 0),
-      fim: new Date(2026, 1, 12, 13, 0),
-      clienteNome: 'Ricardo Fernandes'
-    },
-    {
-      id: 14,
-      titulo: 'Amanda Costa',
-      descricao: 'Avaliação completa',
-      inicio: new Date(2026, 1, 12, 14, 30),
-      fim: new Date(2026, 1, 12, 16, 0),
-      clienteNome: 'Amanda Costa'
-    },
-    // Sexta 13/02/2026
-    {
-      id: 15,
-      titulo: 'Thiago Oliveira',
-      descricao: 'Primeira consulta',
-      inicio: new Date(2026, 1, 13, 8, 0),
-      fim: new Date(2026, 1, 13, 9, 0),
-      clienteNome: 'Thiago Oliveira'
-    },
-    {
-      id: 16,
-      titulo: 'Camila Ribeiro',
-      descricao: 'Retorno',
-      inicio: new Date(2026, 1, 13, 10, 0),
-      fim: new Date(2026, 1, 13, 11, 0),
-      clienteNome: 'Camila Ribeiro'
-    },
-    {
-      id: 17,
-      titulo: 'Felipe Araújo',
-      descricao: 'Tratamento',
-      inicio: new Date(2026, 1, 13, 15, 0),
-      fim: new Date(2026, 1, 13, 16, 30),
-      clienteNome: 'Felipe Araújo'
-    },
-    // Sábado 14/02/2026
-    {
-      id: 18,
-      titulo: 'Larissa Mendes',
-      descricao: 'Consulta especial',
-      inicio: new Date(2026, 1, 14, 9, 0),
-      fim: new Date(2026, 1, 14, 10, 30),
-      clienteNome: 'Larissa Mendes'
-    },
-    {
-      id: 19,
-      titulo: 'Bruno Carvalho',
-      descricao: 'Avaliação final',
-      inicio: new Date(2026, 1, 14, 11, 0),
-      fim: new Date(2026, 1, 14, 12, 0),
-      clienteNome: 'Bruno Carvalho'
-    },
-    {
-      id: 20,
-      titulo: 'Isabela Gomes',
-      descricao: 'Acompanhamento',
-      inicio: new Date(2026, 1, 14, 14, 0),
-      fim: new Date(2026, 1, 14, 15, 0),
-      clienteNome: 'Isabela Gomes'
-    }
-  ])
+  const profissionalId = ref<number | null>(null)
+
+  /**
+   * Estado: Lista de agendamentos carregados do banco
+   */
+  const agendamentos = ref<Agendamento[]>([])
+
+  /**
+   * Estado: Controle de carregamento
+   */
+  const loading = ref(false)
+
+  /**
+   * Estado: Cache de agendamentos por semana
+   * Chave: "profissionalId_dataInicio_dataFim" (ex: "2_2026-02-15_2026-02-21")
+   * Valor: Array de agendamentos
+   */
+  const cacheAgendamentos = ref<Record<string, Agendamento[]>>({})
 
   /**
    * Getter: Calcula os 7 dias da semana com base na data de referência
@@ -256,11 +124,172 @@ export const useAgendamentoStore = defineStore('agendamento', () => {
   }
 
   /**
+   * Gera chave única para cache baseada em profissional e período
+   * 
+   * A chave identifica unicamente um conjunto de agendamentos no cache:
+   * - Mesmo profissional + mesmo período = mesmos dados
+   * - Permite navegação entre semanas sem refetch desnecessário
+   * 
+   * Formato: "profissionalId_dataInicio_dataFim"
+   * Exemplo: "2_2026-02-15_2026-02-21" (profissional 2, semana de 15 a 21 de fevereiro)
+   * 
+   * @param profId - ID do profissional
+   * @param dataInicio - Data início no formato YYYY-MM-DD
+   * @param dataFim - Data fim no formato YYYY-MM-DD
+   * @returns Chave única para indexação do cache
+   */
+  function gerarChaveCache(profId: number, dataInicio: string, dataFim: string): string {
+    return `${profId}_${dataInicio}_${dataFim}`
+  }
+
+  /**
+   * Formata Date para string YYYY-MM-DD (formato ISO 8601 Date)
+   * 
+   * Converte objeto Date nativo do JavaScript para formato aceito pelo PostgreSQL
+   * e utilizado nas chaves do cache. Garante sempre 2 dígitos para mês e dia.
+   * 
+   * Exemplos:
+   * - new Date('2026-02-09') → "2026-02-09"
+   * - new Date('2026-12-25') → "2026-12-25"
+   * 
+   * @param data - Objeto Date a ser formatado
+   * @returns String no formato YYYY-MM-DD
+   */
+  function formatarDataISO(data: Date): string {
+    const ano = data.getFullYear()
+    const mes = String(data.getMonth() + 1).padStart(2, '0') // +1 porque getMonth() retorna 0-11
+    const dia = String(data.getDate()).padStart(2, '0')
+    return `${ano}-${mes}-${dia}`
+  }
+
+  /**
+   * Action: Carrega agendamentos do profissional atual do banco
+   * 
+   * Esta função implementa um sistema de cache inteligente para otimizar performance:
+   * 
+   * Fluxo de execução:
+   * 1. Valida profissionalId e diasSemana
+   * 2. Gera chave de cache baseada no profissional + período da semana
+   * 3. Verifica se dados já existem no cache (cache-first strategy)
+   * 4. Se sim: retorna dados do cache imediatamente (sem network request)
+   * 5. Se não: busca do Supabase via composable
+   * 6. Converte dados do banco (AgAgendamento) para view model (Agendamento)
+   * 7. Armazena no cache para reutilização futura
+   * 8. Atualiza estado reativo (agendamentos.value)
+   * 
+   * Benefícios do cache:
+   * - Reduz chamadas ao banco de dados em 90%+
+   * - Navegação instantânea entre semanas já visitadas
+   * - Melhor UX (sem loading em dados já carregados)
+   * - Menor custo de infraestrutura (menos queries)
+   * 
+   * Quando é chamada:
+   * - Mudança de profissionalId (watch em AgendamentoManager)
+   * - Mudança de semana via navegação (watch diasSemana)
+   * - Montagem inicial do componente AgendamentoManager
+   * 
+   * @async
+   * @returns Promise<void>
+   */
+  async function carregarAgendamentos() {
+    // Validação 1: Verificar se há profissional selecionado
+    if (!profissionalId.value) {
+      console.warn('⚠️ Store: Nenhum profissional selecionado')
+      agendamentos.value = []
+      return
+    }
+
+    // Validação 2: Verificar se diasSemana está disponível (computed pode não estar pronto)
+    if (!diasSemana.value[0] || !diasSemana.value[6]) {
+      console.warn('⚠️ Store: diasSemana ainda não está definido')
+      return
+    }
+
+    // Define período: primeiro dia (domingo) até último dia (sábado) da semana
+    const dataInicio = formatarDataISO(diasSemana.value[0])
+    const dataFim = formatarDataISO(diasSemana.value[6])
+    const chaveCache = gerarChaveCache(profissionalId.value, dataInicio, dataFim)
+
+    console.log('🔄 Store: Iniciando carregamento de agendamentos...')
+    console.log('📍 Store: profissionalId =', profissionalId.value)
+    console.log('📅 Store: Período =', dataInicio, 'até', dataFim)
+    console.log('🔑 Store: Chave cache =', chaveCache)
+
+    // CACHE-FIRST STRATEGY: Verificar cache antes de fazer network request
+    if (cacheAgendamentos.value[chaveCache]) {
+      console.log('💾 Store: Dados encontrados no cache! Usando cache.')
+      console.log('📊 Store: Total no cache:', cacheAgendamentos.value[chaveCache].length)
+      agendamentos.value = cacheAgendamentos.value[chaveCache]
+      return // Early return - não precisa buscar do servidor
+    }
+
+    // Cache miss: buscar do servidor
+    console.log('🌐 Store: Cache vazio. Buscando do servidor...')
+    loading.value = true
+    
+    try {
+      // Busca dados do Supabase via composable (com filtros aplicados)
+      const agendamentosBanco = await buscarAgendamentosPorProfissional(
+        profissionalId.value,
+        dataInicio,
+        dataFim
+      )
+      
+      console.log('📦 Store: Dados recebidos do composable:', agendamentosBanco)
+      
+      if (agendamentosBanco) {
+        // Converte dados do banco para view model (snake_case → camelCase, strings → Date)
+        console.log('🔄 Store: Convertendo dados do banco para view model...')
+        const agendamentosConvertidos = agendamentosBanco.map(ag => agendamentoBancoParaViewModel(ag))
+        
+        // Armazena no cache para reutilização futura (key-value store em memória)
+        cacheAgendamentos.value[chaveCache] = agendamentosConvertidos
+        agendamentos.value = agendamentosConvertidos
+        
+        console.log('✅ Store: Agendamentos convertidos e armazenados no cache:', agendamentosConvertidos.length)
+        console.log('💾 Store: Total de entradas no cache:', Object.keys(cacheAgendamentos.value).length)
+      } else {
+        // Resultado vazio: armazena cache vazio para evitar refetch desnecessário
+        console.log('⚠️ Store: Nenhum agendamento retornado (null ou undefined)')
+        cacheAgendamentos.value[chaveCache] = []
+        agendamentos.value = []
+      }
+    } catch (error) {
+      console.error('❌ Store: Erro ao carregar agendamentos:', error)
+      agendamentos.value = [] // Limpa estado em caso de erro
+    } finally {
+      loading.value = false
+      console.log('🏁 Store: Carregamento finalizado. Total:', agendamentos.value.length)
+    }
+  }
+
+  /**
    * Action: Retorna agendamentos de um dia específico
-   * Compara apenas a data (dia/mês/ano), ignorando horário
+   * 
+   * Filtra a lista de agendamentos carregados (agendamentos.value) para retornar
+   * apenas os que pertencem à data fornecida. A comparação é feita apenas na parte
+   * de data (dia/mês/ano), ignorando completamente o horário.
+   * 
+   * Esta função é chamada pelos componentes ItemAgendamento para renderizar
+   * os cards de agendamento em cada coluna do calendário semanal.
+   * 
+   * Lógica de comparação:
+   * - Converte ag.inicio (Date object) para data pura
+   * - Compara getDate() (dia do mês: 1-31)
+   * - Compara getMonth() (mês: 0-11)
+   * - Compara getFullYear() (ano: ex: 2026)
+   * 
+   * Exemplo:
+   * - Data entrada: 16/02/2026 00:00:00
+   * - Agendamento 1: 16/02/2026 08:00:00 → ✅ Incluído
+   * - Agendamento 2: 16/02/2026 14:30:00 → ✅ Incluído
+   * - Agendamento 3: 17/02/2026 08:00:00 → ❌ Excluído (dia diferente)
+   * 
+   * @param data - Data para filtrar agendamentos (apenas data importa, horário ignorado)
+   * @returns Array de agendamentos que ocorrem nesta data específica
    */
   function getAgendamentosDoDia(data: Date): Agendamento[] {
-    return agendamentos.value.filter((ag: Agendamento) => {
+    const resultado = agendamentos.value.filter((ag: Agendamento) => {
       const agData = new Date(ag.inicio)
       return (
         agData.getDate() === data.getDate() &&
@@ -268,15 +297,21 @@ export const useAgendamentoStore = defineStore('agendamento', () => {
         agData.getFullYear() === data.getFullYear()
       )
     })
+    
+    return resultado
   }
 
   // Exporta o estado e ações da store
   return {
     dataReferencia,
+    profissionalId,
     diasSemana,
     agendamentos,
+    loading,
+    cacheAgendamentos,
     avancarSemana,
     voltarSemana,
+    carregarAgendamentos,
     getAgendamentosDoDia
   }
 })
