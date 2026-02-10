@@ -1,49 +1,61 @@
 <template>
-  <div class="flex flex-col items-center justify-center gap-1">
+  <div id="profissional-atual" class="flex flex-col items-center justify-center gap-1">
     <!-- Estado: Carregando dados -->
     <div v-if="loading" class="text-gray-500 text-sm">
       Carregando...
     </div>
-    
+
     <!-- Estado: Profissional encontrado -->
     <template v-else-if="profissionalAtual">
-      <!-- Nome do profissional -->
-      <div class="text-lg font-bold text-gray-900">
+      <!-- Nome do profissional (clicável para abrir modal) -->
+      <button
+        type="button"
+        class="flex items-center gap-1.5 text-lg font-bold text-gray-900 hover:text-purple-700 transition-colors cursor-pointer"
+        @click="modalAberto = true"
+      >
         {{ profissionalAtual.nome }}
-      </div>
+        <ChevronDownIcon class="w-4 h-4" />
+      </button>
       <!-- Especialidade -->
       <div class="text-sm text-gray-600">
         {{ profissionalAtual.especialidade }}
       </div>
     </template>
-    
+
     <!-- Estado: Nenhum profissional disponível -->
     <div v-else class="text-gray-500 text-sm">
       Nenhum profissional encontrado
     </div>
+
+    <!-- Modal de seleção de profissional -->
+    <ModalSelecionarProfissional
+      v-model="modalAberto"
+      :profissionais="profissionais"
+      :profissional-atual-id="profissionalAtual?.profissional_id ?? null"
+      @selecionar="handleSelecionar"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 /**
  * ================= ProfissionalAtual.vue =================
- * Componente que exibe o nome e especialidade do profissional atual
+ * Componente que exibe o profissional atual e permite trocar
+ * via modal de seleção.
  * 
  * Lógica:
  * 1. Busca todos os profissionais cadastrados
- * 2. Se o usuário logado for profissional, exibe seus dados
- * 3. Caso contrário, exibe o primeiro profissional da lista
- * 4. Define o profissional no store de agendamentos para carregar seus dados
- * 
- * Futuras melhorias:
- * - Adicionar seletor de profissional (dropdown)
- * - Permitir trocar profissional visualizado
+ * 2. Inicializa com o profissional logado (ou primeiro da lista)
+ * 3. Ao clicar, abre modal com lista de profissionais
+ * 4. Ao selecionar, define o profissional no store de agendamentos
  * ========================================================
  */
 
 import { useProfissionais } from '~/composables/useProfissionais'
 import { useUserStore } from '~/stores/user'
 import { useAgendamentoStore } from '~/stores/agendamento'
+import { ChevronDownIcon } from '@heroicons/vue/24/solid'
+import ModalSelecionarProfissional from './ModalSelecionarProfissional.vue'
 import type { AgProfissional } from '../../../shared/types/database'
 
 // Composables
@@ -52,45 +64,57 @@ const userStore = useUserStore()
 const agendamentoStore = useAgendamentoStore()
 
 // Estado local do componente
-const profissionais = ref<AgProfissional[]>([]) // Lista completa de profissionais
-const loading = ref(true) // Controle de carregamento
+const profissionais = ref<AgProfissional[]>([])
+const loading = ref(true)
+const modalAberto = ref(false)
+const profissionalSelecionadoId = ref<number | null>(null)
 
 /**
  * Computed que retorna o profissional a ser exibido
- * Prioridade: 1) Profissional logado, 2) Primeiro da lista
+ * Prioridade: 1) Selecionado pelo usuário, 2) Profissional logado, 3) Primeiro da lista
  */
 const profissionalAtual = computed(() => {
-  // Se não há profissionais, retorna null
   if (profissionais.value.length === 0) return null
-  
+
+  // Se o usuário já selecionou um profissional via modal
+  if (profissionalSelecionadoId.value) {
+    const selecionado = profissionais.value.find(
+      (p: AgProfissional) => p.profissional_id === profissionalSelecionadoId.value
+    )
+    if (selecionado) return selecionado
+  }
+
   // Tentar encontrar o profissional logado pelo profile_id
   if (userStore.profile?.id) {
     const profissionalLogado = profissionais.value.find(
       (p: AgProfissional) => p.profile_id === userStore.profile?.id
     )
-    // Se encontrou o profissional logado, retorna ele
     if (profissionalLogado) return profissionalLogado
   }
-  
-  // Fallback: Se não encontrar ou usuário não for profissional, retorna o primeiro da lista
+
+  // Fallback: primeiro da lista
   return profissionais.value[0]
 })
 
 /**
- * Watch: Quando o profissional atual mudar, apenas define o ID no store
- * O carregamento de agendamentos é responsabilidade do AgendamentoManager
+ * Handler ao selecionar profissional no modal
+ */
+function handleSelecionar(prof: AgProfissional) {
+  profissionalSelecionadoId.value = prof.profissional_id
+}
+
+/**
+ * Watch: Quando o profissional atual mudar, define o ID no store
  */
 watch(profissionalAtual, (novoProfissional) => {
   if (novoProfissional) {
     console.log('ProfissionalAtual: Definindo profissional', novoProfissional.profissional_id)
-    // Apenas define o profissional no store (sem carregar agendamentos)
     agendamentoStore.profissionalId = novoProfissional.profissional_id
   }
 }, { immediate: true })
 
 /**
  * Buscar profissionais ao montar o componente
- * Executa apenas uma vez quando o componente é criado
  */
 onMounted(async () => {
   try {
