@@ -1,11 +1,11 @@
 <template>
   <!-- Régua de horários - exibe as horas do dia -->
-  <div class="flex flex-col border-r border-gray-200 w-20">
+  <div class="flex flex-col w-20 mr-2 border-b-4 border-white bg-neutral-100">
     <!-- Cada horário -->
     <div 
       v-for="hora in horarios" 
       :key="hora"
-      class="text-sm font-medium text-gray-600 h-16 flex items-start justify-center border-t border-gray-50 first:border-t-0 pt-1"
+      class="text-sm font-medium text-gray-600 h-16 flex items-start justify-center border-t border-white first:border-t-0 pt-1"
     >
       {{ hora }}
     </div>

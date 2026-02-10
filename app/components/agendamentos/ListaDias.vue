@@ -1,8 +1,8 @@
 <template>
   <!-- Container de visualização dos dias da semana -->
-  <div class="w-full border-b border-gray-200">
+  <div class="w-full">
     <!-- Exibe cada dia da semana usando DiaItem - distribuídos uniformemente -->
-    <div class="flex w-full">
+    <div class="flex w-full gap-2">
       <!-- Espaçador para alinhar com a régua de horários -->
       <div class="w-20 flex-shrink-0"></div>
       

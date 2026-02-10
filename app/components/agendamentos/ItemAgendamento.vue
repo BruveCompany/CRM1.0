@@ -1,13 +1,13 @@
 <template>
   <!-- Item de agendamento para um dia específico -->
-  <div class="flex-1 border-r border-gray-200 last:border-r-0 relative">
+  <div class="flex-1 relative bg-neutral-100">
     <!-- Container dos slots de agendamento com posição relativa -->
     <div class="flex flex-col relative">
       <!-- Slots de horário (8h às 22h = 15 slots) - apenas para estrutura visual -->
       <div 
         v-for="hora in 15" 
         :key="hora"
-        class="h-16 border-t border-gray-50 first:border-t-0 hover:bg-gray-50 cursor-pointer transition-colors"
+        class="h-16 border-t border-white first:border-t-0 hover:bg-gray-50 cursor-pointer transition-colors pt-1"
       >
         <!-- Slot vazio - estrutura de fundo -->
       </div>

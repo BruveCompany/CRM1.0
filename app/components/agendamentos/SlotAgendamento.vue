@@ -5,7 +5,7 @@
       top: `${posicaoTop}px`, 
       height: `${altura}px` 
     }"
-    class="absolute left-0 right-0 mx-1 bg-[#4338CA] text-white rounded px-2 py-1 cursor-pointer hover:bg-[#3730A3] transition-colors overflow-hidden"
+    class="absolute left-0 right-0 bg-[#4338CA] text-white rounded px-2 py-1 cursor-pointer hover:bg-[#3730A3] transition-colors overflow-hidden"
   >
     <!-- Título do agendamento -->
     <div class="text-xs font-semibold truncate">
@@ -62,7 +62,8 @@ const posicaoTop = computed(() => {
   const horasDesdeInicio = horas - INICIO_DIA
   const minutosEmHoras = minutos / 60
   
-  return (horasDesdeInicio + minutosEmHoras) * ALTURA_HORA
+  // Adiciona 4px (pt-1) para alinhar com o padding da régua
+  return (horasDesdeInicio + minutosEmHoras) * ALTURA_HORA + 4
 })
 
 /**

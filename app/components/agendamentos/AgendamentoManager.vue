@@ -27,14 +27,14 @@
     </div>
 
     <!-- Corpo: Área principal para exibição da agenda -->
-    <div class="flex-1 px-4 flex">
+    <div class="flex-1 px-4 flex mt-0">
       <!-- Lado Esquerdo: Régua de horários -->
       <div class="flex-shrink-0">
         <ReguaHorarios />
       </div>
       
       <!-- Lado Direito: Grid de agendamentos - 7 dias da semana -->
-      <div class="flex flex-1">
+      <div class="flex flex-1 gap-2">
         <ItemAgendamento
           v-for="(dia, index) in agendamentoStore.diasSemana"
           :key="index"
