@@ -1,7 +1,6 @@
 <template>
   <NuxtLayout>
-    <div class="flex flex-col h-full bg-white p-8">
-      <h1 class="text-3xl font-bold text-gray-900 mb-6 flex-none">Agendamentos</h1>
+    <div class="flex flex-col h-full bg-white p-4">
       <div class="flex-1 min-h-0">
         <AgendamentoManager />
       </div>
