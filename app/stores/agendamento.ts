@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
-import type { Agendamento } from '../../shared/types/Agendamento'
-import { agendamentoBancoParaViewModel } from '../../shared/types/Agendamento'
+import type { AgAgendamento } from '../../shared/types/database'
 import { useAgendamento } from '~/composables/useAgendamento'
 
 /**
@@ -17,13 +16,14 @@ import { useAgendamento } from '~/composables/useAgendamento'
  * 
  * ARQUITETURA DE DADOS:
  * Interface banco (AgAgendamento) → Composable (busca/filtro) → Store (cache/estado) → Components (UI)
+ * Os dados são armazenados no formato bruto do banco (snake_case, strings) sem conversão.
  * 
  * ESTADO REATIVO:
  * - dataReferencia: Date - Data de referência para cálculo da semana
  * - profissionalId: number | null - ID do profissional atual sendo visualizado
- * - agendamentos: Agendamento[] - Lista de agendamentos carregados do banco
+ * - agendamentos: AgAgendamento[] - Lista de agendamentos carregados do banco (formato bruto)
  * - loading: boolean - Estado de carregamento (spinner/skeleton)
- * - cacheAgendamentos: Record<string, Agendamento[]> - Cache em memória por semana
+ * - cacheAgendamentos: Record<string, AgAgendamento[]> - Cache em memória por semana
  * 
  * COMPUTED PROPERTIES:
  * - diasSemana: Date[] - Array com os 7 dias da semana atual (Domingo a Sábado)
@@ -33,7 +33,7 @@ import { useAgendamento } from '~/composables/useAgendamento'
  * - avancarSemana(): void - Navega para a próxima semana (+7 dias)
  * - voltarSemana(): void - Navega para a semana anterior (-7 dias)
  * - carregarAgendamentos(): Promise<void> - Busca agendamentos do profissional (com cache)
- * - getAgendamentosDoDia(data: Date): Agendamento[] - Filtra agendamentos de um dia específico
+ * - getAgendamentosDoDia(data: Date): AgAgendamento[] - Filtra agendamentos de um dia específico
  * 
  * SISTEMA DE CACHE:
  * - Cache-first strategy (verifica cache antes de buscar do servidor)
@@ -62,9 +62,9 @@ export const useAgendamentoStore = defineStore('agendamento', () => {
   const profissionalId = ref<number | null>(null)
 
   /**
-   * Estado: Lista de agendamentos carregados do banco
+   * Estado: Lista de agendamentos carregados do banco (formato bruto AgAgendamento)
    */
-  const agendamentos = ref<Agendamento[]>([])
+  const agendamentos = ref<AgAgendamento[]>([])
 
   /**
    * Estado: Controle de carregamento
@@ -74,9 +74,9 @@ export const useAgendamentoStore = defineStore('agendamento', () => {
   /**
    * Estado: Cache de agendamentos por semana
    * Chave: "profissionalId_dataInicio_dataFim" (ex: "2_2026-02-15_2026-02-21")
-   * Valor: Array de agendamentos
+   * Valor: Array de agendamentos (formato bruto AgAgendamento)
    */
-  const cacheAgendamentos = ref<Record<string, Agendamento[]>>({})
+  const cacheAgendamentos = ref<Record<string, AgAgendamento[]>>({})
 
   /**
    * Getter: Calcula os 7 dias da semana com base na data de referência
@@ -173,9 +173,8 @@ export const useAgendamentoStore = defineStore('agendamento', () => {
    * 3. Verifica se dados já existem no cache (cache-first strategy)
    * 4. Se sim: retorna dados do cache imediatamente (sem network request)
    * 5. Se não: busca do Supabase via composable
-   * 6. Converte dados do banco (AgAgendamento) para view model (Agendamento)
-   * 7. Armazena no cache para reutilização futura
-   * 8. Atualiza estado reativo (agendamentos.value)
+   * 6. Armazena dados brutos (AgAgendamento) no cache sem conversão
+   * 7. Atualiza estado reativo (agendamentos.value)
    * 
    * Benefícios do cache:
    * - Reduz chamadas ao banco de dados em 90%+
@@ -238,15 +237,12 @@ export const useAgendamentoStore = defineStore('agendamento', () => {
       console.log('📦 Store: Dados recebidos do composable:', agendamentosBanco)
       
       if (agendamentosBanco) {
-        // Converte dados do banco para view model (snake_case → camelCase, strings → Date)
-        console.log('🔄 Store: Convertendo dados do banco para view model...')
-        const agendamentosConvertidos = agendamentosBanco.map(ag => agendamentoBancoParaViewModel(ag))
-        
+        // Armazena dados brutos do banco diretamente (sem conversão)
         // Armazena no cache para reutilização futura (key-value store em memória)
-        cacheAgendamentos.value[chaveCache] = agendamentosConvertidos
-        agendamentos.value = agendamentosConvertidos
+        cacheAgendamentos.value[chaveCache] = agendamentosBanco
+        agendamentos.value = agendamentosBanco
         
-        console.log('✅ Store: Agendamentos convertidos e armazenados no cache:', agendamentosConvertidos.length)
+        console.log('✅ Store: Agendamentos armazenados no cache:', agendamentosBanco.length)
         console.log('💾 Store: Total de entradas no cache:', Object.keys(cacheAgendamentos.value).length)
       } else {
         // Resultado vazio: armazena cache vazio para evitar refetch desnecessário
@@ -267,35 +263,29 @@ export const useAgendamentoStore = defineStore('agendamento', () => {
    * Action: Retorna agendamentos de um dia específico
    * 
    * Filtra a lista de agendamentos carregados (agendamentos.value) para retornar
-   * apenas os que pertencem à data fornecida. A comparação é feita apenas na parte
-   * de data (dia/mês/ano), ignorando completamente o horário.
+   * apenas os que pertencem à data fornecida. A comparação é feita pela string
+   * do campo ag.data (formato YYYY-MM-DD) contra a data formatada.
    * 
    * Esta função é chamada pelos componentes ItemAgendamento para renderizar
    * os cards de agendamento em cada coluna do calendário semanal.
    * 
    * Lógica de comparação:
-   * - Converte ag.inicio (Date object) para data pura
-   * - Compara getDate() (dia do mês: 1-31)
-   * - Compara getMonth() (mês: 0-11)
-   * - Compara getFullYear() (ano: ex: 2026)
+   * - Formata a data recebida para string YYYY-MM-DD via formatarDataISO
+   * - Compara diretamente com ag.data (string do banco)
    * 
    * Exemplo:
-   * - Data entrada: 16/02/2026 00:00:00
-   * - Agendamento 1: 16/02/2026 08:00:00 → ✅ Incluído
-   * - Agendamento 2: 16/02/2026 14:30:00 → ✅ Incluído
-   * - Agendamento 3: 17/02/2026 08:00:00 → ❌ Excluído (dia diferente)
+   * - Data entrada: 16/02/2026 → formatarDataISO → "2026-02-16"
+   * - Agendamento 1: ag.data = "2026-02-16" → ✅ Incluído
+   * - Agendamento 2: ag.data = "2026-02-16" → ✅ Incluído
+   * - Agendamento 3: ag.data = "2026-02-17" → ❌ Excluído (dia diferente)
    * 
-   * @param data - Data para filtrar agendamentos (apenas data importa, horário ignorado)
+   * @param data - Data para filtrar agendamentos
    * @returns Array de agendamentos que ocorrem nesta data específica
    */
-  function getAgendamentosDoDia(data: Date): Agendamento[] {
-    const resultado = agendamentos.value.filter((ag: Agendamento) => {
-      const agData = new Date(ag.inicio)
-      return (
-        agData.getDate() === data.getDate() &&
-        agData.getMonth() === data.getMonth() &&
-        agData.getFullYear() === data.getFullYear()
-      )
+  function getAgendamentosDoDia(data: Date): AgAgendamento[] {
+    const dataStr = formatarDataISO(data)
+    const resultado = agendamentos.value.filter((ag: AgAgendamento) => {
+      return ag.data === dataStr
     })
     
     return resultado

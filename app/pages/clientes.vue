@@ -53,6 +53,7 @@
 
 //Imports
 import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useProfissionais } from '../composables/useProfissionais'
 import { useNotification } from '../composables/useNotification'
 import type { AgCliente } from '../../shared/types/database'
@@ -208,7 +209,15 @@ async function handleConfirmar(dados: any) {
 }
 
 //Carregar dados
-onMounted(carregarClientes)
+onMounted(() => {
+  carregarClientes()
+
+  // Se veio com ?novo=1, abre o modal de novo cliente automaticamente
+  const route = useRoute()
+  if (route.query.novo === '1') {
+    handleAddCliente()
+  }
+})
 
 //Head
 useHead({

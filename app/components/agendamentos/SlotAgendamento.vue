@@ -30,18 +30,22 @@
  * Componente para exibir um slot de agendamento
  * 
  * Props:
- * @param {Agendamento} agendamento - Dados do agendamento
+ * @param {AgAgendamento} agendamento - Dados brutos do agendamento (formato banco)
  * 
  * Calcula posição e altura baseado no horário de início e fim
  * Cada hora tem 64px de altura (h-16 = 4rem = 64px)
+ * 
+ * Os campos hora_inicio e hora_fim vêm como strings do banco
+ * no formato "HH:MM:SS-TZ" (ex: "08:00:00-03"). São parseados
+ * para extrair horas e minutos.
  * ======================================================
  */
 
-import type { Agendamento } from '../../../shared/types/Agendamento'
+import type { AgAgendamento } from '../../../shared/types/database'
 import { computed } from 'vue'
 
 interface Props {
-  agendamento: Agendamento
+  agendamento: AgAgendamento
 }
 
 const props = defineProps<Props>()
@@ -51,12 +55,26 @@ const ALTURA_HORA = 64
 const INICIO_DIA = 8 // 8h
 
 /**
+ * Faz parse de uma string de hora do banco (ex: "08:30:00-03")
+ * para extrair horas e minutos como números.
+ * 
+ * @param horaStr - String no formato "HH:MM:SS" ou "HH:MM:SS-TZ"
+ * @returns Objeto com { horas, minutos }
+ */
+function parseHora(horaStr: string | null): { horas: number; minutos: number } {
+  if (!horaStr) return { horas: 0, minutos: 0 }
+  const partes = horaStr.split(':')
+  return {
+    horas: parseInt(partes[0] || '0', 10),
+    minutos: parseInt(partes[1] || '0', 10)
+  }
+}
+
+/**
  * Calcula a posição top do slot baseado no horário de início
  */
 const posicaoTop = computed(() => {
-  const inicio = props.agendamento.inicio
-  const horas = inicio.getHours()
-  const minutos = inicio.getMinutes()
+  const { horas, minutos } = parseHora(props.agendamento.hora_inicio)
   
   // Calcula offset desde as 8h
   const horasDesdeInicio = horas - INICIO_DIA
@@ -70,11 +88,13 @@ const posicaoTop = computed(() => {
  * Calcula a altura do slot baseado na duração
  */
 const altura = computed(() => {
-  const inicio = props.agendamento.inicio
-  const fim = props.agendamento.fim
+  const inicio = parseHora(props.agendamento.hora_inicio)
+  const fim = parseHora(props.agendamento.hora_fim)
   
-  const duracaoMs = fim.getTime() - inicio.getTime()
-  const duracaoHoras = duracaoMs / (1000 * 60 * 60)
+  const totalMinutosInicio = inicio.horas * 60 + inicio.minutos
+  const totalMinutosFim = fim.horas * 60 + fim.minutos
+  const duracaoMinutos = totalMinutosFim - totalMinutosInicio
+  const duracaoHoras = duracaoMinutos / 60
   
   return duracaoHoras * ALTURA_HORA
 })
@@ -83,14 +103,14 @@ const altura = computed(() => {
  * Formata o horário para exibição
  */
 const horarioFormatado = computed(() => {
-  const inicio = props.agendamento.inicio
-  const fim = props.agendamento.fim
+  const inicio = parseHora(props.agendamento.hora_inicio)
+  const fim = parseHora(props.agendamento.hora_fim)
   
-  const horaInicio = inicio.getHours().toString().padStart(2, '0')
-  const minutoInicio = inicio.getMinutes().toString().padStart(2, '0')
+  const horaInicio = inicio.horas.toString().padStart(2, '0')
+  const minutoInicio = inicio.minutos.toString().padStart(2, '0')
   
-  const horaFim = fim.getHours().toString().padStart(2, '0')
-  const minutoFim = fim.getMinutes().toString().padStart(2, '0')
+  const horaFim = fim.horas.toString().padStart(2, '0')
+  const minutoFim = fim.minutos.toString().padStart(2, '0')
   
   return `${horaInicio}:${minutoInicio} - ${horaFim}:${minutoFim}`
 })

@@ -41,7 +41,7 @@
  */
 
 import SlotAgendamento from './SlotAgendamento.vue'
-import type { Agendamento } from '../../../shared/types/Agendamento'
+import type { AgAgendamento } from '../../../shared/types/database'
 import { computed } from 'vue'
 import { useAgendamentoStore } from '~/stores/agendamento'
 

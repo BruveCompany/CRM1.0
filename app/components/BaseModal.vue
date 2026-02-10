@@ -5,9 +5,9 @@
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
       @click.self="$emit('update:modelValue', false)"
     >
-      <div :class="['bg-white rounded-lg shadow-2xl w-full mx-4 transform transition-all', maxWidthClass]">
+      <div :class="['bg-white rounded-lg shadow-2xl w-full mx-4 transform transition-all flex flex-col max-h-[calc(100vh-2rem)]', maxWidthClass]">
         <!-- Header -->
-        <div class="px-5 py-3.5 flex items-center justify-between border-b border-gray-100">
+        <div class="px-5 py-3.5 flex items-center justify-between border-b border-gray-100 flex-shrink-0">
           <slot name="header">
             <h3 class="text-lg font-semibold text-gray-900">Modal</h3>
           </slot>
@@ -24,12 +24,12 @@
         </div>
         
         <!-- Body -->
-        <div class="px-5 py-4 overflow-y-auto max-h-[calc(100vh-12rem)]">
+        <div class="px-5 py-4 overflow-y-auto flex-1 min-h-0" style="-ms-overflow-style: none; scrollbar-width: none;">
           <slot />
         </div>
         
         <!-- Footer (apenas se tiver conteúdo) -->
-        <div v-if="$slots.footer" class="px-5 py-3 bg-gray-50 rounded-b-lg flex justify-end gap-2.5 border-t border-gray-100">
+        <div v-if="$slots.footer" class="px-5 py-3 bg-gray-50 rounded-b-lg flex justify-end gap-2.5 border-t border-gray-100 flex-shrink-0">
           <slot name="footer" />
         </div>
       </div>

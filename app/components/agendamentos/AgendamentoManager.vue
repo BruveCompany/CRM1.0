@@ -48,7 +48,9 @@
       v-model="modalNovoAgendamentoAberto"
       :profissional-id="agendamentoStore.profissionalId"
       :profissional-nome="profissionalAtualNome"
+      :profissional-especialidade="profissionalAtualEspecialidade"
       :dias-semana="agendamentoStore.diasSemana"
+      :clientes="clientes"
       @salvar="handleSalvarAgendamento"
     />
   </div>
@@ -132,6 +134,8 @@ import BaseButton from '~/components/BaseButton.vue'
 // Importações de stores e composables
 import { useAgendamentoStore } from '~/stores/agendamento'
 import { useAgendamento } from '~/composables/useAgendamento'
+import { useProfissionais } from '~/composables/useProfissionais'
+import type { AgCliente, AgProfissional } from '../../../shared/types/database'
 
 // Emits (para comunicação com componente pai se necessário)
 const emit = defineEmits(['update:loading', 'error'])
@@ -141,23 +145,39 @@ const agendamentoStore = useAgendamentoStore()
 
 // Instância do composable de agendamento (expõe fetchAgendamentosByProfissional)
 const { buscarAgendamentosPorProfissional: fetchAgendamentosByProfissional } = useAgendamento()
+const { fetchClientes, fetchProfissionais } = useProfissionais()
 
 // Refs para controle de estado
 const error = ref<string | null>(null)
 const profissionalAtualRef = ref<any>(null)
 const modalNovoAgendamentoAberto = ref(false)
+const clientes = ref<AgCliente[]>([])
+const profissionais = ref<AgProfissional[]>([])
+
+/**
+ * Computed: Espelho dos agendamentos do store para visibilidade no DevTools
+ */
+const agendamentos = computed(() => agendamentoStore.agendamentos)
 
 /**
  * Computed: Nome do profissional atual para exibir no modal
  * TODO: Buscar dados completos do profissional (nome, especialidade)
  */
+/**
+ * Computed: Objeto do profissional atual (nome e especialidade)
+ */
+const profissionalAtualObj = computed(() => {
+  const id = agendamentoStore.profissionalId
+  if (!id) return null
+  return profissionais.value.find((p) => p.profissional_id === id) || null
+})
+
 const profissionalAtualNome = computed(() => {
-  // Por enquanto, retorna apenas o ID formatado
-  // TODO: Integrar com composable useProfissionais para buscar nome real
-  if (profissionalAtualRef.value?.id) {
-    return `Profissional #${profissionalAtualRef.value.id}`
-  }
-  return 'Nenhum profissional selecionado'
+  return profissionalAtualObj.value?.nome || 'Nenhum profissional selecionado'
+})
+
+const profissionalAtualEspecialidade = computed(() => {
+  return profissionalAtualObj.value?.especialidade || ''
 })
 
 /**
@@ -283,13 +303,22 @@ watch(
 )
 
 // Lifecycle hooks
-onMounted(() => {
+onMounted(async () => {
   console.log('AgendamentoManager montado')
-  console.log('Data de referência:', agendamentoStore.dataReferencia)
-  console.log('Dias da semana:', agendamentoStore.diasSemana)
-  console.log('Profissional ID:', agendamentoStore.profissionalId)
-  console.log('Agendamentos carregados:', agendamentoStore.agendamentos)
-  console.log('Loading:', agendamentoStore.loading)
+  
+  // Busca clientes e profissionais em segundo plano (não bloqueia a UI)
+  try {
+    const [clientesData, profissionaisData] = await Promise.all([
+      fetchClientes(),
+      fetchProfissionais()
+    ])
+    clientes.value = clientesData
+    profissionais.value = profissionaisData
+    console.log('👥 Clientes carregados:', clientes.value.length)
+    console.log('👤 Profissionais carregados:', profissionais.value.length)
+  } catch (err) {
+    console.error('❌ Erro ao buscar clientes/profissionais:', err)
+  }
 })
 
 /**
