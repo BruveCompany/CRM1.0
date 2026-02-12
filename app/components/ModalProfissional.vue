@@ -1,7 +1,7 @@
 <template>
   <BaseModal :model-value="modelValue" @update:modelValue="$emit('update:modelValue', $event)">
     <template #header>
-      <h3 class="text-lg font-semibold text-gray-900">
+      <h3 class="text-lg font-semibold text-neutral-900">
         {{ isEdicao ? 'Editar Profissional' : 'Novo Profissional' }}
       </h3>
     </template>
@@ -9,14 +9,14 @@
     <form @submit.prevent="onConfirmar" class="space-y-4">
       <!-- Dropdown Perfil -->
       <div>
-        <label for="perfil-select" class="block text-sm font-medium text-gray-700 mb-1.5">
-          Usuário <span class="text-red-500">*</span>
+        <label for="perfil-select" class="block text-sm font-medium text-neutral-700 mb-1.5">
+          Usuário <span class="text-error-500">*</span>
         </label>
         <select
           id="perfil-select"
           v-model="perfilSelecionado"
           required
-          class="block w-full border border-gray-300 rounded-md shadow-sm px-3 py-1.5 text-base transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:border-primary-500 focus:ring-primary-500 hover:border-gray-500 disabled:bg-gray-50 disabled:text-gray-500"
+          class="block w-full border border-neutral-300 rounded-md shadow-sm px-3 py-1.5 text-base transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-700 focus:border-primary-700 hover:border-primary-700 disabled:bg-neutral-50 disabled:text-neutral-500"
           :disabled="isEdicao"
         >
           <option value="" disabled>Selecione um usuário</option>
@@ -28,21 +28,21 @@
             {{ perfil.nome }}
           </option>
         </select>
-        <p v-if="isEdicao" class="text-xs text-gray-500 mt-1.5">
+        <p v-if="isEdicao" class="text-xs text-neutral-500 mt-1.5">
           O perfil não pode ser alterado após criação
         </p>
       </div>
       
       <!-- Dropdown Especialidade -->
       <div>
-        <label for="especialidade-select" class="block text-sm font-medium text-gray-700 mb-1.5">
-          Especialidade <span class="text-red-500">*</span>
+        <label for="especialidade-select" class="block text-sm font-medium text-neutral-700 mb-1.5">
+          Especialidade <span class="text-error-500">*</span>
         </label>
         <select
           id="especialidade-select"
           v-model="especialidadeSelecionada"
           required
-          class="block w-full border border-gray-300 rounded-md shadow-sm px-3 py-1.5 text-base transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:border-primary-500 focus:ring-primary-500 hover:border-gray-500 disabled:bg-gray-50 disabled:text-gray-500"
+          class="block w-full border border-neutral-300 rounded-md shadow-sm px-3 py-1.5 text-base transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-700 focus:border-primary-700 hover:border-primary-700 disabled:bg-neutral-50 disabled:text-neutral-500"
         >
           <option value="" disabled>Selecione uma especialidade</option>
           <option 

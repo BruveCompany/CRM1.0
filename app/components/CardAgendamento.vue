@@ -1,12 +1,12 @@
 <template>
   <div
     id="card-agendamento"
-    class="relative bg-white border-b border-gray-200 hover:bg-gray-50 transition-colors duration-150 w-full"
+    class="relative bg-white border-b border-neutral-200 hover:bg-neutral-50 transition-colors duration-150 w-full"
   >
     <!-- Conteúdo do card - Layout horizontal -->
     <div class="flex items-center gap-3 py-4 px-4 min-h-[64px] w-full">
       <!-- ID do agendamento -->
-      <div class="flex-shrink-0 w-10 text-sm font-medium text-gray-700">
+      <div class="flex-shrink-0 w-10 text-sm font-medium text-neutral-700">
         #{{ agendamento.id }}
       </div>
 
@@ -17,23 +17,23 @@
       ></div>
 
       <!-- Status Ativo/Cancelado -->
-      <div v-if="agendamento.cancelado" class="flex-shrink-0 flex items-center justify-center gap-1 bg-red-50 px-2 py-1 rounded w-[85px]">
-        <XCircleIcon class="w-4 h-4 text-red-600" />
-        <span class="text-xs font-medium text-red-700">Cancelado</span>
+      <div v-if="agendamento.cancelado" class="flex-shrink-0 flex items-center justify-center gap-1 bg-error-50 px-2 py-1 rounded w-[85px]">
+        <XCircleIcon class="w-4 h-4 text-error-600" />
+        <span class="text-xs font-medium text-error-700">Cancelado</span>
       </div>
-      <div v-else class="flex-shrink-0 flex items-center justify-center gap-1 bg-green-50 px-2 py-1 rounded w-[85px]">
-        <CheckCircleIcon class="w-4 h-4 text-green-600" />
-        <span class="text-xs font-medium text-green-700">Ativo</span>
+      <div v-else class="flex-shrink-0 flex items-center justify-center gap-1 bg-success-50 px-2 py-1 rounded w-[85px]">
+        <CheckCircleIcon class="w-4 h-4 text-success-600" />
+        <span class="text-xs font-medium text-success-700">Ativo</span>
       </div>
 
       <!-- Data e horário -->
       <div class="flex-1 basis-0 flex items-center gap-2 h-12 min-w-0" :title="`${formatarDataComDiaSemana(agendamento.data)} | ${formatarHorario(agendamento.hora_inicio)} - ${formatarHorario(agendamento.hora_fim)}`">
-        <CalendarIcon class="w-4 h-4 text-gray-400 flex-shrink-0" />
+        <CalendarIcon class="w-4 h-4 text-neutral-400 flex-shrink-0" />
         <div class="flex flex-col justify-center h-full min-w-0">
-          <span class="text-sm font-medium text-gray-900 leading-tight truncate">
+          <span class="text-sm font-medium text-neutral-900 leading-tight truncate">
             {{ formatarDataComDiaSemana(agendamento.data) }}
           </span>
-          <span class="text-xs text-gray-500 leading-tight truncate">
+          <span class="text-xs text-neutral-500 leading-tight truncate">
             {{ formatarHorario(agendamento.hora_inicio) }} - {{ formatarHorario(agendamento.hora_fim) }}
           </span>
         </div>
@@ -41,14 +41,14 @@
 
       <!-- Título e descrição -->
       <div class="flex-1 basis-0 flex items-center gap-2 h-12 min-w-0" :title="`${agendamento.titulo || 'Sem título'}${agendamento.descricao ? ' | ' + agendamento.descricao : ''}`">
-        <ClipboardDocumentListIcon class="w-4 h-4 text-gray-400 flex-shrink-0" />
+        <ClipboardDocumentListIcon class="w-4 h-4 text-neutral-400 flex-shrink-0" />
         <div class="flex flex-col justify-center h-full min-w-0">
-          <h3 class="text-sm font-semibold text-gray-900 truncate leading-tight">
+          <h3 class="text-sm font-semibold text-neutral-900 truncate leading-tight">
             {{ agendamento.titulo || 'Sem título' }}
           </h3>
           <p 
             v-if="agendamento.descricao" 
-            class="text-xs text-gray-500 truncate leading-tight"
+            class="text-xs text-neutral-500 truncate leading-tight"
           >
             {{ agendamento.descricao }}
           </p>
@@ -57,12 +57,12 @@
 
       <!-- Cliente -->
       <div class="flex-1 basis-0 flex items-center gap-2 h-12 min-w-0" :title="`${agendamento.cliente_nome || 'Não informado'}${agendamento.cliente_telefone ? ' | ' + agendamento.cliente_telefone : ''}${agendamento.cliente_cpf ? ' | CPF: ' + agendamento.cliente_cpf : ''}${agendamento.cliente_email ? ' | ' + agendamento.cliente_email : ''}`">
-        <UserIcon class="w-4 h-4 text-gray-400 flex-shrink-0" />
+        <UserIcon class="w-4 h-4 text-neutral-400 flex-shrink-0" />
         <div class="flex flex-col justify-center min-w-0 h-full">
-          <span class="text-sm font-medium text-gray-900 truncate leading-tight">
+          <span class="text-sm font-medium text-neutral-900 truncate leading-tight">
             {{ agendamento.cliente_nome || 'Não informado' }}
           </span>
-          <span v-if="agendamento.cliente_telefone" class="text-xs text-gray-500 truncate leading-tight">
+          <span v-if="agendamento.cliente_telefone" class="text-xs text-neutral-500 truncate leading-tight">
             {{ agendamento.cliente_telefone }}
           </span>
         </div>
@@ -77,10 +77,10 @@
           {{ agendamento.profissional_nome?.charAt(0).toUpperCase() || 'P' }}
         </div>
         <div class="flex flex-col justify-center min-w-0 h-full">
-          <span class="text-sm font-medium text-gray-900 truncate leading-tight">
+          <span class="text-sm font-medium text-neutral-900 truncate leading-tight">
             {{ agendamento.profissional_nome || 'Não informado' }}
           </span>
-          <span v-if="agendamento.especialidade" class="text-xs text-gray-500 truncate leading-tight">
+          <span v-if="agendamento.especialidade" class="text-xs text-neutral-500 truncate leading-tight">
             {{ agendamento.especialidade }}
           </span>
         </div>
@@ -88,8 +88,8 @@
 
       <!-- Data de criação -->
       <div class="flex-shrink-0 flex flex-col justify-center text-right w-20 h-12" :title="`Criado em ${formatarDataCriacao(agendamento.created_at)}`">
-        <span class="text-xs text-gray-400 leading-tight">Criado em</span>
-        <div class="text-xs text-gray-500 leading-tight">
+        <span class="text-xs text-neutral-400 leading-tight">Criado em</span>
+        <div class="text-xs text-neutral-500 leading-tight">
           {{ formatarDataCriacao(agendamento.created_at) }}
         </div>
       </div>
@@ -97,7 +97,7 @@
       <!-- Menu de ações -->
       <button
         type="button"
-        class="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 transition-colors"
+        class="flex-shrink-0 p-1 text-neutral-400 hover:text-neutral-600 transition-colors"
       >
         <EllipsisVerticalIcon class="w-5 h-5" />
       </button>

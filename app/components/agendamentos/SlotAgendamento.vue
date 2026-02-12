@@ -7,7 +7,7 @@
       backgroundColor: agendamento.cor || '#B4A7F5'
     }"
     :title="`${agendamento.titulo}${profissionalNome ? '\nProfissional: ' + profissionalNome : ''}${profissionalEspecialidade ? ' (' + profissionalEspecialidade + ')' : ''}\n${horarioFormatado}${nomeCliente ? '\nCliente: ' + nomeCliente : ''}${agendamento.descricao ? '\n' + agendamento.descricao : ''}`"
-    class="absolute left-0 right-0 text-gray-900 rounded px-2 py-1 cursor-pointer transition-colors overflow-hidden hover:opacity-85"
+    class="absolute left-0 right-0 text-neutral-900 rounded px-2 py-1 cursor-pointer transition-colors overflow-hidden hover:opacity-85"
     @click="emit('click', agendamento)"
   >
     <!-- Título do agendamento -->

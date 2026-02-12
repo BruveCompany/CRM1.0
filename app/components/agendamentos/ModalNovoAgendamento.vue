@@ -2,19 +2,19 @@
   <BaseModal v-model="isOpen">
     <!-- Header -->
     <template #header>
-      <h3 class="text-lg font-semibold text-gray-900">Novo Agendamento</h3>
+      <h3 class="text-lg font-semibold text-neutral-900">Novo Agendamento</h3>
     </template>
     
     <!-- Body -->
     <div class="space-y-2.5">
       <!-- Profissional (readonly) -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-0.5">Profissional</label>
-        <div class="flex items-center gap-2.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg">
+        <label class="block text-sm font-medium text-neutral-700 mb-0.5">Profissional</label>
+        <div class="flex items-center gap-2.5 px-3 py-1.5 bg-neutral-50 border border-neutral-200 rounded-lg">
           <UserIcon class="w-5 h-5 text-indigo-700 flex-shrink-0" />
           <div class="min-w-0">
-            <p class="text-sm font-medium text-gray-800 truncate">{{ profissionalNome || 'Selecione um profissional' }}</p>
-            <p v-if="profissionalEspecialidade" class="text-xs text-gray-500 truncate leading-tight">{{ profissionalEspecialidade }}</p>
+            <p class="text-sm font-medium text-neutral-800 truncate">{{ profissionalNome || 'Selecione um profissional' }}</p>
+            <p v-if="profissionalEspecialidade" class="text-xs text-neutral-500 truncate leading-tight">{{ profissionalEspecialidade }}</p>
           </div>
         </div>
       </div>
@@ -29,8 +29,8 @@
 
       <!-- Título -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-0.5">
-          Título <span class="text-red-500">*</span>
+        <label class="block text-sm font-medium text-neutral-700 mb-0.5">
+          Título <span class="text-error-500">*</span>
         </label>
         <BaseInput 
           v-model="formData.titulo"
@@ -40,12 +40,12 @@
 
       <!-- Descrição -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-0.5">Descrição</label>
+        <label class="block text-sm font-medium text-neutral-700 mb-0.5">Descrição</label>
         <textarea
           v-model="formData.descricao"
           rows="1"
           placeholder="Observações sobre o agendamento..."
-          class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+          class="w-full px-3 py-1.5 border border-neutral-300 rounded-lg text-sm hover:border-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-700 focus:border-primary-700 transition-all resize-none"
         ></textarea>
       </div>
 
@@ -56,12 +56,12 @@
       <div class="grid grid-cols-3 gap-2.5">
         <!-- Data -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-0.5">
-            Data <span class="text-red-500">*</span>
+          <label class="block text-sm font-medium text-neutral-700 mb-0.5">
+            Data <span class="text-error-500">*</span>
           </label>
           <select 
             v-model="formData.data"
-            class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            class="w-full px-3 py-1.5 border border-neutral-300 rounded-lg text-sm hover:border-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-700 focus:border-primary-700 transition-all"
           >
             <option value="">Selecione</option>
             <option 
@@ -76,13 +76,13 @@
 
         <!-- Hora Início -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-0.5">
-            Início <span class="text-red-500">*</span>
+          <label class="block text-sm font-medium text-neutral-700 mb-0.5">
+            Início <span class="text-error-500">*</span>
           </label>
           <select 
             v-model="formData.horaInicio"
             :disabled="!formData.data"
-            class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+            class="w-full px-3 py-1.5 border border-neutral-300 rounded-lg text-sm hover:border-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-700 focus:border-primary-700 transition-all disabled:bg-neutral-100 disabled:cursor-not-allowed"
           >
             <option value="">--:--</option>
             <option v-for="hora in horariosInicioDisponiveis" :key="hora" :value="hora">
@@ -93,13 +93,13 @@
 
         <!-- Hora Fim -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-0.5">
-            Fim <span class="text-red-500">*</span>
+          <label class="block text-sm font-medium text-neutral-700 mb-0.5">
+            Fim <span class="text-error-500">*</span>
           </label>
           <select 
             v-model="formData.horaFim"
             :disabled="!formData.horaInicio"
-            class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+            class="w-full px-3 py-1.5 border border-neutral-300 rounded-lg text-sm hover:border-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-700 focus:border-primary-700 transition-all disabled:bg-neutral-100 disabled:cursor-not-allowed"
           >
             <option value="">--:--</option>
             <option v-for="hora in horariosFimDisponiveis" :key="'fim-' + hora" :value="hora">

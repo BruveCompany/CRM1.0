@@ -15,7 +15,7 @@
     @focus="handleFocus"
   >
     <template #icon>
-      <EnvelopeIcon class="h-5 w-5 text-gray-400" />
+      <EnvelopeIcon class="h-5 w-5 text-neutral-400" />
     </template>
   </BaseInput>
 </template>

@@ -15,13 +15,13 @@
     @focus="$emit('focus', $event)"
   >
     <template #icon>
-      <LockClosedIcon class="h-5 w-5 text-gray-400" />
+      <LockClosedIcon class="h-5 w-5 text-neutral-400" />
     </template>
     
     <template #suffix>
       <button
         type="button"
-        class="text-gray-400 hover:text-gray-600 transition-colors"
+        class="text-neutral-400 hover:text-neutral-600 transition-colors"
         @click="toggleVisibility"
       >
         <EyeIcon v-if="showPassword" class="h-5 w-5" />

@@ -27,17 +27,17 @@
         <tr
           v-for="cliente in clientes"
           :key="cliente.id"
-          class="transition-shadow duration-200 hover:shadow-sm hover:bg-gray-50"
+          class="transition-shadow duration-200 hover:shadow-sm hover:bg-neutral-50"
         >
-          <td class="px-4 py-2 border-t border-gray-200">{{ cliente.id }}</td>
-          <td class="px-4 py-2 border-t border-gray-200">{{ cliente.nome }}</td>
-          <td class="px-4 py-2 border-t border-gray-200">{{ cliente.cpf }}</td>
-          <td class="px-4 py-2 border-t border-gray-200">{{ cliente.email }}</td>
-          <td class="px-4 py-2 border-t border-gray-200">{{ cliente.telefone }}</td>
-          <td class="px-4 py-2 border-t border-gray-200 flex gap-2">
+          <td class="px-4 py-2 border-t border-neutral-200">{{ cliente.id }}</td>
+          <td class="px-4 py-2 border-t border-neutral-200">{{ cliente.nome }}</td>
+          <td class="px-4 py-2 border-t border-neutral-200">{{ cliente.cpf }}</td>
+          <td class="px-4 py-2 border-t border-neutral-200">{{ cliente.email }}</td>
+          <td class="px-4 py-2 border-t border-neutral-200">{{ cliente.telefone }}</td>
+          <td class="px-4 py-2 border-t border-neutral-200 flex gap-2">
             <!-- Botão Editar -->
             <button
-              class="p-1 rounded hover:bg-gray-100"
+              class="p-1 rounded hover:bg-neutral-100"
               title="Editar"
               @click="$emit('editar-cliente', cliente)"
             >
@@ -45,11 +45,11 @@
             </button>
             <!-- Botão Excluir -->
             <button
-              class="p-1 rounded hover:bg-gray-100"
+              class="p-1 rounded hover:bg-neutral-100"
               title="Excluir"
               @click="$emit('deletar-cliente', cliente)"
             >
-              <TrashIcon class="w-5 h-5 text-red-600" />
+              <TrashIcon class="w-5 h-5 text-error-600" />
             </button>
           </td>
         </tr>

@@ -2,7 +2,7 @@
 <template>
   <NuxtLayout>
     <div class="min-h-screen bg-white p-8">
-      <h1 class="text-3xl font-bold text-gray-900 mb-6">Especialidades</h1>
+      <h1 class="text-3xl font-bold text-neutral-900 mb-6">Especialidades</h1>
       <TabelaEspecialidades
         :especialidades="especialidades"
         @add-especialidade="abrirModalAdd"
@@ -89,7 +89,10 @@ async function handleConfirmar({ especialidade, id }: { especialidade: string, i
   loadingAdd.value = false
   if (result.success) {
     modalAberto.value = false
-    especialidades.value = await fetchEspecialidades()
+    especialidades.value = (await fetchEspecialidades()).map(e => ({
+      id: e.id,
+      especialidade: e.especialidade ?? ''
+    }))
     notifySuccess(isEdicao.value ? 'Especialidade editada com sucesso!' : 'Especialidade adicionada com sucesso!')
   } else {
     notifyError(result.message || 'Erro ao salvar especialidade')
@@ -105,7 +108,10 @@ async function handleConfirmarDelete() {
   if (result.success) {
     modalDeleteAberto.value = false
     especialidadeDelete.value = null
-    especialidades.value = await fetchEspecialidades()
+    especialidades.value = (await fetchEspecialidades()).map(e => ({
+      id: e.id,
+      especialidade: e.especialidade ?? ''
+    }))
     notifySuccess('Especialidade excluída com sucesso!')
   } else {
     notifyError(result.message || 'Erro ao excluir especialidade')
@@ -114,7 +120,10 @@ async function handleConfirmarDelete() {
 
 //Carregar dados iniciais
 onMounted(async () => {
-  especialidades.value = await fetchEspecialidades()
+  especialidades.value = (await fetchEspecialidades()).map(e => ({
+    id: e.id,
+    especialidade: e.especialidade ?? ''
+  }))
 })
 
 useHead({ title: 'Especialidades' })

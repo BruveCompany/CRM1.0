@@ -2,25 +2,25 @@
   <BaseModal v-model="isOpen">
     <!-- Header -->
     <template #header>
-      <h3 class="text-lg font-semibold text-gray-900">Editar Agendamento</h3>
+      <h3 class="text-lg font-semibold text-neutral-900">Editar Agendamento</h3>
     </template>
 
     <!-- Body -->
     <div class="space-y-2">
       <!-- Info readonly: Profissional + Cliente + Data + Horário -->
-      <div class="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 space-y-1">
+      <div class="bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-2 space-y-1">
         <div class="flex items-center gap-2">
           <UserIcon class="w-4 h-4 text-indigo-700 flex-shrink-0" />
           <div>
-            <span class="text-sm text-gray-700">{{ profissionalNome }}</span>
-            <span v-if="profissionalEspecialidade" class="block text-xs text-gray-400">{{ profissionalEspecialidade }}</span>
+            <span class="text-sm text-neutral-700">{{ profissionalNome }}</span>
+            <span v-if="profissionalEspecialidade" class="block text-xs text-neutral-400">{{ profissionalEspecialidade }}</span>
           </div>
         </div>
-        <div v-if="nomeCliente" class="flex items-center gap-2 border-t border-gray-200 pt-1">
-          <UserIcon class="w-4 h-4 text-gray-400 flex-shrink-0" />
-          <span class="text-sm text-gray-600">Cliente: {{ nomeCliente }}</span>
+        <div v-if="nomeCliente" class="flex items-center gap-2 border-t border-neutral-200 pt-1">
+          <UserIcon class="w-4 h-4 text-neutral-400 flex-shrink-0" />
+          <span class="text-sm text-neutral-600">Cliente: {{ nomeCliente }}</span>
         </div>
-        <div class="flex items-center gap-2 text-sm text-gray-500">
+        <div class="flex items-center gap-2 text-sm text-neutral-500">
           <CalendarIcon class="w-4 h-4 flex-shrink-0" />
           <span>{{ dataFormatada }} &bull; {{ horarioFormatado }}</span>
         </div>
@@ -28,20 +28,20 @@
 
       <!-- Título (editável) -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-0.5">
-          Título <span class="text-red-500">*</span>
+        <label class="block text-sm font-medium text-neutral-700 mb-0.5">
+          Título <span class="text-error-500">*</span>
         </label>
         <BaseInput v-model="formData.titulo" placeholder="Título do agendamento" />
       </div>
 
       <!-- Descrição (editável) -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-0.5">Descrição</label>
+        <label class="block text-sm font-medium text-neutral-700 mb-0.5">Descrição</label>
         <textarea
           v-model="formData.descricao"
           rows="1"
           placeholder="Observações sobre o agendamento..."
-          class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+          class="w-full px-3 py-1.5 border border-neutral-300 rounded-lg text-sm hover:border-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-700 focus:border-primary-700 transition-all resize-none"
         ></textarea>
       </div>
 
@@ -55,7 +55,7 @@
       <div class="flex items-center justify-between w-full">
         <button
           type="button"
-          class="inline-flex items-center justify-center font-medium rounded-md transition-colors px-4 py-2 text-base bg-red-600 hover:bg-red-700 text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          class="inline-flex items-center justify-center font-medium rounded-md transition-colors px-4 py-2 text-base bg-error-600 hover:bg-error-700 text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-error-500 disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="processando"
           @click="confirmarCancelamento = true"
         >

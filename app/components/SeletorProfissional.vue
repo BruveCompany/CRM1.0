@@ -1,8 +1,8 @@
 <template>
-  <!-- Dropdown pesquisável de clientes -->
+  <!-- Dropdown pesquisável de profissionais -->
   <div>
     <label class="block text-sm font-medium text-neutral-700 mb-1">
-      Cliente <span class="text-error-500">*</span>
+      Profissional
     </label>
     <div class="relative" ref="dropdownRef">
       <!-- Input de busca -->
@@ -13,21 +13,21 @@
         <input
           v-model="busca"
           type="text"
-          placeholder="Digite para pesquisar ou selecione um cliente"
+          placeholder="Digite para pesquisar ou selecione um profissional"
           class="w-full pl-9 pr-3 py-1.5 border border-neutral-300 rounded-sm text-sm hover:border-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-700 focus:border-primary-700 transition-all"
           @focus="dropdownAberto = true"
           @input="dropdownAberto = true"
         />
       </div>
       
-      <!-- Cliente selecionado (tag) -->
+      <!-- Profissional selecionado (tag) -->
       <div 
-        v-if="clienteObj && !dropdownAberto"
+        v-if="profissionalObj && !dropdownAberto"
         class="absolute inset-0 flex items-center px-3 bg-white border border-neutral-300 rounded-sm cursor-pointer hover:border-primary-700 transition-colors"
         @click="dropdownAberto = true; busca = ''"
       >
         <span class="text-sm text-neutral-700 truncate flex-1">
-          {{ clienteObj.nome }} - {{ clienteObj.cpf || 'Sem CPF' }}
+          {{ profissionalObj.nome }} - {{ profissionalObj.especialidade }}
         </span>
         <button 
           type="button" 
@@ -40,68 +40,62 @@
       
       <!-- Lista de opções filtradas -->
       <ul
-        v-if="dropdownAberto && clientesFiltrados.length > 0"
+        v-if="dropdownAberto && profissionaisFiltrados.length > 0"
         class="absolute z-10 w-full mt-1 bg-white border border-neutral-300 rounded-sm shadow-lg max-h-80 overflow-y-auto"
       >
         <li
-          v-for="cliente in clientesFiltrados"
-          :key="cliente.id"
+          v-for="profissional in profissionaisFiltrados"
+          :key="profissional.profissional_id"
           class="px-3 py-2 cursor-pointer hover:bg-primary-700/10 hover:border-primary-700/30 transition-colors border-b border-neutral-100 last:border-b-0"
-          @mousedown.prevent="selecionar(cliente)"
+          @mousedown.prevent="selecionar(profissional)"
         >
-          <p class="text-sm font-medium text-neutral-800">{{ cliente.nome }}</p>
-          <p v-if="cliente.telefone" class="text-xs text-neutral-500">{{ cliente.telefone }}</p>
-          <p v-if="cliente.cpf" class="text-xs text-neutral-500">CPF: {{ cliente.cpf }}</p>
-          <p v-if="cliente.email" class="text-xs text-blue-500">{{ cliente.email }}</p>
+          <p class="text-sm font-medium text-neutral-800">{{ profissional.nome }}</p>
+          <p class="text-xs text-neutral-500">{{ profissional.especialidade }}</p>
         </li>
       </ul>
       
       <!-- Nenhum resultado -->
       <ul
-        v-if="dropdownAberto && busca && clientesFiltrados.length === 0"
+        v-if="dropdownAberto && busca && profissionaisFiltrados.length === 0"
         class="absolute z-10 w-full mt-1 bg-white border border-neutral-300 rounded-sm shadow-lg"
       >
         <li class="px-3 py-1.5 text-sm text-neutral-500 italic">
-          Nenhum cliente encontrado
+          Nenhum profissional encontrado
         </li>
       </ul>
     </div>
-    <p class="text-xs text-neutral-500 mt-1">
-      Não encontrou o cliente? 
-      <button type="button" class="text-indigo-600 hover:text-indigo-800 font-medium" @click="emit('cadastrar')">Cadastrar novo cliente</button>
-    </p>
+    <p class="text-xs text-neutral-400 mt-1">Selecione um profissional para filtrar os agendamentos</p>
   </div>
 </template>
 
 <script setup lang="ts">
 /**
- * ================= SeletorCliente.vue =================
- * Componente reusável de dropdown pesquisável para clientes.
+ * ================= SeletorProfissional.vue =================
+ * Componente reusável de dropdown pesquisável para profissionais.
  * 
- * Exibe lista de clientes com busca por nome/CPF,
- * tag do cliente selecionado e link para cadastro.
+ * Exibe lista de profissionais com busca por nome/especialidade,
+ * tag do profissional selecionado.
  * 
  * Props:
- * @param {string} modelValue - ID do cliente selecionado (string)
- * @param {AgCliente[]} clientes - Lista completa de clientes
+ * @param {string} modelValue - ID do profissional selecionado (string)
+ * @param {AgProfissional[]} profissionais - Lista completa de profissionais
  * 
  * Emits:
- * @event update:modelValue - Emitido ao selecionar/limpar cliente
- * @event cadastrar - Emitido ao clicar em "Cadastrar novo cliente"
- * ======================================================
+ * @event update:modelValue - Emitido ao selecionar/limpar profissional
+ * ============================================================
  */
 
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
-import type { AgCliente } from '../../shared/types/database'
+import type { AgProfissional } from '../../shared/types/database'
 
 interface Props {
   modelValue: string
-  clientes: AgCliente[]
+  profissionais: AgProfissional[]
 }
 
 const props = defineProps<Props>()
-const emit = defineEmits(['update:modelValue', 'cadastrar'])
+const emit = defineEmits(['update:modelValue'])
 
 // Estado interno
 const busca = ref('')
@@ -109,31 +103,31 @@ const dropdownAberto = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
 
 /**
- * Filtra a lista de clientes pelo texto digitado (nome ou CPF)
+ * Filtra a lista de profissionais pelo texto digitado (nome ou especialidade)
  */
-const clientesFiltrados = computed(() => {
+const profissionaisFiltrados = computed(() => {
   const termo = busca.value.toLowerCase().trim()
-  if (!termo) return props.clientes
-  return props.clientes.filter((c) => {
-    const nome = c.nome?.toLowerCase() || ''
-    const cpf = c.cpf?.toLowerCase() || ''
-    return nome.includes(termo) || cpf.includes(termo)
+  if (!termo) return props.profissionais
+  return props.profissionais.filter((p) => {
+    const nome = p.nome?.toLowerCase() || ''
+    const especialidade = p.especialidade?.toLowerCase() || ''
+    return nome.includes(termo) || especialidade.includes(termo)
   })
 })
 
 /**
- * Retorna o objeto do cliente selecionado (para exibir a tag)
+ * Retorna o objeto do profissional selecionado (para exibir a tag)
  */
-const clienteObj = computed(() => {
+const profissionalObj = computed(() => {
   if (!props.modelValue) return null
-  return props.clientes.find((c) => String(c.id) === String(props.modelValue)) || null
+  return props.profissionais.find((p) => String(p.profissional_id) === String(props.modelValue)) || null
 })
 
 /**
- * Seleciona um cliente da lista e fecha o dropdown
+ * Seleciona um profissional da lista e fecha o dropdown
  */
-function selecionar(cliente: AgCliente) {
-  emit('update:modelValue', String(cliente.id))
+function selecionar(profissional: AgProfissional) {
+  emit('update:modelValue', String(profissional.profissional_id))
   busca.value = ''
   dropdownAberto.value = false
 }
@@ -147,7 +141,7 @@ function limpar() {
 }
 
 /**
- * Reseta o estado interno (chamado pelo pai ao fechar modal)
+ * Reseta o estado interno
  */
 function resetar() {
   busca.value = ''

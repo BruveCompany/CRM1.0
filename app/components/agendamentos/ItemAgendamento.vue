@@ -7,7 +7,7 @@
       <div 
         v-for="hora in 15" 
         :key="hora"
-        class="h-16 border-t border-white first:border-t-0 hover:bg-gray-50 cursor-pointer transition-colors pt-1"
+        class="h-16 border-t border-white first:border-t-0 hover:bg-neutral-50 cursor-pointer transition-colors pt-1"
       >
         <!-- Slot vazio - estrutura de fundo -->
       </div>

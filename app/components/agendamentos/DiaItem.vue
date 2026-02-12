@@ -2,12 +2,12 @@
   <!-- Item individual para exibir um dia -->
   <div class="flex flex-1 flex-col items-center gap-1 px-4 py-3 cursor-pointer transition-all duration-200 rounded-t-2xl bg-neutral-100 border-b-4 border-white">
     <!-- Dia da semana abreviado (ex: SEG, TER, QUA) -->
-    <div class="text-xs font-semibold text-gray-700">
+    <div class="text-xs font-semibold text-neutral-700">
       {{ diaSemana }}
     </div>
     
     <!-- Número do dia (ex: 07, 12, 25) -->
-    <div class="text-lg font-bold text-gray-900">
+    <div class="text-lg font-bold text-neutral-900">
       {{ numeroDia }}
     </div>
   </div>

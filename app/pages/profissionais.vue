@@ -1,7 +1,7 @@
 <template>
   <NuxtLayout>
     <div class="min-h-screen bg-white p-8">
-      <h1 class="text-3xl font-bold text-gray-900 mb-6">Profissionais</h1>
+      <h1 class="text-3xl font-bold text-neutral-900 mb-6">Profissionais</h1>
       <TabelaProfissionais 
         :profissionais="profissionais"
         @add-profissional="abrirModalAdicionar"

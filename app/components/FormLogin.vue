@@ -1,10 +1,10 @@
 <template>
   <div class="space-y-6">
     <div class="text-center mb-8">
-      <h2 class="text-2xl md:text-4xl font-bold text-gray-900">
+      <h2 class="text-2xl md:text-4xl font-bold text-neutral-900">
         Bem-vindo de volta
       </h2>
-      <p class="text-gray-600 md:text-xl mt-2">
+      <p class="text-neutral-600 md:text-xl mt-2">
         Entre com suas credenciais para acessar o sistema
       </p>
     </div>
@@ -33,9 +33,9 @@
           <input
             type="checkbox"
             v-model="form.remember"
-            class="rounded border-gray-300 text-primary-600 shadow-sm focus:ring-primary-500"
+            class="rounded border-neutral-300 text-primary-600 shadow-sm focus:ring-primary-500"
           />
-          <span class="ml-2 text-sm md:text-lg text-gray-600">Lembrar de mim</span>
+          <span class="ml-2 text-sm md:text-lg text-neutral-600">Lembrar de mim</span>
         </label>
 
         <a href="#" class="text-sm md:text-lg text-primary-600 hover:text-primary-700">
@@ -54,7 +54,7 @@
       </BaseButton>
     </form>
 
-    <div class="text-center text-sm md:text-lg text-gray-600">
+    <div class="text-center text-sm md:text-lg text-neutral-600">
       Não tem uma conta?
       <a href="#" class="text-primary-600 hover:text-primary-700 font-medium">
         Cadastre-se

@@ -17,7 +17,7 @@
     @keypress="onlyNumbers"
   >
     <template #icon>
-      <IdentificationIcon class="h-5 w-5 text-gray-400" />
+      <IdentificationIcon class="h-5 w-5 text-neutral-400" />
     </template>
   </BaseInput>
 </template>

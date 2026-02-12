@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col gap-2">
     <!-- Primeira linha: Período da semana atual -->
-    <div v-if="primeiroDia && ultimoDia" class="text-base font-semibold text-gray-800">
+    <div v-if="primeiroDia && ultimoDia" class="text-base font-semibold text-neutral-800">
       De {{ formatarData(primeiroDia) }} até {{ formatarData(ultimoDia) }}
     </div>
 

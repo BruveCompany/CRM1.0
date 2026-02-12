@@ -26,14 +26,14 @@
         <tr
           v-for="item in especialidades"
           :key="item.id"
-          class="transition-shadow duration-200 hover:shadow-sm hover:bg-gray-50"
+          class="transition-shadow duration-200 hover:shadow-sm hover:bg-neutral-50"
         >
-          <td class="px-4 py-2 border-t border-gray-200">{{ item.id }}</td>
-          <td class="px-4 py-2 border-t border-gray-200">{{ item.especialidade }}</td>
-          <td class="px-4 py-2 border-t border-gray-200 flex gap-2">
+          <td class="px-4 py-2 border-t border-neutral-200">{{ item.id }}</td>
+          <td class="px-4 py-2 border-t border-neutral-200">{{ item.especialidade }}</td>
+          <td class="px-4 py-2 border-t border-neutral-200 flex gap-2">
             <!-- Botão Editar (desabilitado para não-admin) -->
             <button
-              class="p-1 rounded hover:bg-gray-100"
+              class="p-1 rounded hover:bg-neutral-100"
               :class="!isAdmin ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''"
               title="Editar"
               :disabled="!isAdmin"
@@ -43,13 +43,13 @@
             </button>
             <!-- Botão Excluir (desabilitado para não-admin) -->
             <button
-              class="p-1 rounded hover:bg-gray-100"
+              class="p-1 rounded hover:bg-neutral-100"
               :class="!isAdmin ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''"
               title="Excluir"
               :disabled="!isAdmin"
               @click="isAdmin && $emit('deletar-especialidade', { id: item.id, especialidade: item.especialidade })"
             >
-              <TrashIcon class="w-5 h-5 text-red-600" />
+              <TrashIcon class="w-5 h-5 text-error-600" />
             </button>
           </td>
         </tr>

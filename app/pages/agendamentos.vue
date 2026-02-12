@@ -1,6 +1,6 @@
 <template>
   <NuxtLayout>
-    <div class="min-h-screen bg-white p-8 overflow-hidden">
+    <div class="min-h-screen bg-white px-8 pt-1 pb-8 overflow-hidden">
       <ListaAgendamentos />
     </div>
   </NuxtLayout>

@@ -1,7 +1,7 @@
 <template>
   <BaseModal id="modal-selecionar-profissional" v-model="modeloVisivel" size="sm">
     <template #header>
-      <h3 class="text-lg font-semibold text-gray-900">Selecionar Profissional</h3>
+      <h3 class="text-lg font-semibold text-neutral-900">Selecionar Profissional</h3>
     </template>
 
     <!-- Lista de profissionais -->
@@ -19,17 +19,17 @@
         <!-- Ícone avatar -->
         <div
           class="w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0"
-          :class="prof.profissional_id === profissionalAtualId ? 'bg-[#4338CA]' : 'bg-gray-400'"
+          :class="prof.profissional_id === profissionalAtualId ? 'bg-primary-700' : 'bg-neutral-400'"
         >
           {{ prof.nome.charAt(0).toUpperCase() }}
         </div>
 
         <!-- Nome e especialidade -->
         <div class="flex-1 min-w-0">
-          <div class="text-sm font-medium text-gray-900 truncate">
+          <div class="text-sm font-medium text-neutral-900 truncate">
             {{ prof.nome }}
           </div>
-          <div class="text-xs text-gray-500 truncate">
+          <div class="text-xs text-neutral-500 truncate">
             {{ prof.especialidade }}
           </div>
         </div>
@@ -37,7 +37,7 @@
         <!-- Check no selecionado -->
         <CheckIcon
           v-if="prof.profissional_id === profissionalAtualId"
-          class="w-5 h-5 text-[#4338CA] flex-shrink-0"
+          class="w-5 h-5 text-primary-700 flex-shrink-0"
         />
       </button>
     </div>

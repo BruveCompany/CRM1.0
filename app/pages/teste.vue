@@ -1,25 +1,25 @@
 <template>
   <NuxtLayout>
-    <div class="min-h-screen bg-gray-50 py-12">
+    <div class="min-h-screen bg-neutral-50 py-12">
       <div class="container mx-auto px-4 max-w-4xl">
         <div class="text-center mb-12">
-          <h1 class="text-3xl font-bold text-gray-900 mb-4">
+          <h1 class="text-3xl font-bold text-neutral-900 mb-4">
             Teste de Componentes
           </h1>
-          <p class="text-lg text-gray-600">
+          <p class="text-lg text-neutral-600">
             Avaliação dos componentes BaseButton e BaseInput
           </p>
         </div>
 
       <!-- BaseButton Tests -->
       <section class="mb-16">
-        <h2 class="text-2xl font-semibold text-gray-800 mb-8 text-center">
+        <h2 class="text-2xl font-semibold text-neutral-800 mb-8 text-center">
           BaseButton
         </h2>
         
         <!-- Variants -->
         <div class="bg-white p-8 rounded-lg shadow-md mb-8">
-          <h3 class="text-lg font-medium text-gray-700 mb-4">Variantes</h3>
+          <h3 class="text-lg font-medium text-neutral-700 mb-4">Variantes</h3>
           <div class="flex flex-wrap gap-4">
             <BaseButton variant="primary" @click="showAlert('Primary clicked')">
               Primary
@@ -38,7 +38,7 @@
 
         <!-- Sizes -->
         <div class="bg-white p-8 rounded-lg shadow-md mb-8">
-          <h3 class="text-lg font-medium text-gray-700 mb-4">Tamanhos</h3>
+          <h3 class="text-lg font-medium text-neutral-700 mb-4">Tamanhos</h3>
           <div class="flex flex-wrap items-center gap-4">
             <BaseButton size="sm" @click="showAlert('Small button')">
               Small
@@ -54,7 +54,7 @@
 
         <!-- States -->
         <div class="bg-white p-8 rounded-lg shadow-md">
-          <h3 class="text-lg font-medium text-gray-700 mb-4">Estados</h3>
+          <h3 class="text-lg font-medium text-neutral-700 mb-4">Estados</h3>
           <div class="flex flex-wrap gap-4">
             <BaseButton @click="showAlert('Normal button')">
               Normal
@@ -74,14 +74,14 @@
 
       <!-- BaseInput Tests -->
       <section class="mb-16">
-        <h2 class="text-2xl font-semibold text-gray-800 mb-8 text-center">
+        <h2 class="text-2xl font-semibold text-neutral-800 mb-8 text-center">
           BaseInput
         </h2>
         
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <!-- Basic Inputs -->
           <div class="bg-white p-8 rounded-lg shadow-md">
-            <h3 class="text-lg font-medium text-gray-700 mb-6">Inputs Básicos</h3>
+            <h3 class="text-lg font-medium text-neutral-700 mb-6">Inputs Básicos</h3>
             <div class="space-y-6">
               <BaseInput 
                 v-model="form.name"
@@ -114,7 +114,7 @@
 
           <!-- Input Sizes & States -->
           <div class="bg-white p-8 rounded-lg shadow-md">
-            <h3 class="text-lg font-medium text-gray-700 mb-6">Tamanhos e Estados</h3>
+            <h3 class="text-lg font-medium text-neutral-700 mb-6">Tamanhos e Estados</h3>
             <div class="space-y-6">
               <BaseInput 
                 v-model="form.small"
@@ -157,13 +157,13 @@
 
       <!-- Interactive Demo -->
       <section>
-        <h2 class="text-2xl font-semibold text-gray-800 mb-8 text-center">
+        <h2 class="text-2xl font-semibold text-neutral-800 mb-8 text-center">
           Demo Interativo
         </h2>
         
         <div class="bg-white p-8 rounded-lg shadow-md">
           <div class="max-w-md mx-auto">
-            <h3 class="text-lg font-medium text-gray-700 mb-6 text-center">
+            <h3 class="text-lg font-medium text-neutral-700 mb-6 text-center">
               Formulário de Teste
             </h3>
             
@@ -202,8 +202,8 @@
               </div>
             </form>
             
-            <div v-if="submitted" class="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p class="text-green-700 text-sm">
+            <div v-if="submitted" class="mt-6 p-4 bg-success-50 border border-success-200 rounded-lg">
+              <p class="text-success-700 text-sm">
                 ✓ Formulário enviado com sucesso!
               </p>
             </div>
@@ -214,15 +214,15 @@
       <!-- Data Display -->
       <section class="mt-12">
         <div class="bg-white p-8 rounded-lg shadow-md">
-          <h3 class="text-lg font-medium text-gray-700 mb-4">Dados dos Formulários</h3>
+          <h3 class="text-lg font-medium text-neutral-700 mb-4">Dados dos Formulários</h3>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <h4 class="font-medium text-gray-600 mb-2">Form Data:</h4>
-              <pre class="text-sm text-gray-600 bg-gray-50 p-3 rounded">{{ JSON.stringify(form, null, 2) }}</pre>
+              <h4 class="font-medium text-neutral-600 mb-2">Form Data:</h4>
+              <pre class="text-sm text-neutral-600 bg-neutral-50 p-3 rounded">{{ JSON.stringify(form, null, 2) }}</pre>
             </div>
             <div>
-              <h4 class="font-medium text-gray-600 mb-2">Demo Form Data:</h4>
-              <pre class="text-sm text-gray-600 bg-gray-50 p-3 rounded">{{ JSON.stringify(demoForm, null, 2) }}</pre>
+              <h4 class="font-medium text-neutral-600 mb-2">Demo Form Data:</h4>
+              <pre class="text-sm text-neutral-600 bg-neutral-50 p-3 rounded">{{ JSON.stringify(demoForm, null, 2) }}</pre>
             </div>
           </div>
         </div>

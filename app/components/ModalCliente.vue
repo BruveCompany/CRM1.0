@@ -1,15 +1,15 @@
 <template>
   <BaseModal :model-value="modelValue" @update:modelValue="$emit('update:modelValue', $event)">
     <template #header>
-      <h3 class="text-lg font-semibold text-gray-900">
+      <h3 class="text-lg font-semibold text-neutral-900">
         {{ isEdicao ? 'Editar Cliente' : 'Novo Cliente' }}
       </h3>
     </template>
     
     <form @submit.prevent="onConfirmar" class="space-y-4">
       <!-- Mensagem de erro geral -->
-      <div v-if="errorMessage" class="p-3 bg-red-50 border border-red-200 rounded-lg">
-        <p class="text-sm text-red-600">{{ errorMessage }}</p>
+      <div v-if="errorMessage" class="p-3 bg-error-50 border border-error-200 rounded-lg">
+        <p class="text-sm text-error-600">{{ errorMessage }}</p>
       </div>
       
       <!-- Campo CPF com máscara -->

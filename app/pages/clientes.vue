@@ -1,8 +1,8 @@
 <template>
   <NuxtLayout>
     <div class="min-h-screen bg-white p-8">
-      <h1 class="text-3xl font-bold text-gray-900 mb-6">Clientes</h1>
-      <div v-if="loading" class="text-gray-500">Carregando...</div>
+      <h1 class="text-3xl font-bold text-neutral-900 mb-6">Clientes</h1>
+      <div v-if="loading" class="text-neutral-500">Carregando...</div>
       <TabelaClientes
         v-else
         :clientes="clientes"

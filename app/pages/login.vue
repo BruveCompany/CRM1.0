@@ -1,14 +1,14 @@
 <template>
   <div class="h-screen flex overflow-hidden">
     <!-- Coluna Esquerda - Formulário -->
-    <div class="w-full md:w-1/2 flex items-center justify-center px-6 py-8 bg-gray-50 overflow-y-auto">
+    <div class="w-full md:w-1/2 flex items-center justify-center px-6 py-8 bg-neutral-50 overflow-y-auto">
       <div class="w-full max-w-md">
         <!-- Logo mobile -->
         <div class="md:hidden text-center mb-8">
           <h1 class="text-3xl font-bold text-primary-600 mb-2">
             Bruve Saas
           </h1>
-          <p class="text-gray-600">Sistema de Agendamento</p>
+          <p class="text-neutral-600">Sistema de Agendamento</p>
         </div>
 
         <!-- Card do formulário -->
@@ -18,7 +18,7 @@
 
         <!-- Footer -->
         <div class="mt-8 text-center">
-          <p class="text-sm text-gray-500">
+          <p class="text-sm text-neutral-500">
             © 2026 Bruve Saas. Todos os direitos reservados.
           </p>
         </div>

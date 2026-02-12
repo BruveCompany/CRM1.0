@@ -1,7 +1,7 @@
 <template>
   <BaseModal :model-value="modelValue" @update:modelValue="$emit('update:modelValue', $event)">
     <template #header>
-      <h3 class="text-lg font-semibold text-gray-900">
+      <h3 class="text-lg font-semibold text-neutral-900">
         {{ isEdicao ? 'Editar Especialidade' : 'Nova Especialidade' }}
       </h3>
     </template>

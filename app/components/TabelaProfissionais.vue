@@ -30,15 +30,15 @@
         <tr
           v-for="profissional in profissionais"
           :key="profissional.profissional_id"
-          class="tabela-linha transition-shadow duration-200 hover:shadow-sm hover:bg-gray-50"
+          class="tabela-linha transition-shadow duration-200 hover:shadow-sm hover:bg-neutral-50"
         >
-          <td class="tabela-coluna px-4 py-2 border-t border-gray-200">{{ profissional.profissional_id }}</td>
-          <td class="tabela-coluna px-4 py-2 border-t border-gray-200">{{ profissional.nome }}</td>
-          <td class="tabela-coluna px-4 py-2 border-t border-gray-200">{{ profissional.especialidade }}</td>
-          <td class="tabela-coluna px-4 py-2 border-t border-gray-200 flex gap-2">
+          <td class="tabela-coluna px-4 py-2 border-t border-neutral-200">{{ profissional.profissional_id }}</td>
+          <td class="tabela-coluna px-4 py-2 border-t border-neutral-200">{{ profissional.nome }}</td>
+          <td class="tabela-coluna px-4 py-2 border-t border-neutral-200">{{ profissional.especialidade }}</td>
+          <td class="tabela-coluna px-4 py-2 border-t border-neutral-200 flex gap-2">
             <!-- Botão Editar -->
             <button
-              class="p-1 rounded hover:bg-gray-100"
+              class="p-1 rounded hover:bg-neutral-100"
               :class="!isAdmin ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''"
               title="Editar"
               :disabled="!isAdmin"
@@ -49,13 +49,13 @@
             
             <!-- Botão Deletar -->
             <button
-              class="p-1 rounded hover:bg-gray-100"
+              class="p-1 rounded hover:bg-neutral-100"
               :class="!isAdmin ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''"
               title="Excluir"
               :disabled="!isAdmin"
               @click="isAdmin && $emit('deletar-profissional', { profissional_id: profissional.profissional_id, nome: profissional.nome })"
             >
-              <TrashIcon class="w-5 h-5 text-red-600" />
+              <TrashIcon class="w-5 h-5 text-error-600" />
             </button>
           </td>
         </tr>

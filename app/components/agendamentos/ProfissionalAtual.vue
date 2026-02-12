@@ -1,7 +1,7 @@
 <template>
   <div id="profissional-atual" class="flex flex-col items-center justify-center gap-1">
     <!-- Estado: Carregando dados -->
-    <div v-if="loading" class="text-gray-500 text-sm">
+    <div v-if="loading" class="text-neutral-500 text-sm">
       Carregando...
     </div>
 
@@ -10,20 +10,20 @@
       <!-- Nome do profissional (clicável para abrir modal) -->
       <button
         type="button"
-        class="flex items-center gap-1.5 text-lg font-bold text-gray-900 hover:text-[#4338CA] transition-colors cursor-pointer"
+        class="flex items-center gap-1.5 text-lg font-bold text-neutral-900 hover:text-primary-700 transition-colors cursor-pointer"
         @click="modalAberto = true"
       >
         {{ profissionalAtual.nome }}
         <ChevronDownIcon class="w-4 h-4" />
       </button>
       <!-- Especialidade -->
-      <div class="text-sm text-gray-600">
+      <div class="text-sm text-neutral-600">
         {{ profissionalAtual.especialidade }}
       </div>
     </template>
 
     <!-- Estado: Nenhum profissional disponível -->
-    <div v-else class="text-gray-500 text-sm">
+    <div v-else class="text-neutral-500 text-sm">
       Nenhum profissional encontrado
     </div>
 

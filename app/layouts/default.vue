@@ -4,7 +4,7 @@
     <Sidebar />
 
     <!-- Main Content -->
-    <main class="flex-1 overflow-y-auto bg-gray-50">
+    <main class="flex-1 overflow-y-auto bg-neutral-50">
       <slot />
     </main>
   </div>

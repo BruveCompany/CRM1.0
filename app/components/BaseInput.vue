@@ -3,10 +3,10 @@
     <label 
       v-if="label" 
       :for="inputId"
-      class="block text-sm font-medium text-gray-700"
+      class="block text-sm font-medium text-neutral-700"
     >
       {{ label }}
-      <span v-if="required" class="text-red-500">*</span>
+      <span v-if="required" class="text-error-500">*</span>
     </label>
     
     <div class="relative">
@@ -38,7 +38,7 @@
       v-if="error || hint" 
       :class="[
         'text-sm',
-        error ? 'text-red-500' : 'text-gray-500'
+        error ? 'text-error-500' : 'text-neutral-500'
       ]"
     >
       {{ error || hint }}
@@ -135,7 +135,7 @@ const handleInput = (event: Event) => {
  * @returns {string} String com todas as classes CSS
  */
 const inputClasses = computed(() => {
-  const base = 'block w-full border rounded-md shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:bg-gray-50 disabled:text-gray-500'
+  const base = 'block w-full border rounded-md shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:bg-neutral-50 disabled:text-neutral-500'
   
   // Tamanhos disponíveis
   const sizes = {
@@ -146,8 +146,8 @@ const inputClasses = computed(() => {
   
   // Estado visual (normal ou erro)
   const state = props.error 
-    ? 'border-red-300 focus:border-red-500 focus:ring-red-500 hover:border-red-400'
-    : 'border-gray-300 focus:border-primary-500 focus:ring-primary-500 hover:border-gray-500'
+    ? 'border-error-300 focus:border-error-500 focus:ring-error-500 hover:border-error-400'
+    : 'border-neutral-300 focus:border-primary-700 focus:ring-primary-700 hover:border-primary-700'
   
   // Padding adicional se tiver ícones nos slots
   const iconPadding = slots.icon ? 'pl-10' : ''

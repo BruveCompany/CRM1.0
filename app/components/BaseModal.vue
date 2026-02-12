@@ -7,13 +7,13 @@
     >
       <div :class="['bg-white rounded-lg shadow-2xl w-full mx-4 transform transition-all flex flex-col max-h-[calc(100vh-2rem)]', maxWidthClass]">
         <!-- Header -->
-        <div class="px-5 py-3.5 flex items-center justify-between border-b border-gray-100 flex-shrink-0">
+        <div class="px-5 py-3.5 flex items-center justify-between border-b border-neutral-100 flex-shrink-0">
           <slot name="header">
-            <h3 class="text-lg font-semibold text-gray-900">Modal</h3>
+            <h3 class="text-lg font-semibold text-neutral-900">Modal</h3>
           </slot>
           <button 
             @click="$emit('update:modelValue', false)" 
-            class="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg p-1.5 transition-colors"
+            class="text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-lg p-1.5 transition-colors"
             type="button"
           >
             <span class="sr-only">Fechar</span>
@@ -29,7 +29,7 @@
         </div>
         
         <!-- Footer (apenas se tiver conteúdo) -->
-        <div v-if="$slots.footer" class="px-5 py-3 bg-gray-50 rounded-b-lg flex justify-end gap-2.5 border-t border-gray-100 flex-shrink-0">
+        <div v-if="$slots.footer" class="px-5 py-3 bg-neutral-50 rounded-b-lg flex justify-end gap-2.5 border-t border-neutral-100 flex-shrink-0">
           <slot name="footer" />
         </div>
       </div>
