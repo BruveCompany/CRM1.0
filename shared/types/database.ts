@@ -28,6 +28,11 @@ export type Database = {
         Update: Partial<Omit<AgAgendamento, 'id' | 'created_at'>>
       }
     }
+    Views: {
+      ag_view_agendamentos_completo: {
+        Row: AgViewAgendamentoCompleto
+      }
+    }
   }
 }
 
@@ -122,6 +127,64 @@ export interface AgAgendamento {
   cancelado: boolean
   cancelado_as: string | null
   cor: string | null
+}
+
+/**
+ * Interface para a view ag_view_agendamentos_completo
+ * View que combina dados de agendamentos com informações completas de cliente e profissional
+ * 
+ * Dados do agendamento:
+ * @property {number} id - ID único do agendamento
+ * @property {string} created_at - Data/hora de criação do registro
+ * @property {string | null} user_id - ID do usuário
+ * @property {string | null} data - Data do agendamento
+ * @property {string | null} hora_inicio - Hora de início
+ * @property {string | null} hora_fim - Hora de fim
+ * @property {string | null} titulo - Título do agendamento
+ * @property {string | null} descricao - Descrição do agendamento
+ * @property {boolean} cancelado - Status de cancelamento
+ * @property {string | null} cancelado_as - Data/hora do cancelamento
+ * @property {string | null} cor - Cor hexadecimal do agendamento
+ * 
+ * Dados do cliente:
+ * @property {number | null} cliente_id - ID do cliente
+ * @property {string | null} cliente_nome - Nome do cliente
+ * @property {string | null} cliente_cpf - CPF do cliente
+ * @property {string | null} cliente_email - Email do cliente
+ * @property {string | null} cliente_telefone - Telefone do cliente
+ * 
+ * Dados do profissional:
+ * @property {number | null} profissional_id - ID do profissional
+ * @property {number | null} profile_id - ID do perfil do profissional
+ * @property {string | null} profissional_nome - Nome do profissional
+ * @property {number | null} especialidade_id - ID da especialidade
+ * @property {string | null} especialidade - Nome da especialidade
+ */
+export interface AgViewAgendamentoCompleto {
+  // Dados do agendamento
+  id: number
+  created_at: string
+  user_id: string | null
+  data: string | null
+  hora_inicio: string | null
+  hora_fim: string | null
+  titulo: string | null
+  descricao: string | null
+  cancelado: boolean
+  cancelado_as: string | null
+  cor: string | null
+  // Dados do cliente
+  cliente_id: number | null
+  cliente_nome: string | null
+  cliente_cpf: string | null
+  cliente_email: string | null
+  cliente_telefone: string | null
+  // Dados do profissional
+  profissional_id: number | null
+  profile_id: number | null
+  profissional_nome: string | null
+  especialidade_id: number | null
+  especialidade: string | null
 }
 
 // Estado do store de usuário

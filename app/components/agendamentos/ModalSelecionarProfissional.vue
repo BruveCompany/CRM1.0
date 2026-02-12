@@ -12,14 +12,14 @@
         type="button"
         class="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-left transition-colors"
         :class="prof.profissional_id === profissionalAtualId
-          ? 'bg-purple-50 border border-purple-200'
-          : 'hover:bg-gray-50 border border-transparent'"
+          ? 'bg-indigo-50 border border-indigo-200'
+          : 'hover:bg-indigo-50 border border-transparent'"
         @click="selecionar(prof)"
       >
         <!-- Ícone avatar -->
         <div
           class="w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0"
-          :class="prof.profissional_id === profissionalAtualId ? 'bg-purple-600' : 'bg-gray-400'"
+          :class="prof.profissional_id === profissionalAtualId ? 'bg-[#4338CA]' : 'bg-gray-400'"
         >
           {{ prof.nome.charAt(0).toUpperCase() }}
         </div>
@@ -37,7 +37,7 @@
         <!-- Check no selecionado -->
         <CheckIcon
           v-if="prof.profissional_id === profissionalAtualId"
-          class="w-5 h-5 text-purple-600 flex-shrink-0"
+          class="w-5 h-5 text-[#4338CA] flex-shrink-0"
         />
       </button>
     </div>

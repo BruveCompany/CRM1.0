@@ -1,4 +1,4 @@
-import type { AgAgendamento, Database } from '../../shared/types/database'
+import type { AgAgendamento, AgViewAgendamentoCompleto, Database } from '../../shared/types/database'
 
 /**
  * ================= useAgendamento.ts =================
@@ -259,10 +259,110 @@ export function useAgendamento() {
     }
   }
 
+  /**
+   * Busca relatório completo de agendamentos com informações de cliente e profissional
+   * Usa a RPC function ag_get_agendamentos_completo que retorna dados da view
+   * 
+   * Filtros opcionais (aplicados após busca):
+   * - dataInicio/dataFim: Período do agendamento
+   * - profissionalId: Filtrar por profissional específico
+   * - clienteId: Filtrar por cliente específico
+   * - cancelado: true (apenas cancelados), false (apenas ativos), undefined (todos)
+   * 
+   * @param filtros - Objeto com filtros opcionais
+   * @returns Promise<AgViewAgendamentoCompleto[] | null> - Array de agendamentos completos ou null se erro
+   * 
+   * Exemplo de uso:
+   * ```ts
+   * // Buscar todos os agendamentos ativos de um profissional em um período
+   * const relatorio = await buscarRelatorioAgendamentos({
+   *   profissionalId: 2,
+   *   dataInicio: '2026-02-01',
+   *   dataFim: '2026-02-28',
+   *   cancelado: false
+   * })
+   * 
+   * // Buscar todos os agendamentos de um cliente (ativos e cancelados)
+   * const historico = await buscarRelatorioAgendamentos({
+   *   clienteId: 5
+   * })
+   * ```
+   */
+  async function buscarRelatorioAgendamentos(filtros?: {
+    dataInicio?: string
+    dataFim?: string
+    profissionalId?: number
+    clienteId?: number
+    cancelado?: boolean
+  }): Promise<AgViewAgendamentoCompleto[] | null> {
+    try {
+      console.log('📊 Buscando relatório de agendamentos:', filtros)
+
+      // Busca via RPC function (bypass RLS da view)
+      const { data, error } = await supabase.rpc('ag_get_agendamentos_completo')
+
+      if (error) {
+        console.error('❌ Erro ao buscar relatório de agendamentos:', error)
+        console.error('Detalhes do erro:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        })
+        notifyError('Erro ao buscar relatório de agendamentos')
+        return null
+      }
+
+      // Aplica filtros manualmente nos dados retornados
+      let resultado = data as AgViewAgendamentoCompleto[]
+
+      if (filtros?.dataInicio) {
+        resultado = resultado.filter(a => a.data && a.data >= filtros.dataInicio!)
+      }
+      if (filtros?.dataFim) {
+        resultado = resultado.filter(a => a.data && a.data <= filtros.dataFim!)
+      }
+      if (filtros?.profissionalId) {
+        resultado = resultado.filter(a => a.profissional_id === filtros.profissionalId)
+      }
+      if (filtros?.clienteId) {
+        resultado = resultado.filter(a => a.cliente_id === filtros.clienteId)
+      }
+      if (filtros?.cancelado !== undefined) {
+        resultado = resultado.filter(a => a.cancelado === filtros.cancelado)
+      }
+
+      // Ordena por data e hora
+      resultado.sort((a, b) => {
+        // Primeiro por data
+        if (a.data && b.data) {
+          if (a.data !== b.data) {
+            return a.data.localeCompare(b.data)
+          }
+        }
+        // Depois por hora_inicio
+        if (a.hora_inicio && b.hora_inicio) {
+          return a.hora_inicio.localeCompare(b.hora_inicio)
+        }
+        return 0
+      })
+
+      console.log('✅ Relatório de agendamentos encontrado:', resultado.length)
+      console.log('📊 Dados:', resultado)
+      
+      return resultado
+    } catch (err) {
+      console.error('❌ Erro inesperado ao buscar relatório:', err)
+      notifyError('Erro inesperado ao buscar relatório')
+      return null
+    }
+  }
+
   return {
     buscarAgendamentosPorProfissional,
     inserirAgendamento,
     editarAgendamento,
-    cancelarAgendamento
+    cancelarAgendamento,
+    buscarRelatorioAgendamentos
   }
 }

@@ -10,7 +10,7 @@
       <!-- Nome do profissional (clicável para abrir modal) -->
       <button
         type="button"
-        class="flex items-center gap-1.5 text-lg font-bold text-gray-900 hover:text-purple-700 transition-colors cursor-pointer"
+        class="flex items-center gap-1.5 text-lg font-bold text-gray-900 hover:text-[#4338CA] transition-colors cursor-pointer"
         @click="modalAberto = true"
       >
         {{ profissionalAtual.nome }}
