@@ -1,101 +1,49 @@
 <template>
-  <aside :class="['bg-white border-r border-gray-200 flex flex-col h-screen transition-all duration-300', isCollapsed ? 'w-20' : 'w-64']">
+  <aside :class="['bg-white border-r border-gray-100 flex flex-col h-screen transition-all duration-300 relative', isCollapsed ? 'w-20' : 'w-64']">
+    <!-- Toggle Button Overlay -->
+    <button
+      @click="toggleSidebar"
+      class="absolute -right-3 top-9 bg-white border border-gray-200 rounded-full p-1 shadow-sm hover:bg-gray-50 transition-colors z-10"
+    >
+      <ChevronLeftIcon v-if="!isCollapsed" class="w-4 h-4 text-gray-400" />
+      <ChevronRightIcon v-else class="w-4 h-4 text-gray-400" />
+    </button>
+
     <!-- Header -->
-    <div class="px-6 pt-[1.125rem] pb-5 border-b border-gray-200 flex items-center gap-3">
-      <div v-if="!isCollapsed" class="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-        <CalendarIcon class="w-7 h-7 text-white" />
+    <div :class="['flex items-center gap-3 px-4 py-6', isCollapsed ? 'justify-center px-2' : '']">
+      <div class="flex items-center justify-center flex-shrink-0">
+        <ChatBubbleLeftRightIcon class="w-8 h-8 text-[#4338CA] stroke-1" />
       </div>
-      <div v-if="!isCollapsed" class="flex-1">
-        <h2 class="text-lg font-bold text-gray-900">AgendaPro</h2>
-        <p class="text-xs text-gray-500">Sistema de Agendamento</p>
+      <div v-if="!isCollapsed" class="flex-1 overflow-hidden">
+        <h2 class="text-base font-medium text-gray-900 leading-tight whitespace-nowrap">Painel de<br>Atendimento</h2>
       </div>
-      <button
-        @click="toggleSidebar"
-        class="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-        :class="isCollapsed ? 'mx-auto' : ''"
-      >
-        <ChevronLeftIcon v-if="!isCollapsed" class="w-5 h-5 text-gray-600" />
-        <ChevronRightIcon v-else class="w-5 h-5 text-gray-600" />
-      </button>
     </div>
 
     <!-- Navigation -->
-    <nav class="flex-1 p-4 space-y-2">
+    <nav class="flex-1 px-3 py-4 space-y-1">
       <NuxtLink 
-        to="/" 
-        :class="['w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 text-gray-700 hover:text-blue-600 transition-colors flex items-center', isCollapsed ? 'justify-center' : 'gap-3']"
-        :title="isCollapsed ? 'Dashboard' : ''"
+        v-for="item in navItems"
+        :key="item.to"
+        :to="item.to" 
+        :class="['group flex items-center px-4 py-2.5 text-sm font-normal rounded-lg transition-all duration-200', 
+          isCollapsed ? 'justify-center' : 'gap-3'
+        ]"
+        active-class="bg-indigo-50 text-[#4338CA] font-medium"
+        class="text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+        :title="isCollapsed ? item.label : ''"
       >
-        <HomeIcon class="w-5 h-5 flex-shrink-0" />
-        <span v-if="!isCollapsed">Dashboard</span>
-      </NuxtLink>
-
-      <NuxtLink 
-        to="/mensagens" 
-        :class="['w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 text-gray-700 hover:text-blue-600 transition-colors flex items-center', isCollapsed ? 'justify-center' : 'gap-3']"
-        :title="isCollapsed ? 'Mensagens' : ''"
-      >
-        <ChatBubbleLeftRightIcon class="w-5 h-5 flex-shrink-0" />
-        <span v-if="!isCollapsed">Mensagens</span>
-      </NuxtLink>
-
-      <NuxtLink 
-        to="/relatorios" 
-        :class="['w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 text-gray-700 hover:text-blue-600 transition-colors flex items-center', isCollapsed ? 'justify-center' : 'gap-3']"
-        :title="isCollapsed ? 'Relatórios' : ''"
-      >
-        <ChartBarIcon class="w-5 h-5 flex-shrink-0" />
-        <span v-if="!isCollapsed">Relatórios</span>
-      </NuxtLink>
-
-      <NuxtLink 
-        to="/agenda" 
-        :class="['w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 text-gray-700 hover:text-blue-600 transition-colors flex items-center', isCollapsed ? 'justify-center' : 'gap-3']"
-        :title="isCollapsed ? 'Agenda' : ''"
-      >
-        <CalendarIcon class="w-5 h-5 flex-shrink-0" />
-        <span v-if="!isCollapsed">Agenda</span>
-      </NuxtLink>
-
-      <NuxtLink 
-        to="/agendamentos" 
-        :class="['w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 text-gray-700 hover:text-blue-600 transition-colors flex items-center', isCollapsed ? 'justify-center' : 'gap-3']"
-        :title="isCollapsed ? 'Agendamentos' : ''"
-      >
-        <CalendarIcon class="w-5 h-5 flex-shrink-0" />
-        <span v-if="!isCollapsed">Agendamentos</span>
-      </NuxtLink>
-
-      <NuxtLink 
-        to="/clientes" 
-        :class="['w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 text-gray-700 hover:text-blue-600 transition-colors flex items-center', isCollapsed ? 'justify-center' : 'gap-3']"
-        :title="isCollapsed ? 'Clientes' : ''"
-      >
-        <UserIcon class="w-5 h-5 flex-shrink-0" />
-        <span v-if="!isCollapsed">Clientes</span>
-      </NuxtLink>
-
-      <NuxtLink 
-        to="/especialidades" 
-        :class="['w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 text-gray-700 hover:text-blue-600 transition-colors flex items-center', isCollapsed ? 'justify-center' : 'gap-3']"
-        :title="isCollapsed ? 'Especialidades' : ''"
-      >
-        <BookOpenIcon class="w-5 h-5 flex-shrink-0" />
-        <span v-if="!isCollapsed">Especialidades</span>
-      </NuxtLink>
-
-      <NuxtLink 
-        to="/profissionais" 
-        :class="['w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 text-gray-700 hover:text-blue-600 transition-colors flex items-center', isCollapsed ? 'justify-center' : 'gap-3']"
-        :title="isCollapsed ? 'Profissionais' : ''"
-      >
-        <UserGroupIcon class="w-5 h-5 flex-shrink-0" />
-        <span v-if="!isCollapsed">Profissionais</span>
+        <div class="w-8 flex items-center justify-center flex-shrink-0">
+          <component 
+            :is="item.icon" 
+            :class="['w-5 h-5 transition-colors duration-200 stroke-[1.5]']" 
+          />
+        </div>
+        <span v-if="!isCollapsed">{{ item.label }}</span>
       </NuxtLink>
     </nav>
 
     <!-- Footer -->
-    <div class="p-4 border-t border-gray-200">
+    <div class="p-3 border-t border-gray-100">
       <MenuDropdown :is-collapsed="isCollapsed" />
     </div>
   </aside>
@@ -118,6 +66,17 @@ const user = useSupabaseUser()
 const { logout } = useAuth()
 
 const isCollapsed = ref(false)
+
+const navItems = [
+  { label: 'Dashboard', to: '/', icon: HomeIcon },
+  { label: 'Mensagens', to: '/mensagens', icon: ChatBubbleLeftRightIcon },
+  { label: 'Relatórios', to: '/relatorios', icon: ChartBarIcon },
+  { label: 'Agenda', to: '/agenda', icon: CalendarIcon },
+  { label: 'Agendamentos', to: '/agendamentos', icon: CalendarIcon },
+  { label: 'Clientes', to: '/clientes', icon: UserIcon },
+  { label: 'Especialidades', to: '/especialidades', icon: BookOpenIcon },
+  { label: 'Profissionais', to: '/profissionais', icon: UserGroupIcon },
+]
 
 const toggleSidebar = () => {
   isCollapsed.value = !isCollapsed.value

@@ -14,7 +14,7 @@
     </div>
     
     <!-- Tabela de especialidades -->
-    <table class="min-w-full bg-white border-separate border-spacing-0 bg-white rounded-lg">
+    <table class="min-w-full bg-white border-separate border-spacing-0 rounded-lg">
       <thead>
         <tr>
           <th class="px-4 py-2 text-left">ID</th>

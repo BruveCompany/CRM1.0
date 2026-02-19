@@ -2,17 +2,17 @@
   <div class="relative" ref="dropdownRef">
     <button
       @click="toggleMenu"
-      :class="['w-full px-4 py-3 text-left rounded-lg hover:bg-neutral-100 flex items-center transition-colors', isCollapsed ? 'justify-center' : 'gap-3']"
+      :class="['w-full px-4 py-2.5 text-left rounded-lg hover:bg-gray-50 flex items-center transition-colors', isCollapsed ? 'justify-center' : 'gap-3']"
       aria-haspopup="true"
       :aria-expanded="isOpen"
       :title="isCollapsed ? 'Configurações' : ''"
     >
-      <div class="w-10 h-10 bg-neutral-100 rounded-full flex items-center justify-center flex-shrink-0">
-        <UserCircleIcon class="w-6 h-6 text-neutral-600" />
+      <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+        <UserCircleIcon class="w-5 h-5 text-gray-600 stroke-[1.5]" />
       </div>
-      <span v-if="!isCollapsed" class="text-sm font-medium text-neutral-700 flex-1">Configurações</span>
-      <ChevronUpIcon v-if="isOpen && !isCollapsed" class="w-4 h-4 text-neutral-600" />
-      <ChevronDownIcon v-else-if="!isCollapsed" class="w-4 h-4 text-neutral-600" />
+      <span v-if="!isCollapsed" class="text-sm font-normal text-gray-700 flex-1">Configurações</span>
+      <ChevronUpIcon v-if="isOpen && !isCollapsed" class="w-4 h-4 text-gray-500" />
+      <ChevronDownIcon v-else-if="!isCollapsed" class="w-4 h-4 text-gray-500" />
     </button>
 
     <!-- Dropdown Menu -->
