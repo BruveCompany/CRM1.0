@@ -31,12 +31,30 @@
       </NuxtLink>
 
       <NuxtLink 
-        to="/especialidades" 
+        to="/mensagens" 
         :class="['w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 text-gray-700 hover:text-blue-600 transition-colors flex items-center', isCollapsed ? 'justify-center' : 'gap-3']"
-        :title="isCollapsed ? 'Especialidades' : ''"
+        :title="isCollapsed ? 'Mensagens' : ''"
       >
-        <BookOpenIcon class="w-5 h-5 flex-shrink-0" />
-        <span v-if="!isCollapsed">Especialidades</span>
+        <ChatBubbleLeftRightIcon class="w-5 h-5 flex-shrink-0" />
+        <span v-if="!isCollapsed">Mensagens</span>
+      </NuxtLink>
+
+      <NuxtLink 
+        to="/relatorios" 
+        :class="['w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 text-gray-700 hover:text-blue-600 transition-colors flex items-center', isCollapsed ? 'justify-center' : 'gap-3']"
+        :title="isCollapsed ? 'Relatórios' : ''"
+      >
+        <ChartBarIcon class="w-5 h-5 flex-shrink-0" />
+        <span v-if="!isCollapsed">Relatórios</span>
+      </NuxtLink>
+
+      <NuxtLink 
+        to="/agenda" 
+        :class="['w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 text-gray-700 hover:text-blue-600 transition-colors flex items-center', isCollapsed ? 'justify-center' : 'gap-3']"
+        :title="isCollapsed ? 'Agenda' : ''"
+      >
+        <CalendarIcon class="w-5 h-5 flex-shrink-0" />
+        <span v-if="!isCollapsed">Agenda</span>
       </NuxtLink>
 
       <NuxtLink 
@@ -55,6 +73,15 @@
       >
         <UserIcon class="w-5 h-5 flex-shrink-0" />
         <span v-if="!isCollapsed">Clientes</span>
+      </NuxtLink>
+
+      <NuxtLink 
+        to="/especialidades" 
+        :class="['w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 text-gray-700 hover:text-blue-600 transition-colors flex items-center', isCollapsed ? 'justify-center' : 'gap-3']"
+        :title="isCollapsed ? 'Especialidades' : ''"
+      >
+        <BookOpenIcon class="w-5 h-5 flex-shrink-0" />
+        <span v-if="!isCollapsed">Especialidades</span>
       </NuxtLink>
 
       <NuxtLink 
@@ -82,7 +109,9 @@ import {
   UserIcon, 
   UserGroupIcon,
   ChevronLeftIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  ChartBarIcon,
+  ChatBubbleLeftRightIcon
 } from '@heroicons/vue/24/outline'
 
 const user = useSupabaseUser()
