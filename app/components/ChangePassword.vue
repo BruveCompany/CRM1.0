@@ -1,6 +1,6 @@
 <template>
-  <div class="space-y-4">
-    <h3 class="text-lg font-medium text-gray-900">Alterar Senha</h3>
+  <form class="space-y-4" @submit.prevent="handleChangePassword">
+    <h3 v-if="showTitle" class="text-lg font-medium text-gray-900">Alterar Senha</h3>
     <div class="space-y-4">
       <InputPassword
         v-model="newPassword"
@@ -25,7 +25,9 @@
       
       <div class="flex justify-end gap-3 pt-2">
         <BaseButton 
+          v-if="showClearButton"
           variant="outline" 
+          type="button"
           @click="handleClear"
           :disabled="loading"
         >
@@ -33,14 +35,14 @@
         </BaseButton>
         <BaseButton 
           variant="primary" 
-          @click="handleChangePassword"
+          type="submit"
           :loading="loading"
         >
           Alterar Senha
         </BaseButton>
       </div>
     </div>
-  </div>
+  </form>
 </template>
 
 <script setup lang="ts">
@@ -58,6 +60,17 @@
 
 import InputPassword from './InputPassword.vue'
 import BaseButton from './BaseButton.vue'
+
+const props = defineProps({
+  showTitle: {
+    type: Boolean,
+    default: true
+  },
+  showClearButton: {
+    type: Boolean,
+    default: true
+  }
+})
 
 // Composables
 const { changePassword } = useAuth()

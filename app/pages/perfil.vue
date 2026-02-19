@@ -1,5 +1,6 @@
 <template>
   <NuxtLayout>
+
     <div class="min-h-screen bg-white p-8">
       <div>
         <div class="mb-6">
@@ -29,8 +30,8 @@
             </div>
             
             <div class="flex justify-end gap-3 pt-4 border-t border-neutral-100">
-              <BaseButton variant="outline" @click="handleCancel">Cancelar</BaseButton>
-              <BaseButton variant="primary" @click="handleSaveProfile">Salvar</BaseButton>
+              <BaseButton variant="outline" @click="handleCancel" :disabled="savingProfile">Cancelar</BaseButton>
+              <BaseButton variant="primary" @click="handleSaveProfile" :loading="savingProfile">Salvar</BaseButton>
             </div>
           </div>
 
@@ -40,6 +41,7 @@
         </div>
       </div>
     </div>
+
   </NuxtLayout>
 </template>
 
@@ -57,11 +59,14 @@ import { storeToRefs } from 'pinia'
 // Store e Composables
 const userStore = useUserStore()
 const { user, profile } = storeToRefs(userStore)
+const { updateUserName } = useAuth()
+const { notifyError } = useNotification()
 
 // Estado Local
 // Informações do perfil
 const name = ref(profile.value?.nome || '')
 const email = ref(user.value?.email || '')
+const savingProfile = ref(false)
 
 // ================= Handlers =================
 
@@ -74,10 +79,24 @@ const handleCancel = () => {
 
 /**
  * Salva as alterações do perfil (Nome).
- * TODO: Implementar integração com updateProfile na store.
+ * Chama a função updateUserName do composable de autenticação.
  */
-const handleSaveProfile = () => {
-  console.log('Salvar perfil:', name.value)
+const handleSaveProfile = async () => {
+  if (!name.value) return notifyError('O nome não pode ser vazio')
+
+  savingProfile.value = true
+  try {
+    const result = await updateUserName(name.value)
+    
+    if (result.success) {
+      // Atualiza o perfil na store para refletir a mudança
+      if (profile.value) {
+        profile.value.nome = name.value
+      }
+    }
+  } finally {
+    savingProfile.value = false
+  }
 }
 
 // ================= Watchers =================

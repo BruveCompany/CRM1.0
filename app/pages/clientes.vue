@@ -1,5 +1,6 @@
 <template>
   <NuxtLayout>
+
     <div class="min-h-screen bg-white p-8">
       <h1 class="text-3xl font-bold text-neutral-900 mb-6">Clientes</h1>
       <div v-if="loading" class="text-neutral-500">Carregando...</div>
@@ -32,6 +33,7 @@
         @cancelar="modalDeleteAberto = false"
       />
     </div>
+
   </NuxtLayout>
 </template>
 

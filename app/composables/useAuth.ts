@@ -80,6 +80,36 @@ export const useAuth = () => {
     }
   }
 
+  /**
+   * Atualiza o nome do usuário.
+   * Utiliza a função RPC 'ag_update_infos_user' no banco de dados.
+   * 
+   * @param {string} novo_nome - O novo nome do usuário
+   * @returns {Promise<{success: boolean, message?: string, error?: any}>} Resultado da operação
+   */
+  const updateUserName = async (novo_nome: string) => {
+    try {
+      // @ts-ignore - Tipagem da função RPC pode estar desatualizada no projeto
+      const { data, error } = await supabase.rpc('ag_update_infos_user', {
+        novo_nome
+      })
+
+      if (error) {
+        console.error('Erro ao atualizar nome:', error)
+        toast.error('Erro ao atualizar nome do usuário')
+        return { success: false, error: error.message }
+      }
+
+      console.log('Update user response:', data)
+      toast.success('Nome atualizado com sucesso!')
+      return { success: true, message: 'Nome atualizado com sucesso!', data }
+    } catch (err) {
+      console.error('Erro inesperado ao atualizar nome:', err)
+      toast.error('Erro inesperado ao atualizar nome')
+      return { success: false, error: err }
+    }
+  }
+
   return {
     // Estado
     user,
@@ -88,6 +118,7 @@ export const useAuth = () => {
     // Métodos
     login,
     logout,
-    changePassword
+    changePassword,
+    updateUserName
   }
 }

@@ -1,7 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2026-07-15', // Você pode manter sua data, ou usar a do professor se preferir
-  devtools: { 
+  devtools: {
     enabled: false,
     telemetry: false
   }, // Mantenha como true para desenvolvimento
@@ -12,7 +12,7 @@ export default defineNuxtConfig({
     redirectOptions: {
       login: '/login',
       callback: '/confirm',
-      exclude: ['/login', '/confirm'] // <-- ADICIONAR '/confirm' AQUI!
+      exclude: ['/login', '/confirm', '/esqueci-senha', '/recuperar-senha'] // <-- ADICIONAR '/confirm' AQUI!
     }
   },
 
