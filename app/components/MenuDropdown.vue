@@ -29,14 +29,15 @@
         :class="['absolute bottom-full mb-2 bg-white rounded-lg shadow-lg border border-neutral-200 py-2', isCollapsed ? 'left-full ml-2 w-48' : 'left-0 right-0']"
         role="menu"
       >
-        <button
-          type="button"
+        <NuxtLink
+          to="/perfil"
           class="w-full px-4 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100 transition-colors flex items-center gap-2"
           role="menuitem"
+          @click="closeMenu"
         >
           <UserIcon class="w-4 h-4" />
           <span>Perfil</span>
-        </button>
+        </NuxtLink>
         
         <button
           type="button"
@@ -53,6 +54,18 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * ================= Componente: MenuDropdown =================
+ * Menu de configurações e ações do usuário localizado na sidebar.
+ * 
+ * Funcionalidades:
+ * - Link para o perfil
+ * - Botão de logout
+ * - Comportamento de dropdown
+ * - Detecção de clique fora para fechar
+ * ========================================================
+ */
+
 import { 
   UserCircleIcon,
   ChevronUpIcon,

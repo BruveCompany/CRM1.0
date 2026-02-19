@@ -53,10 +53,41 @@ export const useAuth = () => {
 
   const isAuthenticated = computed(() => !!user.value)
 
+  /**
+   * Atualiza a senha do usuário autenticado.
+   * Utiliza a API do Supabase para redefinir a senha.
+   * 
+   * @param {string} password - A nova senha
+   * @returns {Promise<{success: boolean, error?: any, data?: any}>} Resultado da operação
+   */
+  const changePassword = async (password: string) => {
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        password
+      })
+
+      if (error) {
+        toast.error(error.message || 'Erro ao atualizar senha')
+        return { success: false, error }
+      }
+
+      toast.success('Senha atualizada com sucesso!')
+      return { success: true, data }
+    } catch (err) {
+      toast.error('Erro inesperado ao atualizar senha')
+      console.error('Update password error:', err)
+      return { success: false, error: err }
+    }
+  }
+
   return {
+    // Estado
     user,
+    isAuthenticated,
+
+    // Métodos
     login,
     logout,
-    isAuthenticated
+    changePassword
   }
 }
