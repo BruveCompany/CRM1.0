@@ -1,66 +1,85 @@
 <template>
-  <div class="tabela-profissionais-container">
-    <!-- Botão para criar novo profissional -->
-    <div class="flex justify-end mb-4">
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <!-- Header with title and button -->
+    <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+      <h3 class="text-base font-semibold text-gray-900">Listagem de Profissionais</h3>
       <BaseButton
         variant="primary"
+        size="sm"
         @click="isAdmin && $emit('add-profissional')"
         :disabled="!isAdmin"
         :class="!isAdmin ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''"
       >
-        <PlusIcon class="w-5 h-5 mr-2" />
-        <span class="font-semibold">Criar Profissional</span>
+        <PlusIcon class="w-4 h-4 mr-2" />
+        Criar Profissional
       </BaseButton>
     </div>
     
-    <!-- Tabela de listagem de profissionais -->
-    <table class="min-w-full bg-white border-separate border-spacing-0 bg-white rounded-lg">
-      <!-- Cabeçalho da tabela -->
-      <thead>
-        <tr class="tabela-header">
-          <th class="tabela-coluna-header px-4 py-2 text-left">ID</th>
-          <th class="tabela-coluna-header px-4 py-2 text-left">Nome</th>
-          <th class="tabela-coluna-header px-4 py-2 text-left">Especialidade</th>
-          <th class="tabela-coluna-header px-4 py-2 text-left">Ações</th>
-        </tr>
-      </thead>
-      
-      <!-- Corpo da tabela com lista de profissionais -->
-      <tbody>
-        <tr
-          v-for="profissional in profissionais"
-          :key="profissional.profissional_id"
-          class="tabela-linha transition-shadow duration-200 hover:shadow-sm hover:bg-neutral-50"
-        >
-          <td class="tabela-coluna px-4 py-2 border-t border-neutral-200">{{ profissional.profissional_id }}</td>
-          <td class="tabela-coluna px-4 py-2 border-t border-neutral-200">{{ profissional.nome }}</td>
-          <td class="tabela-coluna px-4 py-2 border-t border-neutral-200">{{ profissional.especialidade }}</td>
-          <td class="tabela-coluna px-4 py-2 border-t border-neutral-200 flex gap-2">
-            <!-- Botão Editar -->
-            <button
-              class="p-1 rounded hover:bg-neutral-100"
-              :class="!isAdmin ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''"
-              title="Editar"
-              :disabled="!isAdmin"
-              @click="isAdmin && $emit('editar-profissional', { profissional_id: profissional.profissional_id, profile_id: profissional.profile_id, nome: profissional.nome, especialidade_id: profissional.especialidade_id, especialidade: profissional.especialidade })"
-            >
-              <PencilSquareIcon class="w-5 h-5 text-blue-600" />
-            </button>
-            
-            <!-- Botão Deletar -->
-            <button
-              class="p-1 rounded hover:bg-neutral-100"
-              :class="!isAdmin ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''"
-              title="Excluir"
-              :disabled="!isAdmin"
-              @click="isAdmin && $emit('deletar-profissional', { profissional_id: profissional.profissional_id, nome: profissional.nome })"
-            >
-              <TrashIcon class="w-5 h-5 text-error-600" />
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              ID
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Nome
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Especialidade
+            </th>
+            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Ações
+            </th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <tr v-if="!profissionais || profissionais.length === 0">
+            <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500 font-medium">
+              Nenhum profissional encontrado.
+            </td>
+          </tr>
+          <tr
+            v-for="profissional in profissionais"
+            :key="profissional.profissional_id"
+            class="hover:bg-neutral-50 transition-colors duration-150"
+          >
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-medium">
+              {{ profissional.profissional_id }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+              {{ profissional.nome }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              {{ profissional.especialidade }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+              <div class="flex justify-end gap-2">
+                <button
+                  class="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 transition-colors"
+                  :class="!isAdmin ? 'opacity-30 cursor-not-allowed' : ''"
+                  title="Editar"
+                  :disabled="!isAdmin"
+                  @click="isAdmin && $emit('editar-profissional', { ...profissional })"
+                >
+                  <PencilSquareIcon class="w-5 h-5 stroke-[1.5]" />
+                </button>
+                
+                <button
+                  class="p-1.5 rounded-lg text-error-600 hover:bg-error-50 transition-colors"
+                  :class="!isAdmin ? 'opacity-30 cursor-not-allowed' : ''"
+                  title="Excluir"
+                  :disabled="!isAdmin"
+                  @click="isAdmin && $emit('deletar-profissional', { profissional_id: profissional.profissional_id, nome: profissional.nome })"
+                >
+                  <TrashIcon class="w-5 h-5 stroke-[1.5]" />
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>
 

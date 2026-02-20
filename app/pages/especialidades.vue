@@ -1,8 +1,9 @@
 
 <template>
-  <NuxtLayout>
-    <div class="min-h-screen bg-white p-8">
-      <h1 class="text-3xl font-bold text-neutral-900 mb-6">Especialidades</h1>
+  <NuxtLayout name="default">
+    <div class="p-6">
+      <h1 class="text-2xl font-bold mb-4">Especialidades</h1>
+      <p class="text-gray-600 mb-6">Cadastre e gerencie as especialidades médicas do sistema.</p>
       <TabelaEspecialidades
         :especialidades="especialidades"
         @add-especialidade="abrirModalAdd"

@@ -1,12 +1,13 @@
 <template>
-  <div id="lista-agendamentos" class="w-full space-y-2">
+  <div id="lista-agendamentos" class="w-full space-y-6">
     <!-- Seção Filtros -->
-    <div class="border border-neutral-200 rounded-lg">
-      <div class="px-4 py-2">
-        <h2 class="text-lg font-bold text-neutral-900 mb-0.5">Filtros</h2>
-
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-100">
+        <h2 class="text-base font-semibold text-gray-900">Filtros de Busca</h2>
+      </div>
+      <div class="px-6 py-4">
         <!-- Filtros -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-0.5 md:gap-x-24">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
           <SeletorCliente
             v-model="filtroClienteId"
             :clientes="clientes"
@@ -18,9 +19,9 @@
         </div>
 
         <!-- Botão limpar filtros -->
-        <div class="flex justify-end mt-0.5">
+        <div class="flex justify-end mt-4">
           <BaseButton
-            variant="primary"
+            variant="secondary"
             size="sm"
             @click="limparFiltros"
           >
@@ -31,32 +32,34 @@
     </div>
 
     <!-- Seção Agendamentos -->
-    <div class="border border-neutral-200 rounded-lg overflow-hidden">
-      <div class="px-2 py-1.5 border-b border-neutral-200">
-        <h2 class="text-lg font-bold text-neutral-900">
-          Agendamentos
-          <span v-if="!loading && agendamentosFiltrados.length > 0" class="text-sm font-normal text-neutral-500">
-            ({{ agendamentosFiltrados.length }} agendamentos)
-          </span>
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+        <h2 class="text-base font-semibold text-gray-900">
+          Listagem de Agendamentos
         </h2>
+        <span v-if="!loading && agendamentosFiltrados.length > 0" class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-600">
+          {{ agendamentosFiltrados.length }} agendamentos
+        </span>
       </div>
 
       <!-- Loading -->
-      <div v-if="loading" class="flex items-center justify-center py-12">
+      <div v-if="loading" class="flex flex-col items-center justify-center py-16">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mb-4"></div>
         <div class="text-neutral-500 text-sm">Carregando agendamentos...</div>
       </div>
 
       <!-- Sem agendamentos -->
-      <div v-else-if="!agendamentosFiltrados || agendamentosFiltrados.length === 0" class="flex flex-col items-center justify-center py-12">
-        <div class="text-neutral-400 text-sm">Nenhum agendamento encontrado</div>
+      <div v-else-if="!agendamentosFiltrados || agendamentosFiltrados.length === 0" class="flex flex-col items-center justify-center py-16">
+        <div class="text-neutral-400 text-sm italic">Nenhum agendamento encontrado para os filtros selecionados.</div>
       </div>
 
       <!-- Lista de cards -->
-      <div v-else class="flex flex-col">
+      <div v-else class="divide-y divide-gray-100">
         <CardAgendamento
           v-for="agendamento in agendamentosFiltrados"
           :key="agendamento.id"
           :agendamento="agendamento"
+          class="hover:bg-neutral-50 transition-colors"
         />
       </div>
     </div>

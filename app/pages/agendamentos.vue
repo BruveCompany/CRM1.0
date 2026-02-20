@@ -1,6 +1,8 @@
 <template>
-  <NuxtLayout>
-    <div class="min-h-screen bg-white px-8 pt-1 pb-8 overflow-hidden">
+  <NuxtLayout name="default">
+    <div class="p-6">
+      <h1 class="text-2xl font-bold mb-4">Agendamentos</h1>
+      <p class="text-gray-600 mb-6">Consulte e gerencie todos os agendamentos realizados no sistema.</p>
       <ListaAgendamentos />
     </div>
   </NuxtLayout>
