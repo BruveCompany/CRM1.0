@@ -136,6 +136,46 @@ export const useAuth = () => {
     }
   }
 
+  /**
+   * Verifica se o usuário atual é admin.
+   * Utiliza a função RPC 'ag_isadmin' no banco de dados.
+   * 
+   * @returns {Promise<boolean>} True se for admin, false caso contrário
+   */
+  const checkIsAdmin = async () => {
+    try {
+      // @ts-ignore - Tipagem da função RPC pode estar desatualizada
+      const { data, error } = await supabase.rpc('ag_isadmin')
+
+      if (error) {
+        console.error('Erro ao verificar status de admin:', error)
+        return false
+      }
+
+      // Verifica diferentes formatos possíveis de retorno
+      if (typeof data === 'boolean') return data
+      if (data && typeof data === 'object' && 'isadmin' in data) {
+        return (data as any).isadmin === true
+      }
+      if (Array.isArray(data) && (data as any[]).length > 0) {
+        // Caso retorne um array de objetos
+        if ('isadmin' in data[0]) {
+          return (data[0] as any).isadmin === true
+        }
+        // Caso retorne array de booleans (menos provável, mas possível)
+        if (typeof data[0] === 'boolean') {
+          return data[0]
+        }
+      }
+
+      console.log('Retorno desconhecido da função ag_isadmin:', data)
+      return false
+    } catch (err) {
+      console.error('Erro inesperado ao verificar admin:', err)
+      return false
+    }
+  }
+
   return {
     // Estado
     user,
@@ -146,6 +186,7 @@ export const useAuth = () => {
     logout,
     changePassword,
     updateUserName,
-    recoverPassword
+    recoverPassword,
+    checkIsAdmin
   }
 }

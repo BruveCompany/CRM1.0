@@ -59,24 +59,38 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ChartBarIcon,
-  ChatBubbleLeftRightIcon
+  ChatBubbleLeftRightIcon,
+  ShieldCheckIcon
 } from '@heroicons/vue/24/outline'
 
 const user = useSupabaseUser()
 const { logout } = useAuth()
+const userStore = useUserStore()
+
+onMounted(() => {
+  userStore.fetchProfile()
+})
 
 const isCollapsed = ref(false)
 
-const navItems = [
-  { label: 'Dashboard', to: '/', icon: HomeIcon },
-  { label: 'Mensagens', to: '/mensagens', icon: ChatBubbleLeftRightIcon },
-  { label: 'Relatórios', to: '/relatorios', icon: ChartBarIcon },
-  { label: 'Agenda', to: '/agenda', icon: CalendarIcon },
-  { label: 'Agendamentos', to: '/agendamentos', icon: CalendarIcon },
-  { label: 'Clientes', to: '/clientes', icon: UserIcon },
-  { label: 'Especialidades', to: '/especialidades', icon: BookOpenIcon },
-  { label: 'Profissionais', to: '/profissionais', icon: UserGroupIcon },
-]
+const navItems = computed(() => {
+  const items = [
+    { label: 'Dashboard', to: '/', icon: HomeIcon },
+    { label: 'Mensagens', to: '/mensagens', icon: ChatBubbleLeftRightIcon },
+    { label: 'Relatórios', to: '/relatorios', icon: ChartBarIcon },
+    { label: 'Agenda', to: '/agenda', icon: CalendarIcon },
+    { label: 'Agendamentos', to: '/agendamentos', icon: CalendarIcon },
+    { label: 'Clientes', to: '/clientes', icon: UserIcon },
+    { label: 'Especialidades', to: '/especialidades', icon: BookOpenIcon },
+    { label: 'Profissionais', to: '/profissionais', icon: UserGroupIcon },
+  ]
+
+  if (userStore.userRole === 'admin') {
+    items.push({ label: 'Admin', to: '/admin', icon: ShieldCheckIcon })
+  }
+
+  return items
+})
 
 const toggleSidebar = () => {
   isCollapsed.value = !isCollapsed.value

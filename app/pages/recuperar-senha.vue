@@ -35,7 +35,10 @@
         </div>
         <h3 class="text-lg font-medium text-gray-900">Link inválido ou expirado</h3>
         <p class="mt-2 text-sm text-gray-500">
-          Não foi possível validar sua sessão. Por favor, solicite uma nova redefinição de senha.
+          Não foi possível validar sua sessão.
+        </p>
+        <p v-if="isOtpExpired" class="mt-2 text-sm text-amber-600 bg-amber-50 p-2 rounded">
+          <strong>Dica:</strong> Se você solicitou a recuperação várias vezes, certifique-se de clicar no link do <strong>último e-mail</strong> recebido (os anteriores são invalidados automaticamente).
         </p>
         <div class="mt-6">
           <NuxtLink to="/esqueci-senha" class="text-base text-primary-600 hover:text-primary-700 font-medium">
@@ -58,7 +61,12 @@ useHead({
   title: 'Definir Nova Senha - Bruve Saas'
 })
 const user = useSupabaseUser()
+const route = useRoute()
 const loadingSession = ref(true)
+
+const isOtpExpired = computed(() => {
+  return route.query.error_code === 'otp_expired' || route.hash?.includes('error_code=otp_expired')
+})
 
 // Verificar sessão ao carregar
 onMounted(() => {
