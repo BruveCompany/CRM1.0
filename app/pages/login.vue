@@ -1,47 +1,47 @@
 <template>
   <div class="h-screen flex overflow-hidden">
     <!-- Coluna Esquerda - Branding -->
-    <div class="hidden md:flex md:w-[53%] bg-gradient-to-br from-primary-500 via-primary-600 to-primary-900 relative overflow-hidden rounded-r-lg">
+    <div class="hidden md:flex md:w-[53%] bg-gradient-to-b from-primary-500 via-primary-600 to-primary-900 relative overflow-hidden rounded-r-lg">
       <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
       
       <div class="relative z-10 flex flex-col justify-center px-12 text-white">
-        <div class="mb-10">
-          <h1 class="text-4xl font-bold mb-4 leading-tight">
+        <div class="mb-7">
+          <h1 class="text-4xl font-semibold mb-4 leading-tight">
             Converta mais com seus <span class="text-success-400">leads</span>
           </h1>
           <div class="w-24 h-1.5 bg-success-400 rounded"></div>
         </div>
         
-        <p class="text-2xl font-light mb-10 leading-relaxed">
+        <p class="text-xl font-light mb-7 leading-relaxed">
           Gerencie conversas, acompanhe leads e feche mais vendas pelo WhatsApp.
         </p>
         
-        <ul class="space-y-5 text-lg">
+        <ul class="space-y-4 text-lg">
           <li class="flex items-start">
             <span class="w-2 h-2 rounded-full bg-success-400 mr-4 mt-2 flex-shrink-0"></span>
             <div>
-              <span class="block font-bold">Leads em um só lugar</span>
-              <span class="text-success-400 text-base">Visualize, filtre e acompanhe cada oportunidade</span>
+              <span class="block font-semibold">Leads em um só lugar</span>
+              <span class="text-success-400 text-sm">Visualize, filtre e acompanhe cada oportunidade</span>
             </div>
           </li>
           <li class="flex items-start">
             <span class="w-2 h-2 rounded-full bg-success-400 mr-4 mt-2 flex-shrink-0"></span>
             <div>
-              <span class="block font-bold">Respostas rápidas no WhatsApp</span>
-              <span class="text-success-400 text-base">Templates prontos para cada etapa do funil</span>
+              <span class="block font-semibold">Respostas rápidas no WhatsApp</span>
+              <span class="text-success-400 text-sm">Templates prontos para cada etapa do funil</span>
             </div>
           </li>
           <li class="flex items-start">
             <span class="w-2 h-2 rounded-full bg-success-400 mr-4 mt-2 flex-shrink-0"></span>
             <div>
-              <span class="block font-bold">Resultados em tempo real</span>
-              <span class="text-success-400 text-base">Saiba exatamente onde estão suas vendas</span>
+              <span class="block font-semibold">Resultados em tempo real</span>
+              <span class="text-success-400 text-sm">Saiba exatamente onde estão suas vendas</span>
             </div>
           </li>
         </ul>
 
-        <div class="mt-16 pt-4 border-t border-success-400">
-          <p class="text-base opacity-90 italic leading-relaxed">
+        <div class="mt-12 pt-4 border-t border-success-400">
+          <p class="text-xs font-light italic leading-relaxed">
             "Do primeiro contato ao fechamento: tudo organizado, tudo no WhatsApp."
           </p>
         </div>
@@ -51,14 +51,12 @@
       <div class="absolute top-20 right-10 w-72 h-72 bg-success-400/10 rounded-3xl rotate-12 blur-3xl"></div>
       <div class="absolute bottom-20 left-10 w-80 h-80 bg-primary-300/10 rounded-3xl -rotate-12 blur-3xl"></div>
       
-
-
       <!-- Diagrama Circular Contemporâneo (Letras nítidas) -->
       <div class="absolute right-[5%] bottom-[25%] w-[220px] h-[220px] hidden xl:block pointer-events-none transition-all duration-1000">
         <div class="relative w-full h-full">
           <!-- Círculos de Órbita Finos (Com opacidade) -->
-          <div class="absolute inset-0 border-[0.5px] border-white/30 rounded-full"></div>
-          <div class="absolute inset-[15%] border-[0.5px] border-white/20 rounded-full"></div>
+          <div class="absolute inset-0 border-[0.5px] border-white/20 rounded-full"></div>
+          <div class="absolute inset-[15%] border-[0.5px] border-[#2DD4BF]/30 rounded-full"></div>
           
           <!-- Nodes do Diagrama -->
           <!-- Conversa -->
@@ -107,16 +105,8 @@
     <!-- Coluna Direita - Formulário -->
     <div class="w-full md:w-[47%] flex items-center justify-center px-6 py-8 bg-neutral-50 overflow-y-auto">
       <div class="w-full max-w-md">
-        <!-- Logo mobile -->
-        <div class="md:hidden text-center mb-8">
-          <h1 class="text-3xl font-bold text-primary-600 mb-2">
-            Bruve Saas
-          </h1>
-          <p class="text-neutral-600">Sistema de Agendamento</p>
-        </div>
-
         <!-- Card do formulário -->
-        <div class="bg-white rounded-xl shadow-lg p-8">
+        <div class="bg-white rounded-xl shadow-lg p-6 md:p-8">
           <FormLogin />
         </div>
 

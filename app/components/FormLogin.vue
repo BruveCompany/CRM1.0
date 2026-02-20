@@ -1,11 +1,21 @@
 <template>
-  <div class="space-y-6">
-    <div class="text-center mb-8">
-      <h2 class="text-2xl md:text-4xl font-bold text-neutral-900">
+  <div class="space-y-4 md:space-y-6">
+    <div class="text-left mb-4 md:mb-6">
+      <!-- Logo Painel de Atendimento -->
+      <div class="flex items-center gap-3 mb-4 md:mb-6">
+        <div class="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary-600/20">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+        </div>
+        <span class="text-xl font-bold text-neutral-900 tracking-tight">Painel de Atendimento</span>
+      </div>
+
+      <h2 class="text-2xl font-bold text-neutral-900 leading-tight">
         Bem-vindo de volta
       </h2>
-      <p class="text-neutral-600 md:text-xl mt-2">
-        Entre com suas credenciais para acessar o sistema
+      <p class="text-neutral-500 mt-2">
+        Entre com suas credenciais para acessar o painel
       </p>
     </div>
 
@@ -29,16 +39,16 @@
       />
 
       <div class="flex items-center justify-between">
-        <label class="flex items-center">
+        <label class="flex items-center cursor-pointer group">
           <input
             type="checkbox"
             v-model="form.remember"
-            class="rounded border-neutral-300 text-primary-600 shadow-sm focus:ring-primary-500"
+            class="w-4 h-4 rounded border-neutral-300 text-primary-600 shadow-sm focus:ring-primary-500 transition-colors"
           />
-          <span class="ml-2 text-sm md:text-lg text-neutral-600">Lembrar de mim</span>
+          <span class="ml-2 text-sm text-neutral-600 group-hover:text-neutral-900 transition-colors">Lembrar de mim</span>
         </label>
 
-        <a href="#" class="text-sm md:text-lg text-primary-600 hover:text-primary-700">
+        <a href="#" class="text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors">
           Esqueceu a senha?
         </a>
       </div>
@@ -54,9 +64,9 @@
       </BaseButton>
     </form>
 
-    <div class="text-center text-sm md:text-lg text-neutral-600">
+    <div class="text-center text-sm text-neutral-500 pt-2">
       Não tem uma conta?
-      <a href="#" class="text-primary-600 hover:text-primary-700 font-medium">
+      <a href="#" class="text-primary-600 hover:text-primary-700 font-bold ml-1 transition-colors">
         Cadastre-se
       </a>
     </div>
