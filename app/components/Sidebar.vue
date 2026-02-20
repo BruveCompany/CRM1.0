@@ -60,7 +60,8 @@ import {
   ChevronRightIcon,
   ChartBarIcon,
   ChatBubbleLeftRightIcon,
-  ShieldCheckIcon
+  ShieldCheckIcon,
+  IdentificationIcon
 } from '@heroicons/vue/24/outline'
 
 const user = useSupabaseUser()
@@ -77,6 +78,7 @@ const navItems = computed(() => {
   const items = [
     { label: 'Dashboard', to: '/', icon: HomeIcon },
     { label: 'Mensagens', to: '/mensagens', icon: ChatBubbleLeftRightIcon },
+    { label: 'Leads', to: '/leads', icon: IdentificationIcon },
     { label: 'Relatórios', to: '/relatorios', icon: ChartBarIcon },
     { label: 'Agenda', to: '/agenda', icon: CalendarIcon },
     { label: 'Agendamentos', to: '/agendamentos', icon: CalendarIcon },
