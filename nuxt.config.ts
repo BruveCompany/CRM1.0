@@ -5,7 +5,7 @@ export default defineNuxtConfig({
     enabled: false,
     telemetry: false
   }, // Mantenha como true para desenvolvimento
-  modules: ['@nuxtjs/tailwindcss', '@nuxtjs/supabase', '@pinia/nuxt'],
+  modules: ['@nuxtjs/tailwindcss', '@nuxtjs/supabase', '@pinia/nuxt', '@nuxt/icon'],
 
   supabase: {
     redirect: true, // <-- ADICIONAR ESTA LINHA!
