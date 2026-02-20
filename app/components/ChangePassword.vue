@@ -61,6 +61,8 @@
 import InputPassword from './InputPassword.vue'
 import BaseButton from './BaseButton.vue'
 
+const emit = defineEmits(['success'])
+
 const props = defineProps({
   showTitle: {
     type: Boolean,
@@ -103,6 +105,7 @@ const handleChangePassword = async () => {
     const result = await changePassword(newPassword.value)
     if (result.success) {
       handleClear()
+      emit('success')
     }
   } finally {
     loading.value = false

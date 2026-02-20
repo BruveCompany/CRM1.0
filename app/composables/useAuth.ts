@@ -110,6 +110,32 @@ export const useAuth = () => {
     }
   }
 
+  /**
+   * Envia um email de recuperação de senha para o usuário.
+   * 
+   * @param {string} email - O email do usuário
+   * @returns {Promise<{success: boolean, error?: any}>} Resultado da operação
+   */
+  const recoverPassword = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/recuperar-senha`
+      })
+
+      if (error) {
+        // Por segurança, não devemos informar se o email existe ou não, 
+        // mas para debug/desenvolvimento pode ser útil logar.
+        console.error('Erro ao enviar email de recuperação:', error)
+        return { success: false, error }
+      }
+
+      return { success: true }
+    } catch (err) {
+      console.error('Erro inesperado na recuperação de senha:', err)
+      return { success: false, error: err }
+    }
+  }
+
   return {
     // Estado
     user,
@@ -119,6 +145,7 @@ export const useAuth = () => {
     login,
     logout,
     changePassword,
-    updateUserName
+    updateUserName,
+    recoverPassword
   }
 }

@@ -8,18 +8,20 @@
         </p>
       </div>
 
-      <div class="space-y-6">
+      <form @submit.prevent="handleSendEmail" class="space-y-6">
         <BaseInput
           v-model="email"
           label="Email"
           type="email"
           placeholder="seu@email.com"
+          required
         />
 
         <BaseButton 
           variant="primary" 
           class="w-full"
-          @click="handleSendEmail"
+          type="submit"
+          :loading="loading"
         >
           Enviar email
         </BaseButton>
@@ -29,7 +31,18 @@
             Voltar para o login
           </NuxtLink>
         </div>
-      </div>
+      </form>
+
+      <!-- Modal de Confirmação -->
+      <ModalConfirmacao
+        v-model="modalAberto"
+        titulo="Verifique seu email"
+        mensagem="Caso o email informado esteja cadastrado, você receberá um link com as instruções para redefinir sua senha."
+        texto-confirmar="Voltar para Login"
+        texto-cancelar="Fechar"
+        variant="info"
+        @confirmar="handleConfirmarModal"
+      />
     </div>
   </div>
 </template>
@@ -47,8 +60,38 @@ useHead({
 })
 
 const email = ref('')
+const loading = ref(false)
+const modalAberto = ref(false)
 
-const handleSendEmail = () => {
-  // Lógica será implementada posteriormente
+// Composables
+const { recoverPassword } = useAuth()
+const { notifyError } = useNotification()
+
+const handleSendEmail = async () => {
+  if (!email.value) return notifyError('Digite seu email')
+  
+  loading.value = true
+  try {
+    const result = await recoverPassword(email.value)
+    
+    if (result.success) {
+      modalAberto.value = true
+    } else {
+      const msg = (result.error as any)?.message || 'Erro ao enviar email. Tente novamente.'
+      // Traduzindo mensagens comuns do Supabase
+      if (msg.includes('Too many requests')) {
+        notifyError('Muitas tentativas. Aguarde 60 segundos.')
+      } else {
+        notifyError(msg)
+      }
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleConfirmarModal = () => {
+  modalAberto.value = false
+  navigateTo('/login')
 }
 </script>
