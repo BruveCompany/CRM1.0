@@ -3,10 +3,32 @@
     <div class="page-container">
       <header class="page-header">
         <h1 class="text-2xl font-bold text-neutral-800">Funil de Vendas (Leads)</h1>
-        <button class="btn-primary">Adicionar Lead</button>
+        <div class="header-actions">
+          <BaseButton 
+            :variant="showKanbanView ? 'primary' : 'outline'" 
+            size="sm" 
+            class="view-toggle-btn" 
+            @click="showKanbanView = true"
+          >
+            <ViewColumnsIcon class="w-4 h-4 mr-2" />
+            <span>Kanban</span>
+          </BaseButton>
+          <BaseButton 
+            :variant="!showKanbanView ? 'primary' : 'outline'" 
+            size="sm" 
+            class="view-toggle-btn" 
+            @click="showKanbanView = false"
+          >
+            <ListBulletIcon class="w-4 h-4 mr-2" />
+            <span>Lista</span>
+          </BaseButton>
+          <BaseButton variant="primary" size="sm" class="ml-4">
+            Adicionar Lead
+          </BaseButton>
+        </div>
       </header>
 
-      <div class="kanban-board" ref="board">
+      <div v-if="showKanbanView" class="kanban-board">
         <!-- Loop para criar cada coluna -->
         <div v-for="column in columns" :key="column.id" class="kanban-column" :data-id="column.id">
           <div class="column-title">
@@ -14,8 +36,9 @@
             <span class="task-count">{{ column.tasks.length }}</span>
           </div>
           
-          <!-- Lista de cards da coluna -->
-          <div class="card-list" :id="column.id">
+          <!-- Lista de cards da coluna (Registrada no onMounted) -->
+          <div class="card-list" :id="`list-${column.id}`" :data-column-id="column.id">
+            <!-- Loop para criar cada card dentro da coluna -->
             <div v-for="task in column.tasks" :key="task.id" class="kanban-card" :data-id="task.id">
               <h4 class="card-title">{{ task.title }}</h4>
               <p class="card-details">{{ task.details }}</p>
@@ -24,13 +47,33 @@
           </div>
         </div>
       </div>
+
+      <div v-else class="lead-list-view">
+        <h2>Lista de Leads</h2>
+        <p>Aqui será implementada a tabela com a lista detalhada de todos os leads.</p>
+        <div class="table-placeholder">
+          <!-- Futura tabela de leads será renderizada aqui -->
+          <p>Carregando dados da tabela...</p>
+        </div>
+      </div>
     </div>
   </NuxtLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+/**
+ * ================= Página: Leads (Funil de Vendas) =================
+ * Descrição: Esta página implementa o quadro Kanban para a gestão de leads.
+ * Funcionalidades:
+ * - Visualização do fluxo de vendas em 5 estágios.
+ * - Arrastar e soltar (Drag and Drop) para mudar o status do lead.
+ * - Sincronização automática com o Supabase.
+ * - Alternância entre visualização em Kanban e Lista.
+ * ===================================================================
+ */
+import { ref, onMounted, watch, nextTick } from 'vue';
 import { dragAndDrop } from '@formkit/drag-and-drop';
+import { ViewColumnsIcon, ListBulletIcon } from '@heroicons/vue/24/outline';
 
 interface LeadTask {
   id: string;
@@ -48,6 +91,9 @@ interface KanbanColumn {
 definePageMeta({
   layout: 'default'
 });
+
+const supabase = useSupabaseClient();
+const showKanbanView = ref(true);
 
 const columns = ref<KanbanColumn[]>([
   {
@@ -88,23 +134,53 @@ const columns = ref<KanbanColumn[]>([
   },
 ]);
 
-const board = ref<HTMLElement | null>(null);
-
-onMounted(() => {
-  // Inicializa o drag and drop para cada lista de cards
+const initDragAndDrop = () => {
+  if (!showKanbanView.value) return;
+  
+  // Inicializa o drag and drop para cada coluna de cards
   columns.value.forEach((column) => {
-    const el = document.getElementById(column.id);
+    const el = document.getElementById(`list-${column.id}`);
     if (el) {
       dragAndDrop({
         parent: el,
         getValues: () => column.tasks,
         setValues: (newValues) => { column.tasks = newValues },
         config: {
-          group: 'kanban-tasks',
+          group: 'kanban',
+          handleEnd: async (data: any) => {
+            const movedTaskId = data.draggedNode.data.id;
+            const newColumnId = data.target.parent.el.parentElement?.dataset.id;
+            
+            if (movedTaskId && newColumnId) {
+              try {
+                const { error } = await (supabase.from('leads') as any)
+                  .update({ status: newColumnId })
+                  .eq('id', movedTaskId);
+
+                if (error) throw error;
+                console.log(`Lead ${movedTaskId} atualizado para ${newColumnId}.`);
+              } catch (error: any) {
+                console.error('Erro:', error.message);
+                alert('❌ Erro ao salvar mudança.');
+              }
+            }
+          }
         },
       });
     }
   });
+};
+
+onMounted(() => {
+  initDragAndDrop();
+});
+
+// Reinicializa o drag and drop quando volta para a vista Kanban
+watch(showKanbanView, async (newVal) => {
+  if (newVal) {
+    await nextTick();
+    initDragAndDrop();
+  }
 });
 </script>
 
@@ -121,6 +197,20 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* Botão Adicionar Lead e Switcher agora usam BaseButton */
+.view-toggle-btn {
+  padding: 0.5rem 1rem !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
 }
 
 .kanban-board {
@@ -167,7 +257,7 @@ onMounted(() => {
   flex-grow: 1;
   overflow-y: auto;
   padding-right: 0.5rem;
-  min-height: 200px; /* Área maior para facilitar soltar em colunas vazias */
+  min-height: 200px;
 }
 
 .kanban-card {
@@ -178,14 +268,6 @@ onMounted(() => {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   cursor: grab;
   user-select: none;
-}
-
-.kanban-card:active {
-  cursor: grabbing;
-}
-
-.kanban-card:hover {
-  background-color: #f8f9fa;
 }
 
 .card-title {
@@ -210,18 +292,34 @@ onMounted(() => {
   display: inline-block;
 }
 
-.btn-primary {
-    background-color: #4f46e5;
-    color: white;
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 6px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.2s;
+/* Visualização em Lista */
+.lead-list-view {
+  padding: 3rem;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
-.btn-primary:hover {
-    background-color: #4338ca;
+.lead-list-view h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 0.5rem;
+}
+
+.table-placeholder {
+  margin-top: 2rem;
+  padding: 3rem;
+  border: 2px dashed #e2e8f0;
+  border-radius: 12px;
+  color: #64748b;
+  width: 100%;
+  max-width: 500px;
 }
 </style>
