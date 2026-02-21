@@ -49,7 +49,7 @@
         <div v-if="showKanbanView" key="kanban" class="kanban-board-wrapper">
           <div class="kanban-board" ref="board">
             <div 
-              v-for="column in displayColumns" 
+              v-for="column in displayColumnsForKanban" 
               :key="column.id" 
               class="kanban-column" 
               :data-id="column.id"
@@ -83,24 +83,34 @@
                     @dragstart="onDragStartCard($event, task.id)"
                   >
                     <div class="card-content">
-                      <h4 class="card-title">{{ task.leadName }}</h4>
+                      <div class="card-header">
+                        <h4 class="card-title">{{ task.leadName }}</h4>
+                        <!-- Ícone de Status (Alerta, Check, X - Movido para o topo) -->
+                        <div v-if="task.statusIcon" class="card-status-icon-wrapper" :style="{ 'border-color': column.color }">
+                          <Icon :name="`lucide:${task.statusIcon}`" :class="`status-icon status-${task.statusIcon}`" :style="{ 'color': column.color }" />
+                        </div>
+                      </div>
                       <p class="card-phone-number">{{ task.phone }}</p>
+                      
                       <div class="card-meta">
                         <div class="card-meta-left">
-                          <span v-if="task.lastActivityText" class="card-last-activity">{{ task.lastActivityText }}</span>
-                          <span v-if="task.vendedorNome" class="card-vendedor-tag">
-                            <Icon name="lucide:user" class="vendedor-icon" />
-                            <span>{{ task.vendedorNome }}</span>
-                          </span>
+                          <!-- Avatar do Vendedor -->
+                          <div class="vendedor-avatar">
+                            <span>{{ task.vendedorNome ? task.vendedorNome.substring(0, 2).toUpperCase() : '??' }}</span>
+                          </div>
+                          <!-- Nome do Vendedor e Última Atividade -->
+                          <div class="vendedor-info">
+                            <span class="vendedor-nome">{{ task.vendedorNome || 'Não Atribuído' }}</span>
+                            <span v-if="task.lastActivityText" class="card-last-activity-small">{{ task.lastActivityText }}</span>
+                          </div>
                         </div>
                         <div class="card-meta-right">
+                          <!-- Badge de Mensagens Não Lidas (Círculo Vermelho) -->
                           <div v-if="task.unreadMessages" class="card-unread-messages">
                             <span class="message-count">{{ task.unreadMessages }}</span>
-                            <span class="message-text">novas msgs</span>
                           </div>
-                          <div v-if="task.statusIcon" class="card-status-icon-wrapper" :style="{ 'border-color': column.color }">
-                            <Icon :name="`lucide:${task.statusIcon}`" :class="`status-icon status-${task.statusIcon}`" :style="{ 'color': column.color }" />
-                          </div>
+                          
+                          <!-- Seta para Abrir Detalhes -->
                           <div class="card-arrow-icon">
                             <Icon name="lucide:chevron-right" />
                           </div>
@@ -176,7 +186,7 @@ const supabase = useSupabaseClient();
 const showKanbanView = ref(true);
 const searchQuery = ref('');
 
-// Dados do UsuárioLogado (Mock)
+// Dados do Usuário Logado (Mock para o Header)
 const currentUser = ref({
   name: 'Maria',
   company: 'Pipes & More',
@@ -249,16 +259,11 @@ const fetchLeads = async () => {
   }
 
   // Popula a lista plana de leads
-  allLeads.value = (leadsData as any[]).map((lead: any) => {
-    const l = lead as any;
-    // Tenta pegar o nome do vendedor lidando com objeto ou array retornado pelo JOIN
-    const vRef = l.vendedor;
-    const vNome = Array.isArray(vRef) ? vRef[0]?.nome_display : vRef?.nome_display;
-    
+  allLeads.value = leadsData.map((lead: any) => {
     return { 
-      ...l, 
-      id: String(l.id), 
-      vendedor_nome: vNome || 'Não Atribuído'
+      ...lead, 
+      id: String(lead.id), 
+      vendedor_nome: lead.vendedor?.nome_display || 'Não Atribuído'
     };
   });
 
@@ -312,9 +317,8 @@ function getStatusIcon(status: string, unreadMessages: number) {
   if (unreadMessages > 0) return 'alert-triangle'; // Alerta para novas mensagens
   if (status === 'ganho') return 'check-circle';
   if (status === 'perdido') return 'x-circle';
-  return 'message-square'; // Ícone padrão para outras etapas
+  return undefined; // Não mostra ícone extra para etapas de progresso para limpar o visual
 }
-
 
 // Helper para obter a cor do status (usado na tabela de lista)
 function getStatusColor(statusId: string) {
@@ -322,30 +326,24 @@ function getStatusColor(statusId: string) {
   return column ? column.color : '#64748b'; // Cor padrão se não encontrar
 }
 
-
 // Computed property para filtrar as colunas e calcular os totais
 const columnsWithTotals = computed(() => {
-  const filteredColumns = columns.value.map(column => {
+  return columns.value.map(column => {
     const filteredTasks = column.tasks.filter(task =>
-      task.leadName && task.leadName.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      task.phone && task.phone.toLowerCase().includes(searchQuery.value.toLowerCase())
+      (task.leadName && task.leadName.toLowerCase().includes(searchQuery.value.toLowerCase())) ||
+      (task.phone && task.phone.toLowerCase().includes(searchQuery.value.toLowerCase()))
     );
-    const totalDeals = filteredTasks.length;
-
     return {
       ...column,
       tasks: filteredTasks,
-      totalDeals: totalDeals,
+      totalDeals: filteredTasks.length,
     };
   });
-  return filteredColumns;
 });
 
 // Computed property para filtrar a lista plana de leads (para a visualização de tabela)
 const filteredLeadsList = computed(() => {
-  if (!searchQuery.value) {
-    return allLeads.value;
-  }
+  if (!searchQuery.value) return allLeads.value;
   const query = searchQuery.value.toLowerCase();
   return allLeads.value.filter(lead =>
     (lead.nome && lead.nome.toLowerCase().includes(query)) ||
@@ -381,12 +379,8 @@ const onDropCard = async (event: DragEvent, newStatus: string) => {
   }
 };
 
-const board = ref(null);
-const dndTasks = ref([]);
-
-// Para que o template do Kanban use as colunas filtradas e com totais
-const displayColumns = computed(() => columnsWithTotals.value);
-
+// Computed property para o template usar os dados filtrados
+const displayColumnsForKanban = computed(() => columnsWithTotals.value);
 
 // Carregar leads ao montar o componente
 onMounted(() => {
@@ -396,10 +390,11 @@ onMounted(() => {
 
 <style scoped>
 .page-container {
+  padding: 0;
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background-color: #f8fafc; /* Fundo padrão mais moderno e limpo */
+  background-color: #f8fafc;
   overflow: hidden;
 }
 
@@ -413,20 +408,79 @@ onMounted(() => {
   gap: 1.5rem;
 }
 
+/* --- Header Actions (Botões Kanban/Lista) --- */
 .header-left-group {
   display: flex;
   align-items: center;
   gap: 1rem;
-  flex: 0 0 auto; /* Não deixa encolher */
+}
+
+.view-toggle-group {
+  display: flex;
+  align-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  overflow: hidden;
+  background: white;
+}
+
+.view-toggle-btn {
+  height: 34px;
+  padding: 0 0.9rem;
+  border: none;
+  background: white;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+
+.view-toggle-btn:hover {
+  background-color: #f8fafc;
+  color: #1e293b;
+}
+
+.view-toggle-btn.active {
+  background-color: #eef2ff;
+  color: #4f46e5;
+}
+
+.view-toggle-btn .btn-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Botão + Criar Lead */
+.btn-add-lead {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 1rem;
+  height: 34px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  background-color: #eef2ff;
+  color: #4f46e5;
   white-space: nowrap;
 }
 
-/* Centro: Pesquisa */
+.btn-add-lead:hover {
+  background-color: #e0e7ff;
+}
+
+/* --- Header Search --- */
 .header-center-group {
   flex: 2;
   display: flex;
   justify-content: center;
-  padding: 0 2rem;
 }
 
 .search-container {
@@ -463,7 +517,7 @@ onMounted(() => {
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
-/* Direita: Perfil */
+/* --- User Profile --- */
 .header-right-group {
   flex: 1;
   display: flex;
@@ -474,7 +528,6 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding-left: 1rem;
 }
 
 .user-info {
@@ -491,11 +544,10 @@ onMounted(() => {
   margin-bottom: 2px;
 }
 
-.user-company, .user-status-text {
+.user-status-text {
   font-size: 0.7rem;
   color: #22c55e;
   font-weight: 600;
-  text-transform: lowercase;
 }
 
 .avatar-wrapper {
@@ -511,7 +563,6 @@ onMounted(() => {
   object-fit: cover;
   border: 2px solid white;
   box-shadow: 0 0 0 1px #e2e8f0;
-  opacity: 0.8; /* Ajustado para 80% conforme solicitado */
 }
 
 .online-indicator {
@@ -525,66 +576,7 @@ onMounted(() => {
   border-radius: 50%;
 }
 
-/* Grupo de toggle (Kanban/Lista) */
-.view-toggle-group {
-  display: flex;
-  align-items: center;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  overflow: hidden;
-  background: white;
-}
-
-.view-toggle-btn {
-  height: 34px;
-  padding: 0 0.9rem;
-  border: none;
-  background: white;
-  color: #64748b;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  transition: all 0.15s;
-}
-
-.view-toggle-btn:hover {
-  background-color: #f8fafc;
-  color: #1e293b;
-}
-
-.view-toggle-btn.active {
-  background-color: #eef2ff; /* Fundo indigo pastel suave */
-  color: #4f46e5; /* Texto indigo principal */
-}
-
-.view-toggle-btn span {
-  white-space: nowrap; /* Impede quebra de linha no texto do botão */
-}
-
-.view-toggle-btn .btn-icon {
-  width: 1rem;
-  height: 1rem;
-}
-
-.btn-no-wrap {
-  white-space: nowrap !important;
-  flex-shrink: 0;
-  background-color: #eef2ff !important; /* Indigo pastel (Mesmo do Kanban ativo) */
-  color: #4f46e5 !important; /* Texto Indigo */
-  border: 1px solid #dbeafe !important; /* Borda suave */
-  box-shadow: none !important;
-  font-weight: 600 !important;
-}
-
-.btn-no-wrap:hover {
-  background-color: #e0e7ff !important;
-  border-color: #c7d2fe !important;
-}
-
-/* KANBAN BOARD */
+/* --- Kanban Board --- */
 .kanban-board-wrapper {
   flex-grow: 1;
   overflow: auto;
@@ -603,33 +595,12 @@ onMounted(() => {
 .kanban-column {
   flex: 0 0 20%; /* Força exatamente 5 colunas por tela */
   width: 20%;
-  min-width: 180px; /* Largura mínima pequena para não cortar */
+  min-width: 180px;
   display: flex;
   flex-direction: column;
   border-right: 1px solid #e1e5e8;
   box-sizing: border-box;
-}
-
-/* Estilos para o botão adicionar lead no header (Igual ao toggle ativo) */
-.btn-add-lead {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0 1rem; /* Ajustado para bater a altura */
-  height: 34px;    /* Mesma altura do toggle */
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: none;
-  background-color: #eef2ff; /* Indigo pastel suave */
-  color: #4f46e5;           /* Texto Indigo principal */
-  white-space: nowrap;
-}
-
-.btn-add-lead:hover {
-  background-color: #e0e7ff;
+  background-color: #f8fafc;
 }
 
 /* HEADER CHEVRON STYLE */
@@ -642,7 +613,7 @@ onMounted(() => {
 }
 
 .column-header-chevron {
-  height: 60px;
+  height: 50px;
   background: #fdfdfd;
   border-bottom: 1px solid #e1e5e8;
   display: flex;
@@ -660,7 +631,7 @@ onMounted(() => {
 }
 
 .header-title {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 700;
   color: #26292c;
   margin: 0;
@@ -680,7 +651,6 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-/* Chevron arrow effect */
 .chevron-arrow {
   position: absolute;
   right: -10px;
@@ -693,87 +663,72 @@ onMounted(() => {
   border-right: 1px solid #e1e5e8;
 }
 
-/* CARD LIST */
+/* --- Card List --- */
 .card-list {
   flex-grow: 1;
   overflow-y: auto;
-  overflow-y: overlay;
-  background: transparent; /* Usa o fundo do container pai */
-  padding: 0.2rem 0 0.2rem 0.5rem;
+  padding: 0.75rem 0.5rem;
 }
 
-/* KANBAN CARD */
+/* --- Kanban Card --- */
 .kanban-card {
   background-color: #ffffff;
   border-radius: 8px;
-  padding: 1rem;
+  padding: 0;
   margin-bottom: 0.75rem;
-  margin-right: 0.5rem; /* Margem para manter o card longe da borda/barra */
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-  cursor: pointer;
-  transition: box-shadow 0.2s ease-in-out, border-color 0.2s;
+  cursor: grab;
+  transition: transform 0.2s, box-shadow 0.2s;
   position: relative;
   display: flex;
   align-items: stretch;
-  border: 1px solid #e2e8f0; /* Borda bem leve e sutil para o card */
-  min-height: 100px; /* Altura mínima para o card */
-  cursor: grab; /* Mão aberta para indicar que pode arrastar */
+  border: 1px solid #e2e8f0;
+  min-height: 100px;
+  overflow: hidden;
 }
 
 .kanban-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  transform: translateY(-3px);
   border-color: #cbd5e1;
 }
 
 
 .card-content {
   flex-grow: 1;
+  padding: 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem; /* Espaçamento menor entre os itens para um visual mais compacto */
+  gap: 0.25rem;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.1rem;
 }
 
 .card-title {
   font-weight: 600;
   font-size: 0.95rem;
   color: #334155;
+  margin: 0;
 }
 
 .card-phone-number {
   font-size: 0.8rem;
   color: #64748b;
-  margin-top: 0.2rem; /* Pequena margem para separar do título */
-}
-
-.card-last-activity {
-  font-size: 0.75rem;
-  color: #94a3b8;
-}
-
-.card-vendedor-tag {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: 0.75rem;
-  color: #64748b;
-  background: #f1f5f9;
-  padding: 1px 6px;
-  border-radius: 4px;
-}
-
-.vendedor-icon {
-  width: 0.75rem;
-  height: 0.75rem;
-  color: #94a3b8;
+  margin: 0;
 }
 
 .card-meta {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: auto; /* Empurra os metadados para baixo no card */
-  font-size: 0.85rem;
-  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid color-mix(in srgb, var(--column-color), transparent 92%); /* Separador na cor da coluna, bem suave */
 }
 
 .card-meta-left {
@@ -782,6 +737,36 @@ onMounted(() => {
   gap: 0.5rem;
 }
 
+.vendedor-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+  background-color: color-mix(in srgb, var(--column-color), white 60%); /* Cor mutada/apagada baseada na coluna */
+}
+
+.vendedor-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.vendedor-nome {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #475569;
+  line-height: 1.2;
+}
+
+.card-last-activity-small {
+  font-size: 0.7rem;
+  color: #94a3b8;
+}
 
 .card-meta-right {
   display: flex;
@@ -789,16 +774,16 @@ onMounted(() => {
   gap: 0.5rem;
 }
 
-.card-unread-badge {
+.card-unread-messages {
   background-color: #dc2626;
   color: white;
-  min-width: 20px;
-  height: 20px;
+  min-width: 18px;
+  height: 18px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
   padding: 0 4px;
 }
@@ -807,10 +792,10 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  border: 1px solid var(--column-color);
+  border: 1px solid transparent;
   background-color: white;
 }
 
@@ -826,11 +811,8 @@ onMounted(() => {
 
 .card-arrow-icon {
   color: #cbd5e1;
-  transition: color 0.2s;
-}
-
-.kanban-card:hover .card-arrow-icon {
-  color: #64748b;
+  display: flex;
+  align-items: center;
 }
 
 /* ESTILOS PARA CORRIGIR O RASTRO/FANTASMA AO ARRASTAR */
