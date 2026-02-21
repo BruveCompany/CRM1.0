@@ -4,6 +4,7 @@
     :style="{ '--column-color': columnColor }"
     draggable="true"
     @dragstart="$emit('dragstart', $event)"
+    @click="openDetails(task.id)"
   >
     <div class="card-content">
       <div class="card-header">
@@ -44,12 +45,15 @@
 </template>
 
 <script setup lang="ts">
+import { useLeads } from '~/composables/useLeads';
 import type { LeadTask } from '~/composables/useLeads';
 
-defineProps<{
+const props = defineProps<{
   task: LeadTask;
   columnColor: string;
 }>();
+
+const { openDetails } = useLeads();
 
 defineEmits(['dragstart']);
 </script>

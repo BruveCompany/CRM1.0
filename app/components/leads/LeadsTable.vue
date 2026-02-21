@@ -20,7 +20,7 @@
           <tr v-if="filteredLeadsList.length === 0">
             <td colspan="7" class="empty-table-message">Nenhum lead encontrado.</td>
           </tr>
-          <tr v-for="lead in filteredLeadsList" :key="lead.id">
+          <tr v-for="lead in filteredLeadsList" :key="lead.id" @click="openDetails(lead.id)" class="cursor-pointer">
             <td>{{ lead.nome }}</td>
             <td>{{ lead.telefone }}</td>
             <td>
@@ -50,7 +50,7 @@
 
 <script setup lang="ts">
 import { useLeads } from '~/composables/useLeads';
-const { filteredLeadsList, formatRelativeTime } = useLeads();
+const { filteredLeadsList, formatRelativeTime, openDetails } = useLeads();
 
 // Helper para obter a cor do status (usado na tabela de lista)
 function getStatusColor(statusId: string) {

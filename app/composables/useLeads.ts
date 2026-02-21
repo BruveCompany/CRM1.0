@@ -15,6 +15,7 @@ export interface LeadTask {
     vendedor_nome?: string;
     ultima_mensagem_data?: string;
     mensagens_nao_lidas?: number;
+    notas?: string;
 }
 
 export interface KanbanColumn {
@@ -31,6 +32,13 @@ export const useLeads = () => {
     const searchQuery = useState<string>('leads-search-query', () => '')
     const showKanbanView = useState<boolean>('leads-view-mode-toggle', () => true)
     const pendingStatusUpdates = ref<Record<string, string>>({})
+    const selectedLeadId = useState<string | null>('selected-lead-id', () => null)
+    const showDetailsModal = useState<boolean>('show-details-modal', () => false)
+
+    const openDetails = (id: string) => {
+        selectedLeadId.value = id
+        showDetailsModal.value = true
+    }
 
     // Colunas do Kanban (Status originais da View)
     const columns = ref<KanbanColumn[]>([
@@ -156,6 +164,9 @@ export const useLeads = () => {
         searchQuery,
         showKanbanView,
         pendingStatusUpdates,
+        selectedLeadId,
+        showDetailsModal,
+        openDetails,
         columnsWithTotals,
         filteredLeadsList,
         fetchLeads,

@@ -7,6 +7,7 @@
         <ClientOnly>
           <LeadsKanban v-if="showKanbanView" />
           <LeadsTable v-else />
+          <LeadsLeadDetailsModal />
         </ClientOnly>
       </main>
 
