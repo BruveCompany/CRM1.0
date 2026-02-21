@@ -408,6 +408,7 @@ const displayColumns = computed(() => columnsWithTotals.value);
   object-fit: cover;
   border: 2px solid white;
   box-shadow: 0 0 0 1px #e2e8f0;
+  opacity: 0.8; /* Ajustado para 80% conforme solicitado */
 }
 
 .online-indicator {
@@ -452,8 +453,8 @@ const displayColumns = computed(() => columnsWithTotals.value);
 }
 
 .view-toggle-btn.active {
-  background-color: #4f46e5;
-  color: white;
+  background-color: #eef2ff; /* Fundo indigo pastel suave */
+  color: #4f46e5; /* Texto indigo principal */
 }
 
 .view-toggle-btn span {
@@ -468,6 +469,16 @@ const displayColumns = computed(() => columnsWithTotals.value);
 .btn-no-wrap {
   white-space: nowrap !important;
   flex-shrink: 0;
+  background-color: #eef2ff !important; /* Indigo pastel (Mesmo do Kanban ativo) */
+  color: #4f46e5 !important; /* Texto Indigo */
+  border: 1px solid #dbeafe !important; /* Borda suave */
+  box-shadow: none !important;
+  font-weight: 600 !important;
+}
+
+.btn-no-wrap:hover {
+  background-color: #e0e7ff !important;
+  border-color: #c7d2fe !important;
 }
 
 /* KANBAN BOARD */
