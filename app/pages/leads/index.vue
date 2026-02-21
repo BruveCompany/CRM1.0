@@ -170,6 +170,20 @@
           </div>
         </div>
       </ClientOnly>
+
+      <!-- Notificação Flutuante (Toast) -->
+      <Transition name="toast">
+        <div v-if="toast.show" class="toast-notification" :class="toast.type">
+          <div class="toast-content">
+            <Icon 
+              :name="toast.type === 'success' ? 'lucide:check-circle-2' : 'lucide:alert-circle'" 
+              class="toast-icon" 
+            />
+            <span>{{ toast.message }}</span>
+          </div>
+          <div class="toast-progress" :class="toast.type"></div>
+        </div>
+      </Transition>
     </div>
   </NuxtLayout>
 </template>
@@ -185,6 +199,20 @@ definePageMeta({
 const supabase = useSupabaseClient();
 const showKanbanView = ref(true);
 const searchQuery = ref('');
+
+// --- Sistema de Toast Elegante ---
+const toast = ref({
+  show: false,
+  message: '',
+  type: 'success' as 'success' | 'error'
+});
+
+const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+  toast.value = { show: true, message, type };
+  setTimeout(() => {
+    toast.value.show = false;
+  }, 4000);
+};
 
 // Dados do Usuário Logado (Mock para o Header)
 const currentUser = ref({
@@ -212,13 +240,15 @@ interface KanbanColumn {
   tasks: LeadTask[];
 }
 
-// Estrutura de colunas para o Kanban
+// Estrutura de colunas para o Kanban - Atualizada para bater com os status da View/Print
 const columns = ref<KanbanColumn[]>([
   { id: 'leads_novos', title: 'Leads Novos', color: '#3B82F6', tasks: [] },
   { id: 'contato_feito', title: 'Contato Feito', color: '#F59E0B', tasks: [] },
   { id: 'necessidades', title: 'Necessidades', color: '#EC4899', tasks: [] },
-  { id: 'proposta', title: 'Proposta', color: '#8B5CF6', tasks: [] },
-  { id: 'negociacao', title: 'Negociação', color: '#06B6D4', tasks: [] },
+  { id: 'em_atendimento', title: 'Em Atendimento', color: '#6366f1', tasks: [] },
+  { id: 'qualificado', title: 'Qualificado', color: '#8B5CF6', tasks: [] },
+  { id: 'em_negociacao', title: 'Em Negociação', color: '#06B6D4', tasks: [] },
+  { id: 'proposta', title: 'Proposta', color: '#f97316', tasks: [] },
   { id: 'ganho', title: 'Ganho', color: '#10B981', tasks: [] },
   { id: 'perdido', title: 'Perdido', color: '#EF4444', tasks: [] },
 ]);
@@ -226,71 +256,124 @@ const columns = ref<KanbanColumn[]>([
 // Nova ref para a lista plana de todos os leads (para a visualização de tabela)
 const allLeads = ref<any[]>([]);
 
+// Controle de "Status Pendente" para evitar que o card volte na coluna (Flicker)
+// Esse mapa guarda o ID do Lead e o Status que ele DEVE ter, mesmo que o banco ainda não tenha atualizado a View.
+const pendingStatusUpdates = ref<Record<string, string>>({});
+
 // Função para buscar leads do Supabase
 const fetchLeads = async () => {
-  const { data: authData } = await supabase.auth.getUser();
-  const user = authData?.user;
-  let currentVendedorId = null;
-
-  if (user) {
-    // ASSUNÇÃO TEMPORÁRIA: Para teste, vamos usar um ID BIGINT fixo (ex: 101)
-    currentVendedorId = 101; 
-  }
-
-  let query = supabase.from('ag_leads').select(`
-      *,
-      vendedor:ag_profissionais(nome_display)  /* FAZENDO JOIN para buscar o nome do vendedor */
-    `).order('criado_em', { ascending: false });
-
-  if (currentVendedorId) {
-    query = query.eq('vendedor_id', currentVendedorId);
-  } else {
-    console.warn('Nenhum vendedor logado ou ID de vendedor para filtro. Carregando todos os leads (se RLS permitir).');
-  }
-
-  const { data, error } = await query;
-  const leadsData = data as any[] | null;
+  console.log('DEBUG - Iniciando fetchLeads da view_leads_crm');
+  
+  // Buscando da VIEW formatada
+  const { data: leadsData, error } = await supabase
+    .from('view_leads_crm')
+    .select('*')
+    .order('criado_em', { ascending: false });
 
   if (error || !leadsData) {
-    console.error('Erro ao buscar leads:', error?.message);
+    console.error('Erro ao buscar leads da view:', error?.message);
     allLeads.value = []; 
     populateKanbanColumns([]);
     return;
   }
 
-  // Popula a lista plana de leads
-  allLeads.value = leadsData.map((lead: any) => {
+  // DEBUG: Verificar formatos reais do banco
+  const leads = leadsData as any[];
+  const uniqueStatuses = [...new Set(leads.map(l => l.status))];
+  console.log('DEBUG - Status no banco:', uniqueStatuses);
+  console.log('DEBUG - Tipo do ID no banco:', typeof (leadsData as any[])[0]?.id);
+
+  // Mapeamento dos dados vindos da view
+  const processedLeads = (leadsData as any[]).map(lead => {
+    const leadId = String(lead.id);
+
+    // Tenta encontrar o nome do vendedor em várias propriedades possíveis da view
+    const nomeVendedor = lead.vendedor_nome || 
+                         lead.vendedor_nome_display || 
+                         lead.nome_vendedor || 
+                         lead.profissional_nome ||
+                         lead.vendedor ||
+                         'Não Atribuído';
+
+    // VERIFICAÇÃO CRÍTICA: Se esse lead acabou de ser movido e o banco ainda não atualizou a View,
+    // usamos o status que está no nosso "cadeado" (pendingStatusUpdates).
+    let statusFinal = lead.status;
+    if (pendingStatusUpdates.value[leadId]) {
+      const targetStatus = pendingStatusUpdates.value[leadId];
+      
+      // Se a view já retornou o status novo, podemos tirar o cadeado.
+      // Comparamos de forma normalizada para não ter erro de caixa alta/baixa.
+      const normalizedCurrent = (statusFinal as string)?.toLowerCase().trim().replace(/\s+/g, '_');
+      const normalizedTarget = (targetStatus as string).toLowerCase().trim().replace(/\s+/g, '_');
+
+      if (normalizedCurrent === normalizedTarget) {
+        delete pendingStatusUpdates.value[leadId];
+      } else {
+        // Se ainda está com status antigo, forçamos o novo na interface
+        statusFinal = targetStatus;
+      }
+    }
+
     return { 
       ...lead, 
-      id: String(lead.id), 
-      vendedor_nome: lead.vendedor?.nome_display || 'Não Atribuído'
-    };
+      id: leadId, 
+      status: statusFinal,
+      vendedor_nome: nomeVendedor
+    } as any;
   });
 
-  // Popula as colunas do Kanban
-  populateKanbanColumns(allLeads.value);
+  allLeads.value = processedLeads;
+  populateKanbanColumns(processedLeads);
 };
 
 
 // Função para popular as colunas do Kanban a partir de uma lista de leads
 const populateKanbanColumns = (leads: any[]) => {
-  columns.value.forEach(col => (col.tasks = [])); // Limpa colunas
+  console.log('DEBUG - populateKanbanColumns iniciada com:', leads.length, 'leads');
+  columns.value.forEach(col => {
+    col.tasks = [];
+  }); 
   
+  if (!leads || leads.length === 0) {
+    console.warn('DEBUG - Nenhum lead para popular no Kanban');
+    return;
+  }
+
   leads.forEach(lead => {
-    const column = columns.value.find(col => col.id === lead.status);
+    // Normaliza status: minúsculo, sem acentos, sem espaços (underscore)
+    const rawStatus = lead.status || '';
+    const statusKey = rawStatus
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '_')
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+          
+    console.log(`DEBUG - Processando Lead: ${lead.nome} | Status Original: "${rawStatus}" | Chave Normalizada: "${statusKey}"`);
+
+    // Tenta encontrar a coluna por ID normalizada ou ID original
+    const column = columns.value.find(col => col.id === statusKey || col.id === rawStatus.toLowerCase().trim());
+    
     if (column) {
+      console.log(`DEBUG - Sucesso! Lead ${lead.nome} adicionado à coluna ${column.id}`);
       column.tasks.push({
-        id: String(lead.id), // Garante que o ID seja string para o D&D
+        id: String(lead.id),
         leadName: lead.nome,
         phone: lead.telefone,
-        avatarText: lead.nome ? lead.nome.substring(0, 2).toUpperCase() : '??',
+        avatarText: lead.vendedor_nome && lead.vendedor_nome !== 'Não Atribuído' ? lead.vendedor_nome.substring(0, 2).toUpperCase() : '??',
+        vendedorNome: lead.vendedor_nome,
         unreadMessages: lead.mensagens_nao_lidas > 0 ? lead.mensagens_nao_lidas : undefined,
         lastActivityText: lead.ultima_mensagem_data ? formatRelativeTime(lead.ultima_mensagem_data) : undefined,
         statusIcon: getStatusIcon(lead.status, lead.mensagens_nao_lidas),
-        vendedorNome: lead.vendedor_nome,
       });
+    } else {
+      console.warn(`DEBUG - Erro! Lead ${lead.nome} ignorado. Nenhuma coluna encontrada para o status: "${rawStatus}"`);
     }
   });
+  
+  // Gatilho de reatividade para o Vue
+  columns.value = [...columns.value];
+  console.log('DEBUG - Colunas após população:', columns.value.map(c => ({ id: c.id, count: c.tasks.length })));
 };
 
 // Helper para formatar a data
@@ -331,7 +414,8 @@ const columnsWithTotals = computed(() => {
   return columns.value.map(column => {
     const filteredTasks = column.tasks.filter(task =>
       (task.leadName && task.leadName.toLowerCase().includes(searchQuery.value.toLowerCase())) ||
-      (task.phone && task.phone.toLowerCase().includes(searchQuery.value.toLowerCase()))
+      (task.phone && task.phone.toLowerCase().includes(searchQuery.value.toLowerCase())) ||
+      (task.vendedorNome && task.vendedorNome.toLowerCase().includes(searchQuery.value.toLowerCase()))
     );
     return {
       ...column,
@@ -355,6 +439,7 @@ const filteredLeadsList = computed(() => {
 
 // Lógica do Drag and Drop Nativa para os Cards
 const onDragStartCard = (event: DragEvent, taskId: string) => {
+  console.log('Iniciando arrasto do lead:', taskId);
   if (event.dataTransfer) {
     event.dataTransfer.setData('taskId', taskId);
     event.dataTransfer.effectAllowed = 'move';
@@ -365,17 +450,91 @@ const onDropCard = async (event: DragEvent, newStatus: string) => {
   const taskId = event.dataTransfer?.getData('taskId');
   if (!taskId) return;
 
-  console.log(`Movendo Lead ${taskId} para status ${newStatus}`);
+  const supabaseUser = useSupabaseUser();
+  const currentUserId = (supabaseUser.value as any)?.id || (supabaseUser.value as any)?.sub;
+
+  const leadIdx = allLeads.value.findIndex(l => String(l.id) === taskId);
+  const targetColumn = columns.value.find(c => c.id === newStatus);
+  if (leadIdx === -1 || !targetColumn) return;
+  
+  const leadLocal = allLeads.value[leadIdx];
+  const originalStatus = leadLocal.status;
+  
+  // 1. ATUALIZAÇÃO OTIMISTA (Cadeado para evitar flicker)
+  pendingStatusUpdates.value[taskId] = newStatus;
+  allLeads.value[leadIdx].status = newStatus;
+  populateKanbanColumns(allLeads.value);
 
   try {
-    const { error } = await (supabase.from('ag_leads') as any)
-      .update({ status: newStatus })
-      .eq('id', taskId);
+    // A. BUSCA O PERFIL DO USUÁRIO (Para saber ID e Role)
+    const { data: profile } = await supabase
+      .from('ag_profiles')
+      .select('id, role')
+      .eq('user_id', currentUserId)
+      .maybeSingle();
+    
+    const userProfileId = profile?.id;
+    const isAdmin = (profile as any)?.role === 'admin';
+    
+    if (isAdmin) {
+      console.log('DEBUG - Usuário detectado como ADMIN. Movendo sem alterar propriedade.');
+    }
 
-    if (error) throw error;
-    fetchLeads(); // Recarrega para refletir a mudança
+    // B. TENTA SALVAR NO BANCO - Várias tentativas de formato
+    const statusVariations = [
+      targetColumn.title,
+      newStatus.replace(/_/g, ' ').toUpperCase(),
+      newStatus
+    ];
+
+    let success = false;
+    for (const statusToTry of statusVariations) {
+      // Payload inteligente: Se for admin, só muda o status. Se for vendedor, tenta assumir o lead.
+      const updatePayload: any = { status: statusToTry };
+      if (userProfileId && !isAdmin) {
+        updatePayload.vendedor_id = userProfileId;
+      }
+
+      const { data, error } = await (supabase.from('ag_leads') as any)
+        .update(updatePayload)
+        .eq('id', taskId)
+        .select();
+
+      // Se falhou por UUID mismatch, tenta buscar o ID real (caso a View tenha IDs simplificados)
+      if (error?.code === '22P02' || (!data?.length)) {
+         const { data: leadBySearch } = await (supabase.from('ag_leads') as any)
+           .select('id').ilike('nome', leadLocal.nome || leadLocal.leadName).maybeSingle();
+         if (leadBySearch) {
+           const { data: d2, error: e2 } = await (supabase.from('ag_leads') as any)
+             .update(updatePayload).eq('id', (leadBySearch as any).id).select();
+           if (!e2 && d2?.length) { success = true; break; }
+         }
+      } else if (!error && data?.length) {
+        success = true;
+        break;
+      }
+    }
+
+    if (!success) {
+      const msg = isAdmin 
+        ? 'Acesso Negado: Como Admin, você ainda precisa de permissão RLS no Supabase para editar leads de outros vendedores.'
+        : 'Acesso Negado: Você não é o dono deste lead para movê-lo.';
+      throw new Error(msg);
+    }
+
+    // FEEDBACK DE SUCESSO
+    console.log('DEBUG - Persistência confirmada com sucesso!');
+    showToast('Movido para ' + targetColumn.title + '!', 'success');
+
+    // 3. SINCRONIZAÇÃO EM SEGUNDO PLANO
+    setTimeout(async () => { await fetchLeads(); }, 1500);
+
   } catch (error: any) {
-    console.error('Erro ao mover lead:', error.message);
+    console.error('Falha ao salvar movimento:', error.message);
+    delete pendingStatusUpdates.value[taskId];
+    allLeads.value[leadIdx].status = originalStatus;
+    populateKanbanColumns(allLeads.value);
+    showToast(error.message, 'error');
   }
 };
 
@@ -1062,5 +1221,77 @@ tbody tr:hover {
   font-weight: bold;
   flex-shrink: 0;
   line-height: 1; /* Para alinhar o texto verticalmente */
+}
+
+/* --- ESTILOS DO TOAST (NOTIFICAÇÃO) --- */
+.toast-notification {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 9999;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  min-width: 300px;
+  border: 1px solid #f1f5f9;
+}
+
+.toast-content {
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #1e293b;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.toast-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+}
+
+.toast-notification.success .toast-icon { color: #10b981; }
+.toast-notification.error .toast-icon { color: #ef4444; }
+
+.toast-progress {
+  height: 3px;
+  width: 100%;
+  background: #f1f5f9;
+  position: relative;
+}
+
+.toast-progress::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  transform-origin: left;
+  animation: toast-progress 4s linear forwards;
+}
+
+.toast-progress.success::after { background: #10b981; }
+.toast-progress.error::after { background: #ef4444; }
+
+@keyframes toast-progress {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+/* Animação do Toast */
+.toast-enter-active, .toast-leave-active {
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.toast-enter-from {
+  opacity: 0;
+  transform: translateY(100px) scale(0.9);
+}
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(100px);
 }
 </style>
