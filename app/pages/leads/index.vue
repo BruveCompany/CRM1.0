@@ -14,9 +14,7 @@
                 <span>Lista</span>
             </button>
           </div>
-          <BaseButton variant="primary" size="sm" class="btn-no-wrap">
-            Adicionar Lead
-          </BaseButton>
+          <button class="btn-add-lead btn-success-fill">+ Criar Lead</button> <!-- Texto padronizado -->
         </div>
 
         <!-- Centro: Barra de Pesquisa -->
@@ -48,98 +46,131 @@
       </header>
 
       <ClientOnly>
-      <div v-if="showKanbanView" class="kanban-board-wrapper">
-        <div class="kanban-board" ref="board">
-          <!-- Coluna individual -->
-          <div 
-            v-for="column in displayColumns" 
-            :key="column.id" 
-            class="kanban-column" 
-            :data-id="column.id"
-          >
-            <!-- Header Estilo Pipedrive (Chevron) -->
-            <div class="column-header-wrapper">
-              <div class="column-header-chevron" :style="{ borderBottom: '2px solid ' + column.color + '40' }">
-                <div class="header-content">
-                  <h3 class="header-title">{{ column.title }}</h3>
-                  <div class="header-metrics">
-                    <span class="metrics-deals" :style="{ backgroundColor: column.color + '20', color: column.color }">
-                      {{ column.totalDeals }} {{ column.totalDeals === 1 ? 'lead' : 'leads' }}
-                    </span>
-                  </div>
-                </div>
-                <div class="chevron-arrow"></div>
-              </div>
-            </div>
-
-            <!-- Lista de Cards -->
-            <div class="card-list" :id="`list-${column.id}`" :data-column-id="column.id">
-              <div v-for="task in column.tasks" :key="task.id" class="kanban-card" :data-id="task.id" :style="{ '--column-color': column.color }">
-
-                <div class="card-content">
-                  <h4 class="card-title">{{ task.leadName }}</h4> <!-- Nome do Lead -->
-                  <p class="card-phone-number">{{ task.phone }}</p> <!-- Telefone do Lead -->
-                  <div class="card-meta">
-                    <div class="card-meta-left">
-
-                      <span v-if="task.lastActivityText" class="card-last-activity">{{ task.lastActivityText }}</span> <!-- Última atividade -->
-                    </div>
-                    <div class="card-meta-right">
-                      <div v-if="task.unreadMessages" class="card-unread-messages">
-                        <span class="message-count">{{ task.unreadMessages }}</span>
-                        <span class="message-text">novas msgs</span>
-                      </div>
-                      <div v-if="task.statusIcon" class="card-status-icon-wrapper" :style="{ 'border-color': column.color }">
-                        <Icon :name="`lucide:${task.statusIcon}`" :class="`status-icon status-${task.statusIcon}`" :style="{ 'color': column.color }" />
-                      </div>
-                      <div class="card-arrow-icon">
-                        <Icon name="lucide:chevron-right" />
-                      </div>
+        <div v-if="showKanbanView" key="kanban" class="kanban-board-wrapper">
+          <div class="kanban-board" ref="board">
+            <div 
+              v-for="column in displayColumns" 
+              :key="column.id" 
+              class="kanban-column" 
+              :data-id="column.id"
+            >
+              <div class="column-header-wrapper">
+                <div class="column-header-chevron" :style="{ borderBottom: '2px solid ' + column.color + '40' }">
+                  <div class="header-content">
+                    <h3 class="header-title">{{ column.title }}</h3>
+                    <div class="header-metrics">
+                      <span class="metrics-deals" :style="{ backgroundColor: column.color + '20', color: column.color }">
+                        {{ column.totalDeals }} {{ column.totalDeals === 1 ? 'lead' : 'leads' }}
+                      </span>
                     </div>
                   </div>
+                  <div class="chevron-arrow"></div>
                 </div>
               </div>
+                <div class="card-list" 
+                  :id="`list-${column.id}`" 
+                  :data-column-id="column.id"
+                  @dragover.prevent
+                  @drop="onDropCard($event, column.id)"
+                >
+                  <div 
+                    v-for="task in column.tasks" 
+                    :key="task.id" 
+                    class="kanban-card" 
+                    :data-id="task.id" 
+                    :style="{ '--column-color': column.color }"
+                    draggable="true"
+                    @dragstart="onDragStartCard($event, task.id)"
+                  >
+                    <div class="card-content">
+                      <h4 class="card-title">{{ task.leadName }}</h4>
+                      <p class="card-phone-number">{{ task.phone }}</p>
+                      <div class="card-meta">
+                        <div class="card-meta-left">
+                          <span v-if="task.lastActivityText" class="card-last-activity">{{ task.lastActivityText }}</span>
+                          <span v-if="task.vendedorNome" class="card-vendedor-tag">
+                            <Icon name="lucide:user" class="vendedor-icon" />
+                            <span>{{ task.vendedorNome }}</span>
+                          </span>
+                        </div>
+                        <div class="card-meta-right">
+                          <div v-if="task.unreadMessages" class="card-unread-messages">
+                            <span class="message-count">{{ task.unreadMessages }}</span>
+                            <span class="message-text">novas msgs</span>
+                          </div>
+                          <div v-if="task.statusIcon" class="card-status-icon-wrapper" :style="{ 'border-color': column.color }">
+                            <Icon :name="`lucide:${task.statusIcon}`" :class="`status-icon status-${task.statusIcon}`" :style="{ 'color': column.color }" />
+                          </div>
+                          <div class="card-arrow-icon">
+                            <Icon name="lucide:chevron-right" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
             </div>
           </div>
         </div>
-      </div>
-
-      <div v-else class="lead-list-view">
-        <h2>Lista de Leads</h2>
-        <p>Aqui será implementada a tabela com a lista detalhada de todos os leads.</p>
-        <div class="table-placeholder">
-          <p>Carregando dados da tabela...</p>
+        <div v-else key="list" class="lead-list-view content-wrapper">
+          <div class="list-header">
+            <h2>Lista de Leads</h2>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Telefone</th>
+                  <th>Status</th>
+                  <th>Vendedor</th>
+                  <th>Última Atividade</th>
+                  <th>Mensagens Não Lidas</th>
+                  <th class="actions-column">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="filteredLeadsList.length === 0">
+                  <td colspan="7" class="empty-table-message">Nenhum lead encontrado.</td>
+                </tr>
+                <tr v-for="lead in filteredLeadsList" :key="lead.id">
+                  <td>{{ lead.nome }}</td>
+                  <td>{{ lead.telefone }}</td>
+                  <td>
+                    <span class="status-badge" :style="{ '--status-color': getStatusColor(lead.status) }">
+                      {{ lead.status.replace(/_/g, ' ') }}
+                    </span>
+                  </td>
+                  <td>{{ lead.vendedor_nome || 'Não Atribuído' }}</td>
+                  <td>{{ lead.ultima_mensagem_data ? formatRelativeTime(lead.ultima_mensagem_data) : 'N/A' }}</td>
+                  <td>
+                    <span v-if="lead.mensagens_nao_lidas > 0" class="unread-count-table">
+                      {{ lead.mensagens_nao_lidas }}
+                    </span>
+                    <span v-else>-</span>
+                  </td>
+                  <td class="actions-column">
+                    <button class="icon-btn edit-btn"><Icon name="lucide:edit" /></button>
+                    <button class="icon-btn delete-btn"><Icon name="lucide:trash-2" /></button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <p v-if="filteredLeadsList.length > 0" class="loading-placeholder">Exibindo {{ filteredLeadsList.length }} leads.</p>
+          </div>
         </div>
-      </div>
       </ClientOnly>
     </div>
   </NuxtLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, nextTick } from 'vue';
-import { dragAndDrop, animations } from '@formkit/drag-and-drop';
+import { ref, computed, onMounted } from 'vue';
+import { useDragAndDrop } from '@formkit/drag-and-drop/vue';
 
 definePageMeta({
   layout: 'default'
 });
-
-interface LeadTask {
-  id: string;
-  leadName: string;
-  phone: string;
-  avatarText: string;
-  unreadMessages?: number;
-  lastActivityText?: string;
-  statusIcon?: string;
-}
-
-interface KanbanColumn {
-  id: string;
-  title: string;
-  color: string;
-  tasks: LeadTask[];
-}
 
 const supabase = useSupabaseClient();
 const showKanbanView = ref(true);
@@ -153,73 +184,151 @@ const currentUser = ref({
   online: true
 });
 
-const initialColumns = ref<KanbanColumn[]>([
-  {
-    id: 'leads_novos',
-    title: 'Leads Novos',
-    color: '#3B82F6', // Azul
-    tasks: [
-      { id: '1', leadName: 'Maria Silva', phone: '11 98765-4321', avatarText: 'MS', unreadMessages: 2, lastActivityText: 'Há 5 min', statusIcon: 'alert-triangle' },
-      { id: '2', leadName: 'João Pereira', phone: '21 91234-5678', avatarText: 'JP', lastActivityText: 'Há 1h' },
-      { id: '3', leadName: 'Ana Costa', phone: '31 95555-4444', avatarText: 'AC', unreadMessages: 1, lastActivityText: 'Ontem' },
-    ],
-  },
-  {
-    id: 'contato_feito',
-    title: 'Contato Feito',
-    color: '#F59E0B', // Laranja
-    tasks: [
-      { id: '4', leadName: 'Carlos Andrade', phone: '41 97777-8888', avatarText: 'CA', lastActivityText: 'Há 2 dias', statusIcon: 'check-circle' },
-      { id: '5', leadName: 'Fernanda Lima', phone: '51 96666-2222', avatarText: 'FL', lastActivityText: 'Há 3 dias' },
-    ],
-  },
-  {
-    id: 'necessidades',
-    title: 'Necessidades',
-    color: '#EC4899', // Rosa
-    tasks: [
-      { id: '6', leadName: 'Ricardo Souza', phone: '61 93333-1111', avatarText: 'RS', lastActivityText: 'Há 1 semana', statusIcon: 'alert-triangle' },
-    ],
-  },
-  {
-    id: 'proposta',
-    title: 'Proposta',
-    color: '#8B5CF6', // Roxo
-    tasks: [
-      { id: '7', leadName: 'Bruna Mendes', phone: '71 92222-3333', avatarText: 'BM', lastActivityText: 'Há 30 min', statusIcon: 'alert-triangle' },
-    ],
-  },
-  {
-    id: 'negociacao',
-    title: 'Negociação',
-    color: '#06B6D4', // Ciano
-    tasks: [
-      { id: '8', leadName: 'Paulo Roberto', phone: '81 94444-5555', avatarText: 'PR', lastActivityText: 'Há 1 dia' },
-    ],
-  },
-  {
-    id: 'ganho',
-    title: 'Ganho',
-    color: '#10B981', // Verde
-    tasks: [
-      { id: '9', leadName: 'Cliente Satisfeito', phone: '91 91111-2222', avatarText: 'CS', statusIcon: 'check-circle' },
-    ],
-  },
-  {
-    id: 'perdido',
-    title: 'Perdido',
-    color: '#EF4444', // Vermelho
-    tasks: [
-      { id: '10', leadName: 'Lead Desistente', phone: '01 93333-4444', avatarText: 'LD', statusIcon: 'x-circle' },
-    ],
-  },
+interface LeadTask {
+  id: string;
+  leadName: string;
+  phone: string;
+  avatarText: string;
+  unreadMessages?: number;
+  lastActivityText?: string;
+  statusIcon?: string;
+  vendedorNome?: string;
+}
+
+interface KanbanColumn {
+  id: string;
+  title: string;
+  color: string;
+  tasks: LeadTask[];
+}
+
+// Estrutura de colunas para o Kanban
+const columns = ref<KanbanColumn[]>([
+  { id: 'leads_novos', title: 'Leads Novos', color: '#3B82F6', tasks: [] },
+  { id: 'contato_feito', title: 'Contato Feito', color: '#F59E0B', tasks: [] },
+  { id: 'necessidades', title: 'Necessidades', color: '#EC4899', tasks: [] },
+  { id: 'proposta', title: 'Proposta', color: '#8B5CF6', tasks: [] },
+  { id: 'negociacao', title: 'Negociação', color: '#06B6D4', tasks: [] },
+  { id: 'ganho', title: 'Ganho', color: '#10B981', tasks: [] },
+  { id: 'perdido', title: 'Perdido', color: '#EF4444', tasks: [] },
 ]);
 
-const columnsWithTotals = computed<(KanbanColumn & { totalDeals: number })[]>(() => {
-  const filteredColumns = initialColumns.value.map(column => {
+// Nova ref para a lista plana de todos os leads (para a visualização de tabela)
+const allLeads = ref<any[]>([]);
+
+// Função para buscar leads do Supabase
+const fetchLeads = async () => {
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
+  let currentVendedorId = null;
+
+  if (user) {
+    // ASSUNÇÃO TEMPORÁRIA: Para teste, vamos usar um ID BIGINT fixo (ex: 101)
+    currentVendedorId = 101; 
+  }
+
+  let query = supabase.from('ag_leads').select(`
+      *,
+      vendedor:ag_profissionais(nome_display)  /* FAZENDO JOIN para buscar o nome do vendedor */
+    `).order('criado_em', { ascending: false });
+
+  if (currentVendedorId) {
+    query = query.eq('vendedor_id', currentVendedorId);
+  } else {
+    console.warn('Nenhum vendedor logado ou ID de vendedor para filtro. Carregando todos os leads (se RLS permitir).');
+  }
+
+  const { data, error } = await query;
+  const leadsData = data as any[] | null;
+
+  if (error || !leadsData) {
+    console.error('Erro ao buscar leads:', error?.message);
+    allLeads.value = []; 
+    populateKanbanColumns([]);
+    return;
+  }
+
+  // Popula a lista plana de leads
+  allLeads.value = (leadsData as any[]).map((lead: any) => {
+    const l = lead as any;
+    // Tenta pegar o nome do vendedor lidando com objeto ou array retornado pelo JOIN
+    const vRef = l.vendedor;
+    const vNome = Array.isArray(vRef) ? vRef[0]?.nome_display : vRef?.nome_display;
+    
+    return { 
+      ...l, 
+      id: String(l.id), 
+      vendedor_nome: vNome || 'Não Atribuído'
+    };
+  });
+
+  // Popula as colunas do Kanban
+  populateKanbanColumns(allLeads.value);
+};
+
+
+// Função para popular as colunas do Kanban a partir de uma lista de leads
+const populateKanbanColumns = (leads: any[]) => {
+  columns.value.forEach(col => (col.tasks = [])); // Limpa colunas
+  
+  leads.forEach(lead => {
+    const column = columns.value.find(col => col.id === lead.status);
+    if (column) {
+      column.tasks.push({
+        id: String(lead.id), // Garante que o ID seja string para o D&D
+        leadName: lead.nome,
+        phone: lead.telefone,
+        avatarText: lead.nome ? lead.nome.substring(0, 2).toUpperCase() : '??',
+        unreadMessages: lead.mensagens_nao_lidas > 0 ? lead.mensagens_nao_lidas : undefined,
+        lastActivityText: lead.ultima_mensagem_data ? formatRelativeTime(lead.ultima_mensagem_data) : undefined,
+        statusIcon: getStatusIcon(lead.status, lead.mensagens_nao_lidas),
+        vendedorNome: lead.vendedor_nome,
+      });
+    }
+  });
+};
+
+// Helper para formatar a data
+function formatRelativeTime(dateString: string) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  const diffMonths = Math.floor(diffDays / 30);
+  const diffYears = Math.floor(diffDays / 365);
+
+  if (diffYears >= 1) return `Há ${diffYears} ano${diffYears > 1 ? 's' : ''}`;
+  if (diffMonths >= 1) return `Há ${diffMonths} mês${diffMonths > 1 ? 'es' : ''}`;
+  if (diffDays >= 1) return `Há ${diffDays} dia${diffDays > 1 ? 's' : ''}`;
+  if (diffHours >= 1) return `Há ${diffHours}h`;
+  if (diffMinutes < 1) return 'Agora';
+  if (diffMinutes >= 1) return `Há ${diffMinutes} min`;
+  return date.toLocaleDateString('pt-BR');
+}
+
+// Helper para definir o ícone de status
+function getStatusIcon(status: string, unreadMessages: number) {
+  if (unreadMessages > 0) return 'alert-triangle'; // Alerta para novas mensagens
+  if (status === 'ganho') return 'check-circle';
+  if (status === 'perdido') return 'x-circle';
+  return 'message-square'; // Ícone padrão para outras etapas
+}
+
+
+// Helper para obter a cor do status (usado na tabela de lista)
+function getStatusColor(statusId: string) {
+  const column = columns.value.find(col => col.id === statusId);
+  return column ? column.color : '#64748b'; // Cor padrão se não encontrar
+}
+
+
+// Computed property para filtrar as colunas e calcular os totais
+const columnsWithTotals = computed(() => {
+  const filteredColumns = columns.value.map(column => {
     const filteredTasks = column.tasks.filter(task =>
-      task.leadName.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      task.phone?.toLowerCase().includes(searchQuery.value.toLowerCase())
+      task.leadName && task.leadName.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      task.phone && task.phone.toLowerCase().includes(searchQuery.value.toLowerCase())
     );
     const totalDeals = filteredTasks.length;
 
@@ -232,63 +341,57 @@ const columnsWithTotals = computed<(KanbanColumn & { totalDeals: number })[]>(()
   return filteredColumns;
 });
 
-const initDragAndDrop = () => {
-  if (!showKanbanView.value) return;
-  
-  // Aguarda o próximo tick para garantir que o DOM renderizou as colunas
-  nextTick(() => {
-    initialColumns.value.forEach((column) => {
-      const el = document.getElementById(`list-${column.id}`);
-      if (el) {
-        dragAndDrop({
-          parent: el,
-          getValues: () => column.tasks,
-          setValues: (newValues) => { column.tasks = newValues },
-          config: {
-            group: 'kanban',
-            draggingClass: 'kanban-card-dragged', // Classe para ocultar o original
-            plugins: [
-              animations({
-                duration: 2500, // Ajustado para 2.5 segundos conforme solicitado
-              }),
-            ],
-            handleEnd: async (data: any) => {
-              // Quando o item é solto, identificamos o ID do lead e o ID da nova coluna
-              const movedTaskId = data.draggedNode.data.id;
-              // Verifica se o alvo é válido para evitar o erro de "reading parent"
-              const targetParent = data.target?.parent?.el;
-              const newColumnId = targetParent?.dataset?.columnId;
-              
-              if (movedTaskId && newColumnId) {
-                console.log(`Mover Lead ${movedTaskId} para ${newColumnId}`);
-                try {
-                  const { error } = await (supabase.from('leads') as any)
-                    .update({ status: newColumnId })
-                    .eq('id', movedTaskId);
+// Computed property para filtrar a lista plana de leads (para a visualização de tabela)
+const filteredLeadsList = computed(() => {
+  if (!searchQuery.value) {
+    return allLeads.value;
+  }
+  const query = searchQuery.value.toLowerCase();
+  return allLeads.value.filter(lead =>
+    (lead.nome && lead.nome.toLowerCase().includes(query)) ||
+    (lead.telefone && lead.telefone.toLowerCase().includes(query)) ||
+    (lead.status && lead.status.toLowerCase().includes(query)) ||
+    (lead.vendedor_nome && lead.vendedor_nome.toLowerCase().includes(query)) 
+  );
+});
 
-                  if (error) throw error;
-                  console.log('Status atualizado no Supabase.');
-                } catch (error: any) {
-                  console.error('Erro:', error.message);
-                }
-              }
-            }
-          },
-        });
-      }
-    });
-  });
+// Lógica do Drag and Drop Nativa para os Cards
+const onDragStartCard = (event: DragEvent, taskId: string) => {
+  if (event.dataTransfer) {
+    event.dataTransfer.setData('taskId', taskId);
+    event.dataTransfer.effectAllowed = 'move';
+  }
 };
 
-onMounted(() => {
-  initDragAndDrop();
-});
+const onDropCard = async (event: DragEvent, newStatus: string) => {
+  const taskId = event.dataTransfer?.getData('taskId');
+  if (!taskId) return;
 
-watch(showKanbanView, (val) => {
-  if (val) initDragAndDrop();
-});
+  console.log(`Movendo Lead ${taskId} para status ${newStatus}`);
 
+  try {
+    const { error } = await (supabase.from('ag_leads') as any)
+      .update({ status: newStatus })
+      .eq('id', taskId);
+
+    if (error) throw error;
+    fetchLeads(); // Recarrega para refletir a mudança
+  } catch (error: any) {
+    console.error('Erro ao mover lead:', error.message);
+  }
+};
+
+const board = ref(null);
+const dndTasks = ref([]);
+
+// Para que o template do Kanban use as colunas filtradas e com totais
 const displayColumns = computed(() => columnsWithTotals.value);
+
+
+// Carregar leads ao montar o componente
+onMounted(() => {
+  fetchLeads();
+});
 </script>
 
 <style scoped>
@@ -296,7 +399,7 @@ const displayColumns = computed(() => columnsWithTotals.value);
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background-color: #f7f9fa;
+  background-color: #f8fafc; /* Fundo padrão mais moderno e limpo */
   overflow: hidden;
 }
 
@@ -491,14 +594,42 @@ const displayColumns = computed(() => columnsWithTotals.value);
 .kanban-board {
   display: flex;
   height: 100%;
+  width: 100%;
   padding: 0;
+  gap: 0;
+  box-sizing: border-box;
 }
 
 .kanban-column {
-  flex: 0 0 20%;
+  flex: 0 0 20%; /* Força exatamente 5 colunas por tela */
+  width: 20%;
+  min-width: 180px; /* Largura mínima pequena para não cortar */
   display: flex;
   flex-direction: column;
   border-right: 1px solid #e1e5e8;
+  box-sizing: border-box;
+}
+
+/* Estilos para o botão adicionar lead no header (Igual ao toggle ativo) */
+.btn-add-lead {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 1rem; /* Ajustado para bater a altura */
+  height: 34px;    /* Mesma altura do toggle */
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  background-color: #eef2ff; /* Indigo pastel suave */
+  color: #4f46e5;           /* Texto Indigo principal */
+  white-space: nowrap;
+}
+
+.btn-add-lead:hover {
+  background-color: #e0e7ff;
 }
 
 /* HEADER CHEVRON STYLE */
@@ -567,8 +698,8 @@ const displayColumns = computed(() => columnsWithTotals.value);
   flex-grow: 1;
   overflow-y: auto;
   overflow-y: overlay;
-  background: #f7f9fa;
-  padding: 0.2rem 0 0.2rem 0.5rem; /* Removido padding-right para a barra encostar na borda */
+  background: transparent; /* Usa o fundo do container pai */
+  padding: 0.2rem 0 0.2rem 0.5rem;
 }
 
 /* KANBAN CARD */
@@ -615,8 +746,25 @@ const displayColumns = computed(() => columnsWithTotals.value);
 }
 
 .card-last-activity {
-  font-size: 0.7rem; /* Menor que o telefone */
-  color: #94a3b8; /* Cor mais suave */
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.card-vendedor-tag {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.vendedor-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+  color: #94a3b8;
 }
 
 .card-meta {
@@ -625,6 +773,7 @@ const displayColumns = computed(() => columnsWithTotals.value);
   align-items: center;
   margin-top: auto; /* Empurra os metadados para baixo no card */
   font-size: 0.85rem;
+  gap: 0.5rem;
 }
 
 .card-meta-left {
@@ -640,34 +789,18 @@ const displayColumns = computed(() => columnsWithTotals.value);
   gap: 0.5rem;
 }
 
-.card-unread-messages {
-  display: flex;
-  align-items: center;
-  gap: 0.2rem; /* Espaçamento entre o número e o texto */
-  background-color: #fee2e2; /* Fundo vermelho bem claro */
-  border-radius: 12px;
-  padding: 2px 6px;
-}
-
-.card-unread-messages .message-count {
-  background-color: #dc2626; /* Círculo vermelho para o número */
+.card-unread-badge {
+  background-color: #dc2626;
   color: white;
-  width: 18px;
-  height: 18px;
+  min-width: 20px;
+  height: 20px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.7rem;
-  font-weight: bold;
-  flex-shrink: 0;
-}
-
-.card-unread-messages .message-text {
-  font-size: 0.7rem;
-  color: #dc2626;
-  font-weight: 600;
-  white-space: nowrap;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0 4px;
 }
 
 .card-status-icon-wrapper {
@@ -677,8 +810,8 @@ const displayColumns = computed(() => columnsWithTotals.value);
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  border: 1px solid var(--column-color); /* Borda com a cor da coluna */
-  background-color: white; /* Fundo branco */
+  border: 1px solid var(--column-color);
+  background-color: white;
 }
 
 .status-icon {
@@ -781,16 +914,171 @@ const displayColumns = computed(() => columnsWithTotals.value);
 }
 
 /* OUTROS ESTILOS MANTIDOS */
-.lead-list-view {
-  padding: 2rem;
-  text-align: center;
-  color: #64748b;
+/* Estilos para o wrapper de conteúdo (reutilizado) */
+.content-wrapper {
+  background-color: transparent; /* Remove o fundo branco para padronizar com o Kanban */
+  padding: 1.5rem;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  height: 0; /* truque flexbox para forçar os filhos a scrolarem */
 }
 
-.table-placeholder {
-  margin-top: 1rem;
+/* Estilos do cabeçalho da lista */
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.list-header h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.btn-primary-action {
+  background-color: #4f46e5;
+  color: white;
+  padding: 0.6rem 1.25rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.btn-primary-action:hover {
+  background-color: #4338ca;
+}
+
+/* Estilos para a tabela */
+.table-container {
+  overflow-x: auto;
+  overflow-y: auto; /* Adicionado scroll vertical */
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  scrollbar-width: thin;
+  scrollbar-color: #e2e8f0 transparent;
+}
+
+.table-container::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
+}
+
+table {
+  width: 100%;
+  border-collapse: separate; /* Necessário para sticky header */
+  border-spacing: 0;
+  font-size: 0.9rem;
+  text-align: left;
+}
+
+th, td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap; /* Evita quebra de linha em colunas pequenas */
+}
+
+th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+td {
+  color: #334155;
+}
+
+tbody tr:hover {
+  background-color: #fefefe;
+}
+
+.actions-column {
+  text-align: center;
+  width: 100px; /* Largura fixa para as ações */
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+.icon-btn:hover {
+  background-color: #e2e8f0;
+}
+
+.edit-btn {
+  color: #4f46e5;
+}
+.delete-btn {
+  color: #dc2626;
+}
+
+.empty-table-message {
+  text-align: center;
   padding: 2rem;
-  border: 2px dashed #e2e8f0;
-  border-radius: 8px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.loading-placeholder {
+  text-align: center;
+  color: #94a3b8;
+  padding: 1rem;
+  font-style: italic;
+}
+
+/* Estilos para o badge de status na tabela */
+.status-badge {
+  padding: 2px 10px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--status-color, #64748b);
+  background-color: color-mix(in srgb, var(--status-color, #64748b), transparent 85%);
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+/* Estilos para a contagem de não lidas na tabela */
+.unread-count-table {
+  background-color: #dc2626;
+  color: white;
+  width: 20px; /* Largura para o círculo */
+  height: 20px; /* Altura para o círculo */
+  border-radius: 50%; /* Círculo */
+  display: flex; /* Para centralizar o número */
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem; /* Tamanho da fonte do número */
+  font-weight: bold;
+  flex-shrink: 0;
+  line-height: 1; /* Para alinhar o texto verticalmente */
 }
 </style>
