@@ -555,16 +555,18 @@ const displayColumns = computed(() => columnsWithTotals.value);
 .card-list {
   flex-grow: 1;
   overflow-y: auto;
+  overflow-y: overlay;
   background: #f7f9fa;
-  padding: 0.2rem;
+  padding: 0.2rem 0 0.2rem 0.5rem; /* Removido padding-right para a barra encostar na borda */
 }
 
 /* KANBAN CARD */
 .kanban-card {
   background-color: #ffffff;
   border-radius: 8px;
-  padding: 1rem; /* Padding que dá altura */
+  padding: 1rem;
   margin-bottom: 0.75rem;
+  margin-right: 0.5rem; /* Margem para manter o card longe da borda/barra */
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
   cursor: pointer;
   transition: box-shadow 0.2s ease-in-out, border-color 0.2s;
@@ -725,27 +727,46 @@ const displayColumns = computed(() => columnsWithTotals.value);
   visibility: hidden !important; /* Esconde o texto/conteúdo para não "sujar" o visual */
 }
 
-/* SCROLLBARS */
-.kanban-board-wrapper::-webkit-scrollbar {
-  height: 8px;
-  width: 8px;
+/* SCROLLBAR HORIZONTAL (VISÍVEL E SUTIL) */
+:global(.kanban-board-wrapper) {
+  scrollbar-width: thin !important;
+  scrollbar-color: #e2e8f0 transparent !important;
 }
 
-.kanban-board-wrapper::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
+:global(.kanban-board-wrapper::-webkit-scrollbar) {
+  height: 6px !important;
+  display: block !important;
 }
 
-.card-list::-webkit-scrollbar {
-  width: 4px;
+:global(.kanban-board-wrapper::-webkit-scrollbar-track) {
+  background: transparent !important;
 }
 
-.card-list::-webkit-scrollbar-thumb {
-  background: transparent;
+:global(.kanban-board-wrapper::-webkit-scrollbar-thumb) {
+  background: #e2e8f0 !important;
+  border-radius: 10px !important;
 }
 
-.card-list:hover::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+:global(.kanban-board-wrapper::-webkit-scrollbar-thumb:hover) {
+  background: #cbd5e1 !important;
+}
+
+/* SCROLLBAR VERTICAL DAS COLUNAS (TOTALMENTE INVISÍVEL) */
+:global(.card-list) {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE and Edge */
+}
+
+:global(.card-list::-webkit-scrollbar) {
+  display: none !important; /* Chrome, Safari and Opera */
+  width: 0 !important;
+}
+
+
+/* Remover botões/setas de todas as barras */
+:global(.card-list::-webkit-scrollbar-button),
+:global(.kanban-board-wrapper::-webkit-scrollbar-button) {
+  display: none !important;
 }
 
 /* OUTROS ESTILOS MANTIDOS */
