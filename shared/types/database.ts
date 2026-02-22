@@ -43,6 +43,10 @@ export interface AgProfile {
   user_id: string | null
   nome: string | null
   role: string | null
+  is_online?: boolean
+  last_activity?: string
+  last_login?: string
+  last_logout?: string
 }
 
 // Especialidades
@@ -97,6 +101,11 @@ export interface AgPerfil {
   nome: string
   role: string
   email: string
+  is_online?: boolean
+  last_activity?: string
+  last_login?: string
+  last_logout?: string
+  is_online_calculated?: boolean
 }
 
 /**

@@ -29,33 +29,45 @@
               Email
             </th>
             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Status
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Role
             </th>
             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Criado em
+              Última Ativ.
             </th>
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
-          <tr v-if="loading">
-            <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">
+          <tr v-if="loading && perfis.length === 0">
+            <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">
               Carregando usuários...
             </td>
           </tr>
           <tr v-else-if="perfis.length === 0">
-            <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">
+            <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">
               Nenhum usuário encontrado.
             </td>
           </tr>
           <tr v-for="perfil in perfis" :key="perfil.id">
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-              {{ perfil.id }}
+              {{ String(perfil.id).substring(0, 8) }}...
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
               {{ perfil.nome }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
               {{ perfil.email }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm">
+              <span :class="[
+                'px-2 py-1 inline-flex text-xs leading-5 font-bold rounded-md items-center gap-1.5',
+                (perfil as any).is_online_calculated ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
+              ]">
+                <span :class="['w-2 h-2 rounded-full', (perfil as any).is_online_calculated ? 'bg-green-500 animate-pulse' : 'bg-slate-400']"></span>
+                {{ (perfil as any).is_online_calculated ? 'Online' : 'Offline' }}
+              </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
               <span :class="[
@@ -66,7 +78,11 @@
               </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-              {{ new Date(perfil.created_at).toLocaleDateString('pt-BR') }}
+              <div v-if="(perfil as any).last_activity" class="flex flex-col">
+                <span class="text-xs">{{ new Date((perfil as any).last_activity).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) }}</span>
+                <span class="text-[10px] text-gray-400">{{ new Date((perfil as any).last_activity).toLocaleDateString('pt-BR') }}</span>
+              </div>
+              <span v-else>-</span>
             </td>
           </tr>
         </tbody>
@@ -83,14 +99,26 @@ const { fetchPerfis } = useProfissionais()
 const perfis = ref<AgPerfil[]>([])
 const loading = ref(true)
 const showModal = ref(false)
+let refreshInterval: any = null
 
-onMounted(async () => {
+const loadData = async () => {
   try {
-    perfis.value = await fetchPerfis()
+    const data = await fetchPerfis()
+    perfis.value = data
   } catch (error) {
     console.error('Erro ao carregar perfis:', error)
   } finally {
     loading.value = false
   }
+}
+
+onMounted(async () => {
+  await loadData()
+  // Refresh a cada 10 segundos
+  refreshInterval = setInterval(loadData, 10000)
+})
+
+onUnmounted(() => {
+  if (refreshInterval) clearInterval(refreshInterval)
 })
 </script>

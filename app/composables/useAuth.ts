@@ -5,6 +5,80 @@ export const useAuth = () => {
   const user = useSupabaseUser()
   const toast = useToast()
   const router = useRouter()
+  const profile = useState<any>('auth-user-profile', () => null)
+
+  const fetchProfile = async () => {
+    if (!user.value) {
+      profile.value = null
+      return
+    }
+
+    try {
+      const userId = user.value.id
+      const userSub = (user.value as any).sub
+
+      console.log('🔄 Iniciando busca de perfil:', { id: userId, sub: userSub })
+
+      // Tenta pelo ID primeiro
+      let { data, error } = await (supabase
+        .from('ag_profiles') as any)
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      // Se não achar pelo ID e o SUB for diferente, tenta pelo SUB
+      if (!data && userSub && userSub !== userId) {
+        console.log('🔍 Tentando busca alternativa pelo SUB...')
+        const { data: subData, error: subError } = await (supabase
+          .from('ag_profiles') as any)
+          .select('*')
+          .eq('user_id', userSub)
+          .maybeSingle()
+
+        if (subData) data = subData
+      }
+
+      // NOVO: Se ainda não achar, tenta buscar pelo EMAIL como último recurso
+      if (!data && user.value.email) {
+        console.log('🔍 Tentando busca alternativa pelo EMAIL...')
+        const { data: emailData } = await (supabase
+          .from('ag_profiles') as any)
+          .select('*')
+          .eq('email', user.value.email)
+          .maybeSingle()
+
+        if (emailData) {
+          console.log('✅ Perfil localizado via email!')
+          data = emailData
+
+          // OPORTUNIDADE: Se achou por email mas o user_id estava errado/vazio, corrige no banco
+          if (!data.user_id || data.user_id !== userId) {
+            await (supabase.from('ag_profiles') as any)
+              .update({ user_id: userId })
+              .eq('id', data.id)
+          }
+        }
+      }
+
+      if (data) {
+        console.log('✅ Perfil localizado:', data.nome)
+        profile.value = data
+      } else {
+        console.warn('❌ Perfil não encontrado após todas as tentativas.')
+      }
+    } catch (err) {
+      console.error('❌ Falha crítica ao buscar perfil:', err)
+    }
+  }
+
+  // Monitora mudanças no usuário para atualizar o perfil
+  watch(user, () => {
+    if (user.value) {
+      fetchProfile()
+    } else {
+      profile.value = null
+    }
+  }, { immediate: true })
 
   const login = async (email: string, password: string) => {
     try {
@@ -19,6 +93,25 @@ export const useAuth = () => {
       }
 
       if (data.user) {
+        // Atualiza status para Online
+        const { data: profile } = await (supabase
+          .from('ag_profiles') as any)
+          .select('id')
+          .eq('user_id', data.user.id)
+          .single();
+
+        if (profile) {
+          await (supabase
+            .from('ag_profiles') as any)
+            .update({
+              is_online: true,
+              last_login: new Date().toISOString(),
+              last_activity: new Date().toISOString()
+            })
+            .eq('id', (profile as any).id);
+        }
+
+        await fetchProfile() // Carrega o perfil completo
         toast.success('Login realizado com sucesso!')
         await navigateTo('/')
         return { success: true, user: data.user }
@@ -34,6 +127,24 @@ export const useAuth = () => {
 
   const logout = async () => {
     try {
+      if (user.value) {
+        const { data: profile } = await (supabase
+          .from('ag_profiles') as any)
+          .select('id')
+          .eq('user_id', user.value.id)
+          .single();
+
+        if (profile) {
+          await (supabase
+            .from('ag_profiles') as any)
+            .update({
+              is_online: false,
+              last_logout: new Date().toISOString()
+            })
+            .eq('id', (profile as any).id);
+        }
+      }
+
       const { error } = await supabase.auth.signOut()
 
       if (error) {
@@ -176,17 +287,54 @@ export const useAuth = () => {
     }
   }
 
+  /**
+   * Atualiza o carimbo de última atividade (Heartbeat).
+   * 
+   * @returns {Promise<void>}
+   */
+  const updateHeartbeat = async () => {
+    if (!user.value) return
+    try {
+      const { data: profile } = await (supabase
+        .from('ag_profiles') as any)
+        .select('id, is_online')
+        .eq('user_id', user.value.id)
+        .single()
+
+      if (profile) {
+        const updates: any = {
+          last_activity: new Date().toISOString()
+        }
+
+        // Se estiver marcado como offline mas o heartbeat está rodando, corrige para online
+        if (!(profile as any).is_online) {
+          updates.is_online = true
+        }
+
+        await (supabase
+          .from('ag_profiles') as any)
+          .update(updates)
+          .eq('id', (profile as any).id)
+      }
+    } catch (err) {
+      console.error('Heartbeat error:', err)
+    }
+  }
+
   return {
     // Estado
     user,
+    profile,
     isAuthenticated,
 
     // Métodos
     login,
     logout,
+    fetchProfile,
     changePassword,
     updateUserName,
     recoverPassword,
-    checkIsAdmin
+    checkIsAdmin,
+    updateHeartbeat
   }
 }

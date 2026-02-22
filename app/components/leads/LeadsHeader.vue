@@ -58,16 +58,7 @@
 
     <!-- Direita: Perfil do Vendedor e Status -->
     <div class="header-right-group">
-      <div class="user-profile">
-        <div class="user-info">
-          <span class="user-name">Maria</span>
-          <span class="user-status-text">online</span>
-        </div>
-        <div class="avatar-wrapper">
-          <img src="https://api.dicebear.com/7.x/initials/svg?seed=Maria" alt="Avatar" class="user-avatar" />
-          <div class="online-indicator"></div>
-        </div>
-      </div>
+      <UserProfileHeader />
     </div>
   </header>
 </template>
@@ -291,57 +282,5 @@ watch(() => showMyLeads.value, (val) => {
   flex: 1;
   display: flex;
   justify-content: flex-end;
-}
-
-.user-profile {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.user-info {
-  display: flex;
-  flex-direction: column;
-  text-align: right;
-}
-
-.user-name {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #1e293b;
-  line-height: 1;
-  margin-bottom: 2px;
-}
-
-.user-status-text {
-  font-size: 0.7rem;
-  color: #22c55e;
-  font-weight: 600;
-}
-
-.avatar-wrapper {
-  position: relative;
-  width: 32px;
-  height: 32px;
-}
-
-.user-avatar {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid white;
-  box-shadow: 0 0 0 1px #e2e8f0;
-}
-
-.online-indicator {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 10px;
-  height: 10px;
-  background-color: #22c55e;
-  border: 2px solid white;
-  border-radius: 50%;
 }
 </style>
