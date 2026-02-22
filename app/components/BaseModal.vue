@@ -7,7 +7,7 @@
     >
       <div :class="['bg-white rounded-lg shadow-2xl w-full mx-4 transform transition-all flex flex-col max-h-[calc(100vh-2rem)]', maxWidthClass]">
         <!-- Header -->
-        <div class="px-5 py-3.5 flex items-center justify-between border-b border-neutral-100 flex-shrink-0">
+        <div v-if="!hideHeader" class="px-5 py-3.5 flex items-center justify-between border-b border-neutral-100 flex-shrink-0">
           <slot name="header">
             <h3 class="text-lg font-semibold text-neutral-900">Modal</h3>
           </slot>
@@ -41,8 +41,10 @@
 const props = withDefaults(defineProps<{ 
   modelValue: boolean
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl'
+  hideHeader?: boolean
 }>(), {
-  size: 'md'
+  size: 'md',
+  hideHeader: false
 })
 
 defineEmits(['update:modelValue', 'confirmar', 'cancelar'])

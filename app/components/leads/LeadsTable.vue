@@ -56,7 +56,7 @@
 
               <button 
                 class="icon-btn delete-btn" 
-                @click.stop="confirmDeleteLead(lead.id, lead.nome)"
+                @click.stop="confirmDeleteLead(lead)"
                 title="Excluir Lead"
               >
                 <Icon name="lucide:trash-2" />
@@ -67,12 +67,52 @@
       </table>
       <p v-if="filteredLeadsList.length > 0" class="loading-placeholder">Exibindo {{ filteredLeadsList.length }} leads.</p>
     </div>
+
+    <!-- Modal de Confirmação de Exclusão (Ultra Prime & Minimalist) -->
+    <BaseModal v-model="showConfirmDeleteModal" size="sm" hideHeader>
+      <div class="prime-confirm-modal">
+        <!-- Botão Fechar Customizado -->
+        <button @click="showConfirmDeleteModal = false" class="close-btn-custom">
+          <Icon name="lucide:x" class="w-5 h-5" />
+        </button>
+
+        <div class="icon-header">
+          <div class="icon-circle-red-glow">
+            <Icon name="lucide:trash-2" class="w-7 h-7" />
+          </div>
+        </div>
+        
+        <h3 class="modal-title-prime">Arquivar Lead</h3>
+        
+        <p class="modal-desc-prime">
+          Você tem certeza de que deseja mover <span class="highlight-name">"{{ leadToDelete?.nome }}"</span> para o arquivo? 
+        </p>
+        
+        <p class="modal-subdesc-prime text-rose-500 font-medium pt-1">O lead não aparecerá mais na lista ativa do CRM.</p>
+
+        <div class="prime-modal-actions-compact">
+          <button 
+            class="btn-prime-secondary-slim" 
+            @click="showConfirmDeleteModal = false"
+          >
+            Não, cancelar
+          </button>
+          <button 
+            class="btn-prime-danger-slim" 
+            @click="handleExecuteDelete"
+          >
+            Sim, arquivar
+          </button>
+        </div>
+      </div>
+    </BaseModal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useLeads } from '~/composables/useLeads';
+import { useLeads, type LeadTask } from '~/composables/useLeads';
 import { useNotification } from '~/composables/useNotification';
+import BaseModal from '../BaseModal.vue';
 
 const { filteredLeadsList, formatRelativeTime, openDetails, fetchLeads } = useLeads();
 const { notifySuccess, notifyError } = useNotification();
@@ -80,6 +120,8 @@ const { checkIsAdmin } = useAuth();
 const supabase = useSupabaseClient();
 
 const isAdmin = ref(true);
+const showConfirmDeleteModal = ref(false);
+const leadToDelete = ref<LeadTask | null>(null);
 
 onMounted(async () => {
   isAdmin.value = await checkIsAdmin();
@@ -101,24 +143,37 @@ function getStatusColor(statusId: string) {
   return statusColors[statusId] || '#64748b';
 }
 
-const confirmDeleteLead = async (leadId: string, leadNome: string) => {
-  if (confirm(`Tem certeza que deseja excluir o lead "${leadNome}"? Esta ação não pode ser desfeita.`)) {
-    try {
-      const { error } = await supabase
-        .from('ag_leads')
-        .delete()
-        .eq('id', leadId);
+const confirmDeleteLead = (lead: LeadTask) => {
+  leadToDelete.value = lead;
+  showConfirmDeleteModal.value = true;
+};
 
-      if (error) {
-        throw error;
-      }
+const handleExecuteDelete = async () => {
+  if (!leadToDelete.value) return;
 
-      notifySuccess(`Lead "${leadNome}" excluído com sucesso!`);
-      await fetchLeads(); // Recarrega a lista para remover o lead da tela
-    } catch (err: any) {
-      console.error('Erro ao excluir lead:', err.message);
-      notifyError('Erro ao excluir lead: ' + err.message);
+  const leadId = leadToDelete.value.id;
+  const leadNome = leadToDelete.value.nome;
+  
+  showConfirmDeleteModal.value = false;
+
+  try {
+    // REALIZA A EXCLUSÃO LÓGICA (ARQUIVAMENTO)
+    // Nota: Requer que a coluna 'ativo' exista na tabela 'ag_leads'
+    const { error } = await (supabase
+      .from('ag_leads') as any)
+      .update({ ativo: false })
+      .eq('id', leadId);
+
+    if (error) {
+      throw error;
     }
+
+    notifySuccess(`Lead "${leadNome}" arquivado com sucesso!`);
+    await fetchLeads(); // Recarrega a lista para remover o lead (a VIEW deve filtrar por ativo=true)
+    leadToDelete.value = null;
+  } catch (err: any) {
+    console.error('Erro ao arquivar lead:', err.message);
+    notifyError('Erro ao arquivar lead: ' + err.message);
   }
 };
 </script>
@@ -301,5 +356,136 @@ tbody tr:hover {
 .temp-badge.frio {
   background-color: #eff6ff;
   color: #3b82f6;
+}
+
+/* --- MODAL DE CONFIRMAÇÃO ULTRA PRIME --- */
+.prime-confirm-modal {
+  padding: 2.5rem 1.5rem 1.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  background: white;
+}
+
+.close-btn-custom {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-btn-custom:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+  transform: rotate(90deg);
+}
+
+.icon-header {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.icon-circle-red-glow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 68px;
+  height: 68px;
+  background-color: #fef2f2;
+  color: #ef4444;
+  border-radius: 20px;
+  box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.1), 0 4px 6px -2px rgba(239, 68, 68, 0.05);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.prime-confirm-modal:hover .icon-circle-red-glow {
+  transform: scale(1.1) rotate(-5deg);
+  background-color: #fee2e2;
+}
+
+.modal-title-prime {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.025em;
+}
+
+.modal-desc-prime {
+  font-size: 1rem;
+  color: #475569;
+  line-height: 1.6;
+  max-width: 280px;
+}
+
+.highlight-name {
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.modal-subdesc-prime {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2.5rem;
+}
+
+.prime-modal-actions-compact {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.btn-prime-danger-slim {
+  background-color: #e11d48;
+  color: white;
+  padding: 0.45rem 1.25rem;
+  border-radius: 9px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 10px rgba(225, 29, 72, 0.2);
+  min-width: 120px;
+}
+
+.btn-prime-danger-slim:hover {
+  background-color: #be123c;
+  box-shadow: 0 6px 14px rgba(225, 29, 72, 0.3);
+  transform: translateY(-1.5px);
+}
+
+.btn-prime-secondary-slim {
+  background-color: #ffffff;
+  color: #64748b;
+  padding: 0.45rem 1.25rem;
+  border-radius: 9px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 120px;
+}
+
+.btn-prime-secondary-slim:hover {
+  background-color: #f8fafc;
+  color: #1e293b;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
 }
 </style>
