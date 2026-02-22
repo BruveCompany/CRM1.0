@@ -51,10 +51,10 @@ onMounted(() => {
 
 <style scoped>
 .page-container {
-  padding: 0;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
+  max-height: calc(100vh - 0px); /* Garante que não ultrapasse a tela */
   background-color: #f8fafc;
   overflow: hidden;
 }

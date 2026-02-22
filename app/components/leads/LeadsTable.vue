@@ -6,39 +6,48 @@
     <div class="table-container">
       <table>
         <thead>
-          <tr>
-            <th>Nome</th>
-            <th>Telefone</th>
-            <th>Status</th>
-            <th>Vendedor</th>
-            <th>Última Atividade</th>
-            <th>Mensagens Não Lidas</th>
+            <th style="width: 15%;">Nome</th>
+            <th style="width: 120px;">Telefone</th>
+            <th style="width: 150px;">Status</th>
+            <th style="width: 60px; text-align: center;">Score</th>
+            <th style="width: 100px; text-align: center;">Temp.</th>
+            <th style="width: 15%;">Vendedor</th>
+            <th style="width: 110px;">Atividade</th>
+            <th style="width: 100px; text-align: center;">Mensagens</th>
             <th class="actions-column">Ações</th>
-          </tr>
         </thead>
         <tbody>
           <tr v-if="filteredLeadsList.length === 0">
-            <td colspan="7" class="empty-table-message">Nenhum lead encontrado.</td>
+            <td colspan="9" class="empty-table-message">Nenhum lead encontrado.</td>
           </tr>
           <tr v-for="lead in filteredLeadsList" :key="lead.id" @click="openDetails(lead.id)" class="cursor-pointer">
-            <td>{{ lead.nome }}</td>
-            <td>{{ lead.telefone }}</td>
-            <td>
+            <td :title="lead.nome">{{ lead.nome }}</td>
+            <td :title="lead.telefone">{{ lead.telefone }}</td>
+            <td :title="lead.status.replace(/_/g, ' ')">
               <span class="status-badge" :style="{ '--status-color': getStatusColor(lead.status) }">
                 {{ lead.status.replace(/_/g, ' ') }}
               </span>
             </td>
-            <td>{{ lead.vendedor_nome || 'Não Atribuído' }}</td>
-            <td>{{ lead.ultima_mensagem_data ? formatRelativeTime(lead.ultima_mensagem_data) : 'N/A' }}</td>
-            <td>
+            <td style="width: 60px; text-align: center;" :title="String(lead.score || '-')">{{ lead.score || '-' }}</td>
+            <td style="width: 100px; text-align: center;" :title="lead.temperatura || '-'">
+              <span v-if="lead.temperatura" class="temp-badge" :class="lead.temperatura.toLowerCase()">
+                {{ lead.temperatura }}
+              </span>
+              <span v-else>-</span>
+            </td>
+            <td :title="lead.vendedor_nome || 'Não Atribuído'">{{ lead.vendedor_nome || 'Não Atribuído' }}</td>
+            <td style="width: 110px;" :title="lead.ultima_mensagem_data ? formatRelativeTime(lead.ultima_mensagem_data) : 'N/A'">
+              {{ lead.ultima_mensagem_data ? formatRelativeTime(lead.ultima_mensagem_data) : 'N/A' }}
+            </td>
+            <td style="width: 100px; text-align: center;" :title="String(lead.mensagens_nao_lidas || '0')">
               <span v-if="lead.mensagens_nao_lidas > 0" class="unread-count-table">
                 {{ lead.mensagens_nao_lidas }}
               </span>
               <span v-else>-</span>
             </td>
             <td class="actions-column">
-              <button class="icon-btn edit-btn"><Icon name="lucide:edit" /></button>
-              <button class="icon-btn delete-btn"><Icon name="lucide:trash-2" /></button>
+              <button class="icon-btn edit-btn" title="Editar"><Icon name="lucide:edit" /></button>
+              <button class="icon-btn delete-btn" title="Excluir"><Icon name="lucide:trash-2" /></button>
             </td>
           </tr>
         </tbody>
@@ -72,34 +81,41 @@ function getStatusColor(statusId: string) {
 <style scoped>
 .content-wrapper {
   background-color: transparent;
-  padding: 1.5rem;
-  flex-grow: 1;
+  padding: 0.75rem 1.5rem;
+  flex: 1;
   display: flex;
   flex-direction: column;
-  height: 0; /* truque flexbox para forçar os filhos a scrolarem */
+  min-height: 0;
+  overflow: hidden;
 }
 
 .list-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
+  flex-shrink: 0;
 }
 
 .list-header h2 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #334155;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
 }
 
 .table-container {
-  overflow-x: auto;
-  overflow-y: auto;
+  overflow: auto;
   flex-grow: 1;
-  display: flex;
-  flex-direction: column;
+  min-height: 0; /* Essencial para flex-grow + overflow funcionar em algumas situações */
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   scrollbar-width: thin;
   scrollbar-color: #e2e8f0 transparent;
+  position: relative;
+  overflow-x: hidden; /* Remove scroll horizontal */
 }
 
 .table-container::-webkit-scrollbar {
@@ -120,25 +136,29 @@ table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   text-align: left;
+  table-layout: fixed; /* Força os tamanhos das colunas */
 }
 
 th, td {
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 0.5rem;
   border-bottom: 1px solid #e2e8f0;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 th {
-  background-color: #f8f9fa;
-  font-weight: 600;
-  color: #64748b;
+  background-color: #f8fafc; /* Cor sólida para não ficar transparente no scroll */
+  font-weight: 700;
+  color: #475569;
   text-transform: uppercase;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 20;
   border-bottom: 2px solid #e2e8f0;
 }
 
@@ -184,10 +204,12 @@ tbody tr:hover {
 }
 
 .loading-placeholder {
-  text-align: center;
+  text-align: right;
   color: #94a3b8;
-  padding: 1rem;
+  padding: 0.5rem 0 0 0;
+  font-size: 0.75rem;
   font-style: italic;
+  flex-shrink: 0;
 }
 
 .status-badge {
@@ -216,5 +238,23 @@ tbody tr:hover {
   font-weight: bold;
   flex-shrink: 0;
   line-height: 1;
+}
+
+.temp-badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.temp-badge.quente {
+  background-color: #fff7ed;
+  color: #f97316;
+}
+
+.temp-badge.frio {
+  background-color: #eff6ff;
+  color: #3b82f6;
 }
 </style>

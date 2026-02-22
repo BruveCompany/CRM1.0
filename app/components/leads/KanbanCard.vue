@@ -260,15 +260,10 @@ defineEmits(['dragstart']);
   user-select: none;
 }
 
-/* Indicadores de Temperatura - Bordas */
-.kanban-card.card-hot {
-  border-left: 4px solid #f97316;
-}
-
-.kanban-card.card-cold {
-  border-left: 4px solid #3b82f6;
-  opacity: 0.85;
-}
+/* Indicadores de Temperatura - Removidas bordas laterais conforme solicitado */
+/* Indicadores de Temperatura - Estilos de agrupamento */
+.kanban-card.card-hot { border-left: 0; }
+.kanban-card.card-cold { opacity: 0.9; }
 
 .temperature-indicators {
   position: absolute;
