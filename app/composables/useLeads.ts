@@ -16,6 +16,8 @@ export interface LeadTask {
     ultima_mensagem_data?: string;
     mensagens_nao_lidas?: number;
     notas?: string;
+    score?: number;
+    vendedor_id?: string | number | null;
 }
 
 export interface KanbanColumn {
@@ -58,7 +60,7 @@ export const useLeads = () => {
 
     // Helpers de Formatação
     const formatRelativeTime = (dateString: string) => {
-        if (!dateString) return undefined;
+        if (!dateString || import.meta.server) return undefined;
         const date = new Date(dateString);
         const now = new Date();
         const diffMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
@@ -94,14 +96,14 @@ export const useLeads = () => {
 
         if (showMyLeads.value) {
             const user = useSupabaseUser()
-            if (user.value) {
+            if (user.value && user.value.id) {
                 const { data: profile } = await supabase
                     .from('ag_profiles')
                     .select('id')
                     .eq('user_id', user.value.id)
                     .single()
 
-                if (profile) {
+                if (profile && (profile as any).id) {
                     query = query.eq('vendedor_id', (profile as any).id)
                 }
             }
@@ -179,7 +181,10 @@ export const useLeads = () => {
                     statusIcon: getStatusIcon(l.status, l.mensagens_nao_lidas || 0),
                     status: l.status,
                     nome: l.nome,
-                    telefone: l.telefone
+                    telefone: l.telefone,
+                    score: l.score,
+                    ultima_mensagem_data: l.ultima_mensagem_data,
+                    vendedor_id: l.vendedor_id
                 })) as LeadTask[];
 
             return {

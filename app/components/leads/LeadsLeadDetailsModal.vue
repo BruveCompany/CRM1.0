@@ -167,6 +167,7 @@ async function fetchProfissionalId() {
 }
 
 async function loadLatestNote(leadId: string) {
+  if (!leadId || leadId === 'undefined') return;
   noteText.value = '';
   try {
     const { data, error } = await (supabase.from('ag_notas_internas') as any)
@@ -190,6 +191,7 @@ async function loadLatestNote(leadId: string) {
 }
 
 async function loadMessages(leadId: string) {
+  if (!leadId || leadId === 'undefined') return;
   loadingMessages.value = true;
   messages.value = [];
   try {

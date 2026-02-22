@@ -1,73 +1,65 @@
 <template>
   <div 
     class="kanban-card" 
+    :class="{ 'card-hot': isHot, 'card-cold': isCold }"
     :style="{ '--column-color': columnColor }"
     draggable="true"
     @dragstart="$emit('dragstart', $event)"
-    @click="openDetails(task.id)"
+    @click="task.id ? openDetails(task.id) : null"
   >
-    <!-- Menu de Ações Rápidas -->
-    <div class="quick-actions-trigger" @click.stop="showActionsMenu = !showActionsMenu">
-      <Icon name="lucide:more-vertical" class="action-icon" />
-      
-      <!-- Popover de Ações -->
-      <div v-if="showActionsMenu" class="actions-popover" v-click-outside="() => showActionsMenu = false">
-        <button 
-          v-if="!task.vendedorNome || task.vendedorNome === 'Não Atribuído'" 
-          class="action-item" 
-          @click.stop="assignToMe"
-        >
-          <div class="icon-circle">
-            <Icon name="lucide:user-plus" class="item-icon" />
-          </div>
-          <span>Atribuir a mim</span>
-        </button>
-        
-        <button class="action-item" @click.stop="openReassignModal">
-          <div class="icon-circle">
-            <Icon name="lucide:users" class="item-icon" />
-          </div>
-          <span class="flex-1">Reatribuir</span>
-          <Icon name="lucide:chevron-right" class="submenu-arrow" />
-        </button>
+    <!-- Indicadores de Temperatura (Quente/Frio) -->
+    <div class="temperature-indicators">
+      <div v-if="isHot" class="temp-icon hot" title="Lead Quente (Score > 50)">
+        <Icon name="lucide:flame" />
+      </div>
+      <div v-if="isCold" class="temp-icon cold" title="Lead Frio (Inativo > 7 dias)">
+        <Icon name="lucide:snowflake" />
       </div>
     </div>
 
-    <!-- Modal de Reatribuição (Para evitar que fique atrás da coluna) -->
-    <BaseModal 
-      v-model="showReassignModal"
-    >
-      <template #header>
-        <h3 class="text-lg font-bold text-neutral-900">Reatribuir Lead</h3>
-      </template>
-
-      <div class="reassign-modal-content">
-        <p class="modal-subtitle">Selecione o novo vendedor para <strong>{{ task.leadName }}</strong>:</p>
-        
-        <div class="sellers-list-grid">
-          <button 
-            v-for="v in vendedores" 
-            :key="v.id" 
-            class="seller-selection-btn"
-            @click="reassignTo(v.id, v.nome)"
-          >
-            <div class="seller-btn-info">
-              <div class="seller-avatar-small" :style="{ backgroundColor: '#eef2ff', color: '#4f46e5' }">
-                {{ v.nome.charAt(0).toUpperCase() }}
-              </div>
-              <span>{{ v.nome }}</span>
-            </div>
-            <Icon name="lucide:chevron-right" class="btn-arrow" />
-          </button>
-        </div>
-      </div>
-    </BaseModal>
-
+    <!-- Conteúdo do Card -->
     <div class="card-content">
       <div class="card-header">
-        <h4 class="card-title">{{ task.leadName }}</h4>
-        <div v-if="task.statusIcon" class="card-status-icon-wrapper" :style="{ 'border-color': columnColor }">
-          <Icon :name="`lucide:${task.statusIcon}`" :class="`status-icon status-${task.statusIcon}`" :style="{ 'color': columnColor }" />
+        <h4 class="card-title" :title="task.leadName">{{ task.leadName }}</h4>
+        
+        <div class="card-header-right">
+          <div v-if="task.statusIcon" class="card-status-icon-wrapper" :style="{ 'border-color': columnColor }">
+            <Icon :name="`lucide:${task.statusIcon}`" :class="`status-icon status-${task.statusIcon}`" :style="{ 'color': columnColor }" />
+          </div>
+
+          <!-- Menu de Ações Rápidas -->
+          <div class="quick-actions-trigger" @click.stop="showActionsMenu = !showActionsMenu">
+            <Icon name="lucide:more-vertical" class="action-icon" />
+            
+            <!-- Popover de Ações -->
+            <div v-if="showActionsMenu" class="actions-popover" v-click-outside="() => showActionsMenu = false">
+              <button class="action-item" @click.stop="openDetails(task.id); showActionsMenu = false">
+                <div class="icon-circle">
+                  <Icon name="lucide:eye" class="item-icon" />
+                </div>
+                <span>Ver Detalhes</span>
+              </button>
+
+              <button 
+                v-if="!task.vendedor_id" 
+                class="action-item" 
+                @click.stop="assignToMe"
+              >
+                <div class="icon-circle">
+                  <Icon name="lucide:user-plus" class="item-icon" />
+                </div>
+                <span>Atribuir a mim</span>
+              </button>
+              
+              <button class="action-item" @click.stop="openReassignModal">
+                <div class="icon-circle">
+                  <Icon name="lucide:users" class="item-icon" />
+                </div>
+                <span class="flex-1">Reatribuir</span>
+                <Icon name="lucide:chevron-right" class="submenu-arrow" />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
       <p class="card-phone-number">{{ task.phone }}</p>
@@ -78,7 +70,7 @@
             <span>{{ task.avatarText || '??' }}</span>
           </div>
           <div class="vendedor-info">
-            <span class="vendedor-nome">{{ task.vendedorNome || 'Não Atribuído' }}</span>
+            <span class="vendedor-nome" :title="task.vendedorNome || 'Não Atribuído'">{{ task.vendedorNome || 'Não Atribuído' }}</span>
             <span v-if="task.lastActivityText" class="card-last-activity-small">{{ task.lastActivityText }}</span>
           </div>
         </div>
@@ -91,12 +83,42 @@
           </div>
         </div>
       </div>
+
+      <!-- Modal de Reatribuição (Movido para o final do card-content) -->
+      <BaseModal 
+        v-model="showReassignModal"
+      >
+        <template #header>
+          <h3 class="text-lg font-bold text-neutral-900">Reatribuir Lead</h3>
+        </template>
+
+        <div class="reassign-modal-content">
+          <p class="modal-subtitle">Selecione o novo vendedor para <strong>{{ task.leadName }}</strong>:</p>
+          
+          <div class="sellers-list-grid">
+            <button 
+              v-for="v in vendedores" 
+              :key="v.id" 
+              class="seller-selection-btn"
+              @click="reassignTo(v.id, v.nome)"
+            >
+              <div class="seller-btn-info">
+                <div class="seller-avatar-small" :style="{ backgroundColor: '#eef2ff', color: '#4f46e5' }">
+                  {{ v.nome.charAt(0).toUpperCase() }}
+                </div>
+                <span>{{ v.nome }}</span>
+              </div>
+              <Icon name="lucide:chevron-right" class="btn-arrow" />
+            </button>
+          </div>
+        </div>
+      </BaseModal>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useLeads } from '~/composables/useLeads';
 import type { LeadTask } from '~/composables/useLeads';
 import { useNotification } from '~/composables/useNotification';
@@ -114,6 +136,16 @@ const user = useSupabaseUser();
 const showActionsMenu = ref(false);
 const showReassignModal = ref(false);
 
+const isHot = computed(() => (props.task.score || 0) > 50);
+const isCold = computed(() => {
+  // Evita erro de hidratação calculando apenas no cliente ou garantindo consistência
+  if (!props.task.ultima_mensagem_data || import.meta.server) return false;
+  const lastDate = new Date(props.task.ultima_mensagem_data);
+  const diffTime = Math.abs(new Date().getTime() - lastDate.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays > 7;
+});
+
 const openReassignModal = () => {
   showActionsMenu.value = false;
   showReassignModal.value = true;
@@ -121,32 +153,63 @@ const openReassignModal = () => {
 
 const assignToMe = async () => {
   showActionsMenu.value = false;
-  try {
-    if (!user.value) throw new Error('Usuário não logado');
-    
-    const { data: profile } = await supabase
-      .from('ag_profiles')
-      .select('id')
-      .eq('user_id', user.value.id)
-      .single();
-    
-    if (!profile) throw new Error('Perfil não encontrado');
+  console.log("--> INICIANDO ATRIBUIR A MIM PARA LEAD ID:", props.task.id, "<--");
 
-    const { error } = await (supabase.from('ag_leads') as any)
-      .update({ vendedor_id: (profile as any).id })
+  try {
+    // 1. Obter a sessão do usuário de forma explícita e garantida
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    const currentLoggedInUserId = sessionData?.session?.user?.id;
+
+    if (sessionError) {
+      throw new Error('Falha ao obter sessão do usuário: ' + sessionError.message);
+    }
+    if (!currentLoggedInUserId) {
+      throw new Error('Usuário não logado ou sessão expirada. Por favor, faça login novamente.');
+    }
+    console.log("1. User ID logado (getSession):", currentLoggedInUserId);
+
+
+    // 2. Buscar o 'id' do perfil do usuário logado na view_vendedores_ativos
+    console.log("2. Buscando perfil na view_vendedores_ativos para user ID:", currentLoggedInUserId);
+    const { data: profile, error: profileError } = await supabase
+      .from('view_vendedores_ativos') // Usa a VIEW que inclui admins
+      .select('id') // Seleciona o 'id' do perfil (que será o vendedor_id)
+      .eq('user_id', currentLoggedInUserId) // Filtra pelo user_id obtido da sessão
+      .single(); // Espera um único resultado
+
+    if (profileError) {
+      throw new Error('Erro ao buscar seu perfil de vendedor: ' + profileError.message);
+    }
+    if (!profile) {
+      throw new Error('Seu perfil de vendedor não foi encontrado. Verifique a tabela ag_profiles.');
+    }
+
+    const loggedInProfileId = (profile as any).id; // Este é o ID do perfil que será atribuído ao lead
+    console.log("3. Profile ID do usuário logado encontrado:", loggedInProfileId);
+
+
+    // 3. Atualizar o lead no banco de dados com o vendedor_id correto
+    console.log(`4. Atualizando lead ${props.task.id} com vendedor_id: ${loggedInProfileId}`);
+    const { error: updateError } = await (supabase.from('ag_leads') as any) // 'as any' para compatibilidade com TS
+      .update({ vendedor_id: loggedInProfileId })
       .eq('id', props.task.id);
 
-    if (error) throw error;
+    if (updateError) {
+      throw new Error('Falha ao atribuir lead: ' + updateError.message);
+    }
 
     notifySuccess('Lead atribuído com sucesso!');
-    await fetchLeads();
+    console.log("5. Lead atribuído com sucesso! Recarregando leads...");
+    await fetchLeads(); // Recarrega os leads para atualizar o Kanban
   } catch (err: any) {
+    console.error("ERRO FINAL NA ATRIBUIÇÃO:", err.message);
     notifyError('Erro ao atribuir lead: ' + err.message);
   }
 };
 
 const reassignTo = async (vendedorId: string, vendedorNome: string) => {
   showActionsMenu.value = false;
+  showReassignModal.value = false;
   try {
     const { error } = await (supabase.from('ag_leads') as any)
       .update({ vendedor_id: vendedorId })
@@ -187,7 +250,7 @@ defineEmits(['dragstart']);
   margin-bottom: 0.75rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
   cursor: grab;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.2s;
   position: relative;
   display: flex;
   align-items: stretch;
@@ -197,6 +260,44 @@ defineEmits(['dragstart']);
   user-select: none;
 }
 
+/* Indicadores de Temperatura - Bordas */
+.kanban-card.card-hot {
+  border-left: 4px solid #f97316;
+}
+
+.kanban-card.card-cold {
+  border-left: 4px solid #3b82f6;
+  opacity: 0.85;
+}
+
+.temperature-indicators {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  gap: 4px;
+}
+
+.temp-icon {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  font-size: 0.7rem;
+}
+
+.temp-icon.hot {
+  background-color: #fff7ed;
+  color: #f97316;
+}
+
+.temp-icon.cold {
+  background-color: #eff6ff;
+  color: #3b82f6;
+}
+
 .kanban-card:hover {
   background-color: #fcfdfe;
   border-color: #cbd5e1;
@@ -204,10 +305,8 @@ defineEmits(['dragstart']);
 }
 
 .quick-actions-trigger {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 10;
+  position: relative;
+  z-index: 20;
   color: #94a3b8;
   cursor: pointer;
   padding: 4px;
@@ -216,6 +315,7 @@ defineEmits(['dragstart']);
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-right: -4px; /* Ajuste para encostar na borda adequadamente */
 }
 
 .quick-actions-trigger:hover {
@@ -379,10 +479,17 @@ defineEmits(['dragstart']);
 .card-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.5rem;
   margin-bottom: 0.1rem;
-  padding-right: 20px; /* Espaço para o menu */
+  padding-left: 20px; /* Reduzi um pouco para dar mais espaço */
+}
+
+.card-header-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: -2px; /* Ajuste fino de verticalidade */
 }
 
 .card-title {
@@ -390,6 +497,10 @@ defineEmits(['dragstart']);
   font-size: 0.95rem;
   color: #334155;
   margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .card-phone-number {
@@ -436,6 +547,10 @@ defineEmits(['dragstart']);
   font-weight: 600;
   color: #475569;
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px; /* Limite para não empurrar os ícones da direita */
 }
 
 .card-last-activity-small {
