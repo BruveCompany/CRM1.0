@@ -1,14 +1,39 @@
 <template>
   <BaseModal 
     v-model="isOpen" 
-    size="xl"
+    size="3xl"
   >
     <template #header>
-      <div class="header-details">
-        <h3 class="text-xl font-bold text-slate-800">{{ lead?.nome || lead?.leadName || 'Detalhes do Lead' }}</h3>
-        <span class="status-badge-header" :style="{ backgroundColor: getStatusColor(lead?.status) + '15', color: getStatusColor(lead?.status) }">
-          {{ lead?.status?.replace(/_/g, ' ') || 'Novo' }}
-        </span>
+      <div class="header-details w-full flex justify-between items-center pr-8 py-1">
+        <div class="flex items-center gap-4 flex-1 mr-4">
+          <input 
+            v-if="isEditing"
+            v-model="editableLead.nome"
+            class="edit-input-title"
+            placeholder="Nome do Lead"
+          />
+          <h3 v-else class="text-xl font-bold text-slate-800">{{ lead?.nome || lead?.leadName || 'Detalhes do Lead' }}</h3>
+          <span class="status-badge-header" :style="{ backgroundColor: getStatusColor(lead?.status) + '15', color: getStatusColor(lead?.status) }">
+            {{ lead?.status?.replace(/_/g, ' ') || 'Novo' }}
+          </span>
+        </div>
+        <div class="flex items-center gap-3">
+          <button 
+            v-if="!isEditing && isAdmin"
+            @click="isEditing = true"
+            class="edit-mode-btn"
+          >
+            <Icon name="lucide:edit-3" class="w-4 h-4 mr-1.5" />
+            Editar
+          </button>
+          <template v-else-if="isAdmin">
+            <button @click="cancelEdit" class="cancel-edit-btn">Cancelar</button>
+            <button @click="updateLead" :disabled="updatingLead" class="update-lead-btn">
+              <Icon v-if="!updatingLead" name="lucide:check-circle" class="w-4 h-4 mr-2" />
+              <span>{{ updatingLead ? 'Salvando...' : 'Salvar Alterações' }}</span>
+            </button>
+          </template>
+        </div>
       </div>
     </template>
 
@@ -17,11 +42,18 @@
       <div class="info-grid">
         <div class="info-item">
           <label>Telefone</label>
-          <div class="info-value flex items-center gap-2">
-            <span>{{ lead?.telefone || lead?.phone || 'N/A' }}</span>
-            <a v-if="lead?.telefone || lead?.phone" :href="`https://wa.me/${(lead?.telefone || lead?.phone).replace(/\D/g, '')}`" target="_blank" class="wa-link">
-              <Icon name="lucide:message-circle" class="w-4 h-4" />
-            </a>
+          <div class="info-value">
+            <input 
+              v-if="isEditing"
+              v-model="editableLead.telefone"
+              class="edit-input-field"
+            />
+            <div v-else class="flex items-center gap-2">
+              <span>{{ lead?.telefone || lead?.phone || 'N/A' }}</span>
+              <a v-if="lead?.telefone || lead?.phone" :href="`https://wa.me/${(lead?.telefone || lead?.phone).replace(/\D/g, '')}`" target="_blank" class="wa-link">
+                <Icon name="lucide:message-circle" class="w-4 h-4" />
+              </a>
+            </div>
           </div>
         </div>
         <div class="info-item">
@@ -34,21 +66,44 @@
         </div>
         <div class="info-item">
           <label>Email</label>
-          <div class="info-value text-sm truncate" :title="lead?.email">{{ lead?.email || 'N/A' }}</div>
+          <div class="info-value">
+            <input 
+              v-if="isEditing"
+              v-model="editableLead.email"
+              class="edit-input-field"
+              type="email"
+            />
+            <div v-else class="text-sm truncate" :title="lead?.email">{{ lead?.email || 'N/A' }}</div>
+          </div>
         </div>
         <div class="info-item">
           <label>Score</label>
           <div class="info-value">
-            <span v-if="lead?.score" class="score-badge" :style="{ backgroundColor: getScoreColor(lead.score) + '20', color: getScoreColor(lead.score) }">
-              {{ lead.score }}
-            </span>
-            <span v-else>N/A</span>
+            <input 
+              v-if="isEditing"
+              v-model.number="editableLead.score"
+              type="number"
+              class="edit-input-field"
+              min="0"
+              max="100"
+            />
+            <template v-else>
+              <span v-if="lead?.score !== undefined" class="score-badge" :style="{ backgroundColor: getScoreColor(lead.score) + '20', color: getScoreColor(lead.score) }">
+                {{ lead.score }}
+              </span>
+              <span v-else>N/A</span>
+            </template>
           </div>
         </div>
         <div class="info-item">
           <label>Origem</label>
           <div class="info-value">
-            <span class="origin-tag">{{ lead?.origem || 'N/A' }}</span>
+            <input 
+              v-if="isEditing"
+              v-model="editableLead.origem"
+              class="edit-input-field"
+            />
+            <span v-else class="origin-tag">{{ lead?.origem || 'N/A' }}</span>
           </div>
         </div>
       </div>
@@ -98,18 +153,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useLeads } from '../../composables/useLeads';
 import { useNotification } from '../../composables/useNotification';
 import BaseModal from '../BaseModal.vue';
 
 const { selectedLeadId, showDetailsModal, allLeads, fetchLeads } = useLeads();
 const { notifySuccess, notifyError } = useNotification();
+const { checkIsAdmin } = useAuth();
 const supabase = useSupabaseClient();
 
 const isOpen = computed({
   get: () => showDetailsModal.value,
   set: (val: boolean) => showDetailsModal.value = val
+});
+
+const isAdmin = ref(true); // Default to true to avoid flashing, then verify
+
+onMounted(async () => {
+  isAdmin.value = await checkIsAdmin();
 });
 
 const lead = computed(() => {
@@ -122,8 +184,81 @@ const loadingMessages = ref(false);
 const noteText = ref('');
 const savingNote = ref(false);
 
+interface EditableLeadData {
+  nome: string;
+  telefone: string;
+  email: string;
+  score: number;
+  origem: string;
+}
+
+const isEditing = ref(false);
+const updatingLead = ref(false);
+const editableLead = ref<EditableLeadData>({
+  nome: '',
+  telefone: '',
+  email: '',
+  score: 0,
+  origem: ''
+});
+
 const user = useSupabaseUser();
 const profissionalId = ref<number | null>(null);
+
+function startEditing() {
+  if (lead.value) {
+    editableLead.value = {
+      nome: lead.value.nome || lead.value.leadName || '',
+      telefone: lead.value.telefone || lead.value.phone || '',
+      email: lead.value.email || '',
+      score: lead.value.score || 0,
+      origem: lead.value.origem || ''
+    };
+    isEditing.value = true;
+  }
+}
+
+function cancelEdit() {
+  isEditing.value = false;
+  editableLead.value = {
+    nome: '',
+    telefone: '',
+    email: '',
+    score: 0,
+    origem: ''
+  };
+}
+
+async function updateLead() {
+  if (!selectedLeadId.value) return;
+  updatingLead.value = true;
+  try {
+    const { error } = await (supabase
+      .from('ag_leads') as any)
+      .update({
+        nome: editableLead.value.nome,
+        telefone: editableLead.value.telefone,
+        email: editableLead.value.email,
+        score: editableLead.value.score,
+        origem: editableLead.value.origem
+      })
+      .eq('id', selectedLeadId.value);
+
+    if (error) throw error;
+
+    notifySuccess('Lead atualizado com sucesso!');
+    isEditing.value = false;
+    await fetchLeads(); // Atualiza a lista global
+  } catch (err: any) {
+    notifyError('Falha ao atualizar lead: ' + err.message);
+  } finally {
+    updatingLead.value = false;
+  }
+}
+
+watch(() => isEditing.value, (val) => {
+  if (val) startEditing();
+});
 
 // Busca mensagens e notas quando o modal abre ou o lead muda
 watch(() => selectedLeadId.value, async (newId: string | null) => {
@@ -310,6 +445,7 @@ function getStatusColor(statusId: string) {
   height: 100%;
   max-height: 75vh;
   overflow: hidden;
+  padding: 0 1rem;
 }
 
 .info-grid {
@@ -322,6 +458,104 @@ function getStatusColor(statusId: string) {
   border: 1px solid #e2e8f0;
   margin-bottom: 1rem;
   flex-shrink: 0;
+}
+
+.edit-input-title {
+  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1e293b;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  transition: all 0.2s;
+}
+
+.edit-input-title:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.edit-input-field {
+  width: 100%;
+  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1e293b;
+  transition: all 0.2s;
+}
+
+.edit-input-field:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.edit-mode-btn {
+  display: flex;
+  align-items: center;
+  background: white;
+  color: #475569;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.edit-mode-btn:hover {
+  background: #f8fafc;
+  color: #1e293b;
+  border-color: #cbd5e1;
+}
+
+.update-lead-btn {
+  display: flex;
+  align-items: center;
+  background-color: #eef2ff;
+  color: #4f46e5;
+  padding: 0.6rem 1.5rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: none;
+  box-shadow: 0 2px 4px rgba(79, 70, 229, 0.1);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.update-lead-btn:hover:not(:disabled) {
+  background-color: #e0e7ff;
+  box-shadow: 0 4px 8px rgba(79, 70, 229, 0.15);
+  transform: translateY(-1px);
+}
+
+.update-lead-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.cancel-edit-btn {
+  background: transparent;
+  color: #64748b;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.cancel-edit-btn:hover {
+  background: #f1f5f9;
+  color: #475569;
 }
 
  .score-badge {

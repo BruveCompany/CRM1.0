@@ -14,11 +14,11 @@
             <th style="width: 15%;">Vendedor</th>
             <th style="width: 110px;">Atividade</th>
             <th style="width: 100px; text-align: center;">Mensagens</th>
-            <th class="actions-column">Ações</th>
+            <th v-if="isAdmin" class="actions-column">Ações</th>
         </thead>
         <tbody>
           <tr v-if="filteredLeadsList.length === 0">
-            <td colspan="9" class="empty-table-message">Nenhum lead encontrado.</td>
+            <td :colspan="isAdmin ? 9 : 8" class="empty-table-message">Nenhum lead encontrado.</td>
           </tr>
           <tr v-for="lead in filteredLeadsList" :key="lead.id" @click="openDetails(lead.id)" class="cursor-pointer">
             <td :title="lead.nome">{{ lead.nome }}</td>
@@ -45,9 +45,22 @@
               </span>
               <span v-else>-</span>
             </td>
-            <td class="actions-column">
-              <button class="icon-btn edit-btn" title="Editar"><Icon name="lucide:edit" /></button>
-              <button class="icon-btn delete-btn" title="Excluir"><Icon name="lucide:trash-2" /></button>
+            <td v-if="isAdmin" class="actions-column">
+              <button 
+                class="icon-btn edit-btn" 
+                @click.stop="openDetails(lead.id)"
+                title="Editar Lead"
+              >
+                <Icon name="lucide:edit" />
+              </button>
+
+              <button 
+                class="icon-btn delete-btn" 
+                @click.stop="confirmDeleteLead(lead.id, lead.nome)"
+                title="Excluir Lead"
+              >
+                <Icon name="lucide:trash-2" />
+              </button>
             </td>
           </tr>
         </tbody>
@@ -59,7 +72,18 @@
 
 <script setup lang="ts">
 import { useLeads } from '~/composables/useLeads';
-const { filteredLeadsList, formatRelativeTime, openDetails } = useLeads();
+import { useNotification } from '~/composables/useNotification';
+
+const { filteredLeadsList, formatRelativeTime, openDetails, fetchLeads } = useLeads();
+const { notifySuccess, notifyError } = useNotification();
+const { checkIsAdmin } = useAuth();
+const supabase = useSupabaseClient();
+
+const isAdmin = ref(true);
+
+onMounted(async () => {
+  isAdmin.value = await checkIsAdmin();
+});
 
 // Helper para obter a cor do status (usado na tabela de lista)
 function getStatusColor(statusId: string) {
@@ -76,6 +100,27 @@ function getStatusColor(statusId: string) {
   };
   return statusColors[statusId] || '#64748b';
 }
+
+const confirmDeleteLead = async (leadId: string, leadNome: string) => {
+  if (confirm(`Tem certeza que deseja excluir o lead "${leadNome}"? Esta ação não pode ser desfeita.`)) {
+    try {
+      const { error } = await supabase
+        .from('ag_leads')
+        .delete()
+        .eq('id', leadId);
+
+      if (error) {
+        throw error;
+      }
+
+      notifySuccess(`Lead "${leadNome}" excluído com sucesso!`);
+      await fetchLeads(); // Recarrega a lista para remover o lead da tela
+    } catch (err: any) {
+      console.error('Erro ao excluir lead:', err.message);
+      notifyError('Erro ao excluir lead: ' + err.message);
+    }
+  }
+};
 </script>
 
 <style scoped>

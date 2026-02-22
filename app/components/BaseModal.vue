@@ -40,7 +40,7 @@
 <script setup lang="ts">
 const props = withDefaults(defineProps<{ 
   modelValue: boolean
-  size?: 'sm' | 'md' | 'lg' | 'xl'
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl'
 }>(), {
   size: 'md'
 })
@@ -52,7 +52,11 @@ const maxWidthClass = computed(() => {
     sm: 'max-w-sm',
     md: 'max-w-md',
     lg: 'max-w-lg',
-    xl: 'max-w-xl'
+    xl: 'max-w-xl',
+    '2xl': 'max-w-2xl',
+    '3xl': 'max-w-3xl',
+    '4xl': 'max-w-4xl',
+    '5xl': 'max-w-5xl'
   }
   return sizes[props.size] || 'max-w-md'
 })

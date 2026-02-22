@@ -51,7 +51,11 @@
                 <span>Atribuir a mim</span>
               </button>
               
-              <button class="action-item" @click.stop="openReassignModal">
+              <button 
+                v-if="isAdmin"
+                class="action-item" 
+                @click.stop="openReassignModal"
+              >
                 <div class="icon-circle">
                   <Icon name="lucide:users" class="item-icon" />
                 </div>
@@ -118,23 +122,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useLeads } from '~/composables/useLeads';
 import type { LeadTask } from '~/composables/useLeads';
 import { useNotification } from '~/composables/useNotification';
+import { useAuth } from '~/composables/useAuth';
 
 const props = defineProps<{
   task: LeadTask;
   columnColor: string;
 }>();
 
-const { openDetails, fetchLeads, vendedores } = useLeads();
+const { openDetails, vendedores, fetchLeads } = useLeads();
 const { notifySuccess, notifyError } = useNotification();
+const { checkIsAdmin } = useAuth();
 const supabase = useSupabaseClient();
-const user = useSupabaseUser();
 
 const showActionsMenu = ref(false);
 const showReassignModal = ref(false);
+const isAdmin = ref(false);
+
+onMounted(async () => {
+  isAdmin.value = await checkIsAdmin();
+});
 
 const isHot = computed(() => (props.task.score || 0) > 50);
 const isCold = computed(() => {
