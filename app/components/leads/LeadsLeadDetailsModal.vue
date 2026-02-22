@@ -99,8 +99,8 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import { useLeads } from '~/composables/useLeads';
-import { useNotification } from '~/composables/useNotification';
+import { useLeads } from '../../composables/useLeads';
+import { useNotification } from '../../composables/useNotification';
 import BaseModal from '../BaseModal.vue';
 
 const { selectedLeadId, showDetailsModal, allLeads, fetchLeads } = useLeads();

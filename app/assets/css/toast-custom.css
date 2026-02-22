@@ -1,37 +1,85 @@
-/* Customização das cores do vue-toastification */
+/* Customização Premium das notificações (vue-toastification) */
 
-/* Notificação de sucesso - cor turquesa #2DD4BF */
+.Vue-Toastification__toast {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  border-radius: 12px !important;
+  padding: 14px 18px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.05) !important;
+  border: 1px solid #f1f5f9 !important;
+  min-height: 54px !important;
+  font-family: inherit !important;
+}
+
+/* Ajuste do corpo do texto */
+.Vue-Toastification__toast-body {
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Estilo para Sucesso */
 .Vue-Toastification__toast--success {
-  background-color: #2DD4BF !important;
+  border-left: 5px solid #10b981 !important;
+}
+
+.Vue-Toastification__toast--success .Vue-Toastification__icon {
+  color: #10b981 !important;
 }
 
 .Vue-Toastification__progress-bar--success {
-  background-color: #14B8A6 !important; /* Tom mais escuro para a barra de progresso */
+  background-color: #10b981 !important;
+  height: 3px !important;
+  bottom: 0 !important;
 }
 
-/* Notificação de info - mesma cor turquesa */
-.Vue-Toastification__toast--info {
-  background-color: #2DD4BF !important;
-}
-
-.Vue-Toastification__progress-bar--info {
-  background-color: #14B8A6 !important;
-}
-
-/* Notificação de warning - mesma cor turquesa */
-.Vue-Toastification__toast--warning {
-  background-color: #2DD4BF !important;
-}
-
-.Vue-Toastification__progress-bar--warning {
-  background-color: #14B8A6 !important;
-}
-
-/* Erro mantém vermelho (não alterado) */
+/* Estilo para Erro */
 .Vue-Toastification__toast--error {
-  background-color: #EF4444 !important;
+  border-left: 5px solid #ef4444 !important;
+}
+
+.Vue-Toastification__toast--error .Vue-Toastification__icon {
+  color: #ef4444 !important;
 }
 
 .Vue-Toastification__progress-bar--error {
-  background-color: #DC2626 !important;
+  background-color: #ef4444 !important;
+  height: 3px !important;
+  bottom: 0 !important;
+}
+
+/* Info e Warning (seguindo o padrão de sucesso com tons diferentes se necessário) */
+.Vue-Toastification__toast--info, 
+.Vue-Toastification__toast--warning {
+  border-left: 5px solid #3b82f6 !important;
+}
+
+.Vue-Toastification__toast--info .Vue-Toastification__icon,
+.Vue-Toastification__toast--warning .Vue-Toastification__icon {
+  color: #3b82f6 !important;
+}
+
+.Vue-Toastification__progress-bar--info,
+.Vue-Toastification__progress-bar--warning {
+  background-color: #3b82f6 !important;
+}
+
+/* Botão de Fechar */
+.Vue-Toastification__close-button {
+  color: #94a3b8 !important;
+  opacity: 0.6;
+  font-weight: 300 !important;
+  transition: all 0.2s;
+}
+
+.Vue-Toastification__close-button:hover {
+  color: #475569 !important;
+  opacity: 1;
+}
+
+/* Ícone */
+.Vue-Toastification__icon {
+  margin-right: 12px !important;
+  width: 20px !important;
 }

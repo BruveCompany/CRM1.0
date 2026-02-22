@@ -74,25 +74,28 @@ onMounted(() => {
   z-index: 9999;
   background: white;
   border-radius: 12px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
   overflow: hidden;
-  min-width: 300px;
+  min-width: 320px;
   border: 1px solid #f1f5f9;
 }
 
+.toast-notification.success { border-left: 5px solid #10b981; }
+.toast-notification.error { border-left: 5px solid #ef4444; }
+
 .toast-content {
-  padding: 1rem 1.25rem;
+  padding: 14px 18px;
   display: flex;
   align-items: center;
   gap: 0.75rem;
   color: #1e293b;
-  font-weight: 500;
-  font-size: 0.95rem;
+  font-weight: 600;
+  font-size: 0.9rem;
 }
 
 .toast-icon {
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 1.25rem;
+  height: 1.25rem;
   flex-shrink: 0;
 }
 
