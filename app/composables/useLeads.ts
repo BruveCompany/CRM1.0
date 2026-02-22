@@ -83,7 +83,7 @@ export const useLeads = () => {
     const fetchVendedores = async () => {
         const { data, error } = await supabase
             .from('ag_profiles')
-            .select('id, user_id, nome, is_admin')
+            .select('id, user_id, nome, role')
             .order('nome')
 
         if (!error && data) {
@@ -95,16 +95,26 @@ export const useLeads = () => {
         let query = supabase.from('view_leads_crm').select('*')
 
         if (showMyLeads.value) {
-            const user = useSupabaseUser()
-            if (user.value && user.value.id) {
-                const { data: profile } = await supabase
-                    .from('ag_profiles')
-                    .select('id')
-                    .eq('user_id', user.value.id)
-                    .single()
+            const { profile } = useAuth()
+            if (profile.value && profile.value.id) {
+                query = query.eq('vendedor_id', profile.value.id)
+            } else {
+                // Se o perfil não está carregado, buscamos na hora para garantir a filtragem
+                const user = useSupabaseUser()
+                if (user.value) {
+                    const { data: profileData } = await supabase
+                        .from('ag_profiles')
+                        .select('id')
+                        .eq('user_id', user.value.id)
+                        .maybeSingle() as { data: { id: number } | null }
 
-                if (profile && (profile as any).id) {
-                    query = query.eq('vendedor_id', (profile as any).id)
+                    if (profileData) {
+                        query = query.eq('vendedor_id', profileData.id)
+                    } else {
+                        // Se não encontrar de jeito nenhum, forçamos um filtro que não retorne nada 
+                        // em vez de mostrar tudo, para manter a privacidade do filtro
+                        query = query.eq('vendedor_id', -1)
+                    }
                 }
             }
         } else if (selectedVendedorId.value && selectedVendedorId.value !== 'all') {
