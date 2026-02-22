@@ -34,6 +34,9 @@ export const useLeads = () => {
     const pendingStatusUpdates = ref<Record<string, string>>({})
     const selectedLeadId = useState<string | null>('selected-lead-id', () => null)
     const showDetailsModal = useState<boolean>('show-details-modal', () => false)
+    const vendedores = useState<any[]>('leads-vendedores', () => [])
+    const selectedVendedorId = useState<string | null>('leads-selected-vendedor-id', () => null)
+    const showMyLeads = useState<boolean>('leads-show-my-leads', () => false)
 
     const openDetails = (id: string) => {
         selectedLeadId.value = id
@@ -75,10 +78,38 @@ export const useLeads = () => {
         return 'user';
     }
 
+    const fetchVendedores = async () => {
+        const { data, error } = await supabase
+            .from('ag_profiles')
+            .select('id, nome')
+            .order('nome')
+
+        if (!error && data) {
+            vendedores.value = data
+        }
+    }
+
     const fetchLeads = async () => {
-        const { data: leadsData, error } = await supabase
-            .from('view_leads_crm')
-            .select('*')
+        let query = supabase.from('view_leads_crm').select('*')
+
+        if (showMyLeads.value) {
+            const user = useSupabaseUser()
+            if (user.value) {
+                const { data: profile } = await supabase
+                    .from('ag_profiles')
+                    .select('id')
+                    .eq('user_id', user.value.id)
+                    .single()
+
+                if (profile) {
+                    query = query.eq('vendedor_id', (profile as any).id)
+                }
+            }
+        } else if (selectedVendedorId.value && selectedVendedorId.value !== 'all') {
+            query = query.eq('vendedor_id', selectedVendedorId.value)
+        }
+
+        const { data: leadsData, error } = await query
             .order('criado_em', { ascending: false })
 
         if (error || !leadsData) {
@@ -166,10 +197,14 @@ export const useLeads = () => {
         pendingStatusUpdates,
         selectedLeadId,
         showDetailsModal,
+        vendedores,
+        selectedVendedorId,
+        showMyLeads,
         openDetails,
         columnsWithTotals,
         filteredLeadsList,
         fetchLeads,
+        fetchVendedores,
         formatRelativeTime
     }
 }

@@ -154,7 +154,7 @@ async function fetchProfissionalId() {
     if (profile) {
       const { data: profissional } = await (supabase.from('ag_profissionais') as any)
         .select('id')
-        .eq('profile_id', profile.id)
+        .eq('profile_id', (profile as any).id)
         .single();
       
       if (profissional) {

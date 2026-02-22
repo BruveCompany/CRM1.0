@@ -15,16 +15,44 @@
       <button class="btn-add-lead">+ Criar Lead</button>
     </div>
 
-    <!-- Centro: Barra de Pesquisa -->
+    <!-- Centro: Filtros e Barra de Pesquisa -->
     <div class="header-center-group">
-      <div class="search-container">
-        <Icon name="lucide:search" class="search-icon" />
-        <input 
-          v-model="searchQuery" 
-          type="text" 
-          placeholder="Pesquisar leads..." 
-          class="search-input"
-        />
+      <div class="filters-container">
+        <!-- Filtro Vendedor -->
+        <div class="filter-item">
+          <select 
+            v-model="selectedVendedorId" 
+            class="filter-select"
+            :disabled="showMyLeads"
+          >
+            <option :value="null">Todos os Vendedores</option>
+            <option v-for="v in vendedores" :key="v.id" :value="v.id">
+              {{ v.nome }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Filtro Meus Leads -->
+        <div class="filter-item">
+          <button 
+            @click="showMyLeads = !showMyLeads" 
+            class="my-leads-btn"
+            :class="{ 'active': showMyLeads }"
+          >
+            <Icon :name="showMyLeads ? 'lucide:user-check' : 'lucide:users'" class="btn-icon" />
+            <span>Meus Leads</span>
+          </button>
+        </div>
+
+        <div class="search-container">
+          <Icon name="lucide:search" class="search-icon" />
+          <input 
+            v-model="searchQuery" 
+            type="text" 
+            placeholder="Pesquisar leads..." 
+            class="search-input"
+          />
+        </div>
       </div>
     </div>
 
@@ -45,8 +73,34 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, watch } from 'vue';
 import { useLeads } from '~/composables/useLeads';
-const { showKanbanView, searchQuery } = useLeads();
+
+const { 
+  showKanbanView, 
+  searchQuery, 
+  vendedores, 
+  selectedVendedorId, 
+  showMyLeads,
+  fetchLeads,
+  fetchVendedores
+} = useLeads();
+
+onMounted(() => {
+  fetchVendedores();
+});
+
+// Atualiza a lista quando os filtros mudam
+watch([selectedVendedorId, showMyLeads], () => {
+  fetchLeads();
+});
+
+// Se ativar "Meus Leads", desmarca o vendedor selecionado para evitar conflitos
+watch(() => showMyLeads.value, (val) => {
+  if (val) {
+    selectedVendedorId.value = null;
+  }
+});
 </script>
 
 <style scoped>
@@ -58,6 +112,69 @@ const { showKanbanView, searchQuery } = useLeads();
   background: white;
   border-bottom: 1px solid #e1e5e8;
   gap: 1.5rem;
+}
+
+/* --- Filtros e Pesquisa --- */
+.filters-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.filter-select {
+  height: 34px;
+  padding: 0 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  font-size: 0.85rem;
+  color: #1e293b;
+  background-color: white;
+  outline: none;
+  cursor: pointer;
+  min-width: 180px;
+}
+
+.filter-select:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.filter-select:disabled {
+  background-color: #f8fafc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.my-leads-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.9rem;
+  height: 34px;
+  border-radius: 6px;
+  background-color: #eef2ff;
+  color: #4f46e5;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  white-space: nowrap;
+}
+
+.my-leads-btn:hover {
+  background-color: #e0e7ff;
+}
+
+.my-leads-btn.active {
+  background-color: #4f46e5;
+  color: white;
+}
+
+.my-leads-btn .btn-icon {
+  width: 1rem;
+  height: 1rem;
 }
 
 /* --- Header Actions (Botões Kanban/Lista) --- */
@@ -130,7 +247,7 @@ const { showKanbanView, searchQuery } = useLeads();
 
 /* --- Header Search --- */
 .header-center-group {
-  flex: 2;
+  flex: 3;
   display: flex;
   justify-content: center;
 }
@@ -138,7 +255,7 @@ const { showKanbanView, searchQuery } = useLeads();
 .search-container {
   position: relative;
   width: 100%;
-  max-width: 400px;
+  max-width: 650px;
 }
 
 .search-icon {
