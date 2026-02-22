@@ -12,7 +12,7 @@
             <span>Lista</span>
         </button>
       </div>
-      <button class="btn-add-lead">+ Criar Lead</button>
+      <button class="btn-add-lead" @click="showAddLeadModal = true">+ Criar Lead</button>
     </div>
 
     <!-- Centro: Filtros e Barra de Pesquisa -->
@@ -60,12 +60,16 @@
     <div class="header-right-group">
       <UserProfileHeader />
     </div>
+
+    <!-- Modal de Criação de Lead -->
+    <LeadFormModal v-model="showAddLeadModal" />
   </header>
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useLeads } from '~/composables/useLeads';
+import LeadFormModal from './LeadFormModal.vue';
 
 const { 
   showKanbanView, 
@@ -76,6 +80,8 @@ const {
   fetchLeads,
   fetchVendedores
 } = useLeads();
+
+const showAddLeadModal = ref(false);
 
 onMounted(() => {
   fetchVendedores();

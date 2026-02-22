@@ -240,7 +240,8 @@ async function updateLead() {
         telefone: editableLead.value.telefone,
         email: editableLead.value.email,
         score: editableLead.value.score,
-        origem: editableLead.value.origem
+        origem: editableLead.value.origem,
+        description: (editableLead.value as any).description || ''
       })
       .eq('id', selectedLeadId.value);
 
@@ -316,12 +317,12 @@ async function loadLatestNote(leadId: string) {
     if (data) {
       noteText.value = (data as any).conteudo;
     } else {
-      // Fallback para o campo notas da tabela ag_leads se não houver nota interna
-      noteText.value = (lead.value as any)?.notas || '';
+      // Fallback para o campo description da tabela ag_leads se não houver nota interna
+      noteText.value = (lead.value as any)?.description || (lead.value as any)?.notas || '';
     }
   } catch (err) {
     console.warn('Tabela ag_notas_internas não encontrada ou erro ao carregar:', err);
-    noteText.value = (lead.value as any)?.notas || '';
+    noteText.value = (lead.value as any)?.description || (lead.value as any)?.notas || '';
   }
 }
 
@@ -357,9 +358,9 @@ async function saveNote() {
         conteudo: noteText.value
       });
 
-    // 2. Sempre atualiza o campo 'notas' no lead para compatibilidade/visão rápida
+    // 2. Sempre atualiza o campo 'description' no lead para compatibilidade/visão rápida
     const { error: leadError } = await (supabase.from('ag_leads') as any)
-      .update({ notas: noteText.value })
+      .update({ description: noteText.value })
       .eq('id', selectedLeadId.value);
 
     if (leadError && !noteError) {
@@ -371,7 +372,10 @@ async function saveNote() {
     notifySuccess('Nota salva com sucesso!');
     // Atualiza o lead localmente
     const localLead = allLeads.value.find((l: any) => String(l.id) === String(selectedLeadId.value));
-    if (localLead) localLead.notas = noteText.value;
+    if (localLead) {
+      localLead.description = noteText.value;
+      localLead.notas = noteText.value; // Mantém fallback
+    }
     
   } catch (err: any) {
     notifyError('Falha ao salvar nota: ' + err.message);

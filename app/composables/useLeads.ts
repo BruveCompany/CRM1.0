@@ -83,7 +83,7 @@ export const useLeads = () => {
     const fetchVendedores = async () => {
         const { data, error } = await supabase
             .from('ag_profiles')
-            .select('id, nome')
+            .select('id, user_id, nome, is_admin')
             .order('nome')
 
         if (!error && data) {
