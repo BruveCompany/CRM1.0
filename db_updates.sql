@@ -5,10 +5,28 @@ ADD COLUMN IF NOT EXISTS last_activity TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE,
 ADD COLUMN IF NOT EXISTS last_logout TIMESTAMP WITH TIME ZONE;
 
+-- Garantir que as funções antigas sejam removidas para permitir mudança de tipos (Importante: usar CASCADE)
+DROP FUNCTION IF EXISTS public.ag_isadmin() CASCADE;
+DROP FUNCTION IF EXISTS public.ag_get_all_profiles_if_admin() CASCADE;
+
+-- Garantir que a função ag_isadmin retorne BOOLEAN (evita erro de tipo JSON)
+CREATE OR REPLACE FUNCTION public.ag_isadmin()
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 
+        FROM public.ag_profiles 
+        WHERE user_id = auth.uid() AND role = 'admin'
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Atualizar a função ag_get_all_profiles_if_admin para retornar os novos campos e o status calculado
+DROP FUNCTION IF EXISTS public.ag_get_all_profiles_if_admin();
+
 CREATE OR REPLACE FUNCTION public.ag_get_all_profiles_if_admin()
 RETURNS TABLE (
-    id UUID,
+    id BIGINT,
     nome TEXT,
     email TEXT,
     role TEXT,
@@ -25,7 +43,7 @@ BEGIN
         SELECT 
             p.id, p.nome, p.email, p.role, p.created_at,
             p.is_online, p.last_activity, p.last_login, p.last_logout,
-            (p.is_online AND (now() - p.last_activity < interval '2 minutes')) as is_online_calculated
+            (COALESCE(p.is_online, FALSE) AND (p.last_activity IS NOT NULL) AND (now() - p.last_activity < interval '5 minutes')) as is_online_calculated
         FROM public.ag_profiles p
         ORDER BY p.nome;
     ELSE

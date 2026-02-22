@@ -71,6 +71,14 @@ export const useAuth = () => {
     }
   }
 
+  const isOnlineCalculated = computed(() => {
+    if (!profile.value) return false;
+    const isOnline = profile.value.is_online === true;
+    const lastActivity = profile.value.last_activity ? new Date(profile.value.last_activity).getTime() : 0;
+    const now = new Date().getTime();
+    return isOnline && (now - lastActivity < 300000); // 5 minutos
+  });
+
   // Monitora mudanças no usuário para atualizar o perfil
   watch(user, () => {
     if (user.value) {
@@ -295,29 +303,66 @@ export const useAuth = () => {
   const updateHeartbeat = async () => {
     if (!user.value) return
     try {
-      const { data: profile } = await (supabase
-        .from('ag_profiles') as any)
-        .select('id, is_online')
-        .eq('user_id', user.value.id)
-        .single()
+      // console.log('📡 Enviando Heartbeat...')
 
-      if (profile) {
+      // Busca o perfil para garantir que temos o ID correto para atualizar
+      let currentProfile = profile.value
+
+      if (!currentProfile) {
+        const { data: pData } = await (supabase
+          .from('ag_profiles') as any)
+          .select('id, user_id, is_online')
+          .eq('user_id', user.value.id)
+          .maybeSingle()
+
+        if (pData) {
+          currentProfile = pData
+        } else if (user.value.email) {
+          // Fallback por email se profile.value não estiver carregado
+          const { data: eData } = await (supabase
+            .from('ag_profiles') as any)
+            .select('id, user_id, is_online')
+            .eq('email', user.value.email)
+            .maybeSingle()
+
+          if (eData) currentProfile = eData
+        }
+      }
+
+      if (currentProfile) {
         const updates: any = {
-          last_activity: new Date().toISOString()
+          last_activity: new Date().toISOString(),
+          is_online: true
         }
 
-        // Se estiver marcado como offline mas o heartbeat está rodando, corrige para online
-        if (!(profile as any).is_online) {
-          updates.is_online = true
+        // Se o user_id no banco estiver vazio ou diferente, aproveita para sincronizar
+        if (!currentProfile.user_id || currentProfile.user_id !== user.value.id) {
+          updates.user_id = user.value.id
         }
 
-        await (supabase
+        const { error } = await (supabase
           .from('ag_profiles') as any)
           .update(updates)
-          .eq('id', (profile as any).id)
+          .eq('id', currentProfile.id)
+
+        if (error) {
+          console.error('❌ Erro ao atualizar Heartbeat no banco:', error)
+        } else {
+          // console.log('✅ Heartbeat atualizado com sucesso.')
+          // Atualiza o estado local para refletir na UI imediatamente
+          if (profile.value && profile.value.id === currentProfile.id) {
+            profile.value = {
+              ...profile.value,
+              is_online: true,
+              last_activity: updates.last_activity
+            }
+          }
+        }
+      } else {
+        console.warn('⚠️ Perfil não localizado durante Heartbeat.')
       }
     } catch (err) {
-      console.error('Heartbeat error:', err)
+      console.error('❌ Falha crítica no Heartbeat:', err)
     }
   }
 
@@ -326,6 +371,7 @@ export const useAuth = () => {
     user,
     profile,
     isAuthenticated,
+    isOnlineCalculated,
 
     // Métodos
     login,

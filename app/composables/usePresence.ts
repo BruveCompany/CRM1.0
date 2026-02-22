@@ -1,4 +1,4 @@
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, watch } from 'vue'
 import { useAuth } from './useAuth'
 
 export const usePresence = () => {
@@ -8,14 +8,17 @@ export const usePresence = () => {
     const startHeartbeat = () => {
         if (intervalId) return
 
+        console.log('🚀 Iniciando ciclo de presença (Heartbeat)...')
         // Envia o primeiro heartbeat imediatamente
         updateHeartbeat()
 
         // Configura o intervalo para cada 30 segundos
         intervalId = setInterval(() => {
             if (isAuthenticated.value) {
+                console.log('📡 Disparando pulso de presença...')
                 updateHeartbeat()
             } else {
+                console.log('🛑 Autenticação perdida, parando heartbeat.')
                 stopHeartbeat()
             }
         }, 30000)
@@ -30,9 +33,14 @@ export const usePresence = () => {
 
     const initPresence = () => {
         onMounted(() => {
-            if (isAuthenticated.value) {
-                startHeartbeat()
-            }
+            // Monitora a autenticação de forma reativa
+            watch(isAuthenticated, (isAuth) => {
+                if (isAuth) {
+                    startHeartbeat()
+                } else {
+                    stopHeartbeat()
+                }
+            }, { immediate: true })
         })
 
         onUnmounted(() => {

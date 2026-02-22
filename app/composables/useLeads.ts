@@ -18,6 +18,7 @@ export interface LeadTask {
     notas?: string;
     score?: number;
     vendedor_id?: string | number | null;
+    vendedorOnline?: boolean;
 }
 
 export interface KanbanColumn {
@@ -30,6 +31,7 @@ export interface KanbanColumn {
 
 export const useLeads = () => {
     const supabase = useSupabaseClient()
+    const { profile } = useAuth()
     const allLeads = useState<any[]>('leads-all-data', () => [])
     const searchQuery = useState<string>('leads-search-query', () => '')
     const showKanbanView = useState<boolean>('leads-view-mode-toggle', () => true)
@@ -83,7 +85,7 @@ export const useLeads = () => {
     const fetchVendedores = async () => {
         const { data, error } = await supabase
             .from('ag_profiles')
-            .select('id, user_id, nome, role')
+            .select('id, user_id, nome, role, is_online, last_activity')
             .order('nome')
 
         if (!error && data) {
@@ -92,10 +94,13 @@ export const useLeads = () => {
     }
 
     const fetchLeads = async () => {
+        // Sempre atualiza a lista de vendedores para garantir que o status online esteja fresco
+        await fetchVendedores()
+
+        // Voltamos para a busca simples para garantir que nenhum lead suma
         let query = supabase.from('view_leads_crm').select('*')
 
         if (showMyLeads.value) {
-            const { profile } = useAuth()
             if (profile.value && profile.value.id) {
                 query = query.eq('vendedor_id', profile.value.id)
             } else {
@@ -145,12 +150,23 @@ export const useLeads = () => {
                 }
             }
 
-            const nomeVendedor = lead.vendedor_nome ||
+            const rawNomeVendedor = lead.vendedor_nome ||
                 lead.vendedor_nome_display ||
                 lead.nome_vendedor ||
                 lead.profissional_nome ||
                 lead.vendedor ||
                 'Não Atribuído';
+
+            // Lista de preposições para ignorar
+            const preposicoes = ['de', 'da', 'do', 'das', 'dos', 'e'];
+
+            // Filtra o nome ignorando as preposições
+            const allParts = rawNomeVendedor.trim().split(/\s+/);
+            const filteredParts = allParts.filter((part: string) => !preposicoes.includes(part.toLowerCase()));
+
+            const nomeVendedor = filteredParts.length >= 2
+                ? `${filteredParts[0]} ${filteredParts[1]}`
+                : filteredParts[0] || rawNomeVendedor;
 
             return {
                 ...lead,
@@ -184,10 +200,52 @@ export const useLeads = () => {
                     id: String(l.id),
                     leadName: l.nome,
                     phone: l.telefone,
-                    avatarText: l.vendedor_nome && l.vendedor_nome !== 'Não Atribuído' ? l.vendedor_nome.substring(0, 2).toUpperCase() : '??',
+                    avatarText: (() => {
+                        const vName = l.vendedor_nome || '';
+                        if (!vName || vName === 'Não Atribuído') return '??';
+
+                        const preposicoes = ['de', 'da', 'do', 'das', 'dos', 'e'];
+                        const ns = String(vName).trim().split(/\s+/)
+                            .filter(part => !preposicoes.includes(part.toLowerCase()));
+
+                        const f = ns[0];
+                        const s = ns[1];
+                        if (ns.length >= 2 && f && s && f[0] && s[0]) {
+                            return (f[0] + s[0]).toUpperCase();
+                        }
+                        return vName.substring(0, 2).toUpperCase() || '??';
+                    })(),
                     unreadMessages: l.mensagens_nao_lidas > 0 ? l.mensagens_nao_lidas : undefined,
                     lastActivityText: formatRelativeTime(l.ultima_mensagem_data),
                     vendedorNome: l.vendedor_nome,
+                    vendedorOnline: (() => {
+                        if (!l.vendedor_id) return false;
+
+                        // Se for o próprio usuário logado, usa o perfil reativo dele para velocidade instantânea
+                        if (profile.value && (
+                            String(profile.value.id) === String(l.vendedor_id) ||
+                            String(profile.value.user_id) === String(l.vendedor_id)
+                        )) {
+                            // Usamos a lógica de cálculo baseada no perfil local
+                            const isOnline = profile.value.is_online === true;
+                            const lastActivity = profile.value.last_activity ? new Date(profile.value.last_activity).getTime() : 0;
+                            const now = new Date().getTime();
+                            return isOnline && (now - lastActivity < 300000);
+                        }
+
+                        // Senão, busca o status na lista de vendedores sincronizada
+                        const vInfo = vendedores.value.find(v =>
+                            String(v.id) === String(l.vendedor_id) ||
+                            String(v.user_id) === String(l.vendedor_id)
+                        );
+                        if (!vInfo) return false;
+
+                        const isOnline = vInfo.is_online === true;
+                        const lastActivity = vInfo.last_activity ? new Date(vInfo.last_activity).getTime() : 0;
+                        const now = new Date().getTime();
+
+                        return isOnline && (now - lastActivity < 300000);
+                    })(),
                     statusIcon: getStatusIcon(l.status, l.mensagens_nao_lidas || 0),
                     status: l.status,
                     nome: l.nome,

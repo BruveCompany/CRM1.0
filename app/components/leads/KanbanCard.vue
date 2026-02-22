@@ -70,8 +70,21 @@
       
       <div class="card-meta">
         <div class="card-meta-left">
-          <div class="vendedor-avatar" :style="{ backgroundColor: 'color-mix(in srgb, ' + columnColor + ', white 60%)' }">
-            <span>{{ task.avatarText || '??' }}</span>
+          <div class="vendedor-avatar-wrapper">
+            <img 
+              v-if="task.vendedorNome && task.vendedorNome !== 'Não Atribuído'"
+              :src="`https://api.dicebear.com/7.x/initials/svg?seed=${task.vendedorNome}&backgroundColor=818cf8`" 
+              alt="Avatar" 
+              class="vendedor-img" 
+            />
+            <div 
+              v-if="task.vendedorNome && task.vendedorNome !== 'Não Atribuído'"
+              class="vendedor-status-dot"
+              :class="{ 'is-online': task.vendedorOnline }"
+            ></div>
+            <div v-else class="vendedor-avatar-placeholder">
+              <span>??</span>
+            </div>
           </div>
           <div class="vendedor-info">
             <span class="vendedor-nome" :title="task.vendedorNome || 'Não Atribuído'">{{ task.vendedorNome || 'Não Atribuído' }}</span>
@@ -265,7 +278,7 @@ defineEmits(['dragstart']);
   display: flex;
   align-items: stretch;
   border: 1px solid #e2e8f0;
-  min-height: 100px;
+  min-height: 85px;
   overflow: visible; /* Mudado para permitir o menu sair do card */
   user-select: none;
 }
@@ -475,10 +488,10 @@ defineEmits(['dragstart']);
 /* --- Resto do Estilo --- */
 .card-content {
   flex-grow: 1;
-  padding: 0.75rem;
+  padding: 0.5rem 0.65rem;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.15rem;
 }
 
 .card-header {
@@ -518,8 +531,8 @@ defineEmits(['dragstart']);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 0.75rem;
-  padding-top: 0.5rem;
+  margin-top: 0.4rem;
+  padding-top: 0.4rem;
   border-top: 1px solid color-mix(in srgb, var(--column-color), transparent 92%);
 }
 
@@ -529,17 +542,57 @@ defineEmits(['dragstart']);
   gap: 0.5rem;
 }
 
-.vendedor-avatar {
+.vendedor-avatar-wrapper {
   width: 24px;
   height: 24px;
   border-radius: 50%;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.vendedor-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid white;
+  box-shadow: 0 0 0 1px #e2e8f0;
+}
+
+.vendedor-status-dot {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #94a3b8;
+  border: 1.5px solid white;
+  transition: all 0.3s;
+}
+
+.vendedor-status-dot.is-online {
+  background-color: #22c55e;
+  box-shadow: 0 0 0 1px #22c55e40;
+  animation: pulse-presence 2s infinite;
+}
+
+@keyframes pulse-presence {
+  0% { box-shadow: 0 0 0 0px rgba(34, 197, 94, 0.7); }
+  70% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+  100% { box-shadow: 0 0 0 0px rgba(34, 197, 94, 0); }
+}
+
+.vendedor-avatar-placeholder {
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: #f1f5f9;
+  color: #94a3b8;
   font-size: 0.65rem;
   font-weight: 700;
-  color: white;
-  flex-shrink: 0;
 }
 
 .vendedor-info {

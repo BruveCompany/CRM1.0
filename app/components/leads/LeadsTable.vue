@@ -35,7 +35,12 @@
               </span>
               <span v-else>-</span>
             </td>
-            <td :title="lead.vendedor_nome || 'Não Atribuído'">{{ lead.vendedor_nome || 'Não Atribuído' }}</td>
+            <td :title="lead.vendedor_nome || 'Não Atribuído'">
+              <div class="flex items-center gap-2">
+                <span class="status-dot-mini" :class="{ 'is-online': lead.vendedorOnline }"></span>
+                {{ lead.vendedor_nome || 'Não Atribuído' }}
+              </div>
+            </td>
             <td style="width: 110px;" :title="lead.ultima_mensagem_data ? formatRelativeTime(lead.ultima_mensagem_data) : 'N/A'">
               {{ lead.ultima_mensagem_data ? formatRelativeTime(lead.ultima_mensagem_data) : 'N/A' }}
             </td>
@@ -264,6 +269,31 @@ th {
 
 td {
   color: #334155;
+}
+
+.flex { display: flex; }
+.items-center { align-items: center; }
+.gap-2 { gap: 0.5rem; }
+
+.status-dot-mini {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #94a3b8;
+  flex-shrink: 0;
+  transition: all 0.3s;
+}
+
+.status-dot-mini.is-online {
+  background-color: #22c55e;
+  box-shadow: 0 0 0 1px #22c55e40;
+  animation: pulse-presence 2s infinite;
+}
+
+@keyframes pulse-presence {
+  0% { box-shadow: 0 0 0 0px rgba(34, 197, 94, 0.7); }
+  70% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+  100% { box-shadow: 0 0 0 0px rgba(34, 197, 94, 0); }
 }
 
 tbody tr:hover {

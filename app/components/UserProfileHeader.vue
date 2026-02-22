@@ -6,15 +6,23 @@
         <span class="user-name">
           {{ formattedName }}
         </span>
-        <span class="user-status-text online">online</span>
+        <span 
+          class="user-status-text" 
+          :class="isOnline ? 'online' : 'offline'"
+        >
+          {{ isOnline ? 'online' : 'offline' }}
+        </span>
       </div>
       <div class="avatar-wrapper">
         <img 
-          :src="`https://api.dicebear.com/7.x/initials/svg?seed=${formattedName}&backgroundColor=6366f1`" 
+          :src="`https://api.dicebear.com/7.x/initials/svg?seed=${formattedName}&backgroundColor=818cf8`" 
           alt="Avatar" 
           class="user-avatar" 
         />
-        <div class="online-indicator is-online"></div>
+        <div 
+          class="online-indicator" 
+          :class="{ 'is-online': isOnline }"
+        ></div>
       </div>
     </div>
   </div>
@@ -24,7 +32,7 @@
 import { computed, onMounted } from 'vue';
 import { useAuth } from '~/composables/useAuth';
 
-const { profile, user, fetchProfile } = useAuth();
+const { profile, user, fetchProfile, isOnlineCalculated } = useAuth();
 
 // Garante que o perfil seja carregado ao montar o componente
 onMounted(async () => {
@@ -37,21 +45,22 @@ onMounted(async () => {
 const formattedName = computed(() => {
   const fullContent = profile.value?.nome || user.value?.user_metadata?.full_name || user.value?.user_metadata?.name || user.value?.email?.split('@')[0] || 'Usuário';
   
-  // Limpa espaços extras e divide
-  const names = fullContent.trim().split(/\s+/);
+  // Lista de preposições para ignorar
+  const preposicoes = ['de', 'da', 'do', 'das', 'dos', 'e'];
   
-  // Retorna os dois primeiros nomes se existirem, senão o conteúdo original
+  // Limpa espaços extras e divide, filtrando as preposições
+  const names = fullContent.trim().split(/\s+/)
+    .filter((part: string) => !preposicoes.includes(part.toLowerCase()));
+  
+  // Retorna os dois primeiros nomes significativos
   if (names.length >= 2) {
     return `${names[0]} ${names[1]}`;
   }
-  return names[0];
+  return names[0] || fullContent;
 });
 
 // O status exibido no header é o do próprio usuário logado
-const isOnline = computed(() => {
-  if (!profile.value) return false;
-  return profile.value.is_online_calculated !== false;
-});
+const isOnline = isOnlineCalculated;
 </script>
 
 <style scoped>
@@ -135,5 +144,13 @@ const isOnline = computed(() => {
 
 .online-indicator.is-online {
   background-color: #22c55e;
+  box-shadow: 0 0 0 2px white, 0 0 0 4px #22c55e40;
+  animation: pulse-presence 2s infinite;
+}
+
+@keyframes pulse-presence {
+  0% { box-shadow: 0 0 0 0px rgba(34, 197, 94, 0.7); }
+  70% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+  100% { box-shadow: 0 0 0 0px rgba(34, 197, 94, 0); }
 }
 </style>
