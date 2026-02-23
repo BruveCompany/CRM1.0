@@ -63,11 +63,11 @@ DROP POLICY IF EXISTS "Usuários podem ver o próprio perfil" ON public.ag_profi
 DROP POLICY IF EXISTS "Usuários podem atualizar a própria presença" ON public.ag_profiles;
 DROP POLICY IF EXISTS "Admins podem ver todos os perfis" ON public.ag_profiles;
 
--- Política 1: Usuários podem ver apenas o seu próprio perfil
-CREATE POLICY "Usuários podem ver o próprio perfil" 
+-- Política 1: Todos os usuários autenticados podem ver perfis (necessário para status online)
+CREATE POLICY "Todos podem ver perfis" 
 ON public.ag_profiles 
 FOR SELECT 
-USING (auth.uid() = user_id);
+USING (auth.role() = 'authenticated');
 
 -- Política 2: Usuários podem atualizar apenas os seus próprios campos de presença e nome
 CREATE POLICY "Usuários podem atualizar a própria presença" 
@@ -75,12 +75,6 @@ ON public.ag_profiles
 FOR UPDATE 
 USING (auth.uid() = user_id)
 WITH CHECK (auth.uid() = user_id);
-
--- Política 3: Admins podem ver todos os perfis (através da função ag_isadmin)
-CREATE POLICY "Admins podem ver todos os perfis" 
-ON public.ag_profiles 
-FOR SELECT 
-USING (public.ag_isadmin());
 
 -- ADICIONAR COLUNAS DE DESIGN AOS STATUS
 ALTER TABLE public.ag_lead_statuses ADD COLUMN IF NOT EXISTS status_icon TEXT;

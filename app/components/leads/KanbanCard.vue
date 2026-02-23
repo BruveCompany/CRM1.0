@@ -92,7 +92,7 @@
           </div>
           <div class="vendedor-info">
             <span class="vendedor-nome" :title="task.vendedorNome || 'Não Atribuído'">{{ task.vendedorNome || 'Não Atribuído' }}</span>
-            <span v-if="task.vendedorOnline" class="card-last-activity-small" style="color: #10b981; font-weight: 700;">Online agora</span>
+            <span v-if="task.vendedorOnline" class="card-last-activity-small" style="color: #10b981; font-weight: 400; font-size: 0.65rem;">Online agora</span>
             <span v-else-if="task.lastActivityText || task.vendedorLastSeenText" class="card-last-activity-small">
               {{ task.lastActivityText || task.vendedorLastSeenText }}
             </span>
@@ -533,7 +533,7 @@ defineEmits(['dragstart']);
 }
 
 .card-title {
-  font-weight: 700; /* Um pouco mais de peso para destaque */
+  font-weight: 600; /* Suavizado de 700 para 600 */
   font-size: 0.9rem;
   color: #1e293b;
   margin: 0;

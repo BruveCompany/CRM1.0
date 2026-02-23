@@ -48,7 +48,7 @@
               </ClientOnly>
             </td>
             <td style="width: 100px; text-align: center;" :title="String(lead.mensagens_nao_lidas || '0')">
-              <span v-if="lead.mensagens_nao_lidas > 0" class="unread-count-table">
+              <span v-if="(lead.mensagens_nao_lidas || 0) > 0" class="unread-count-table">
                 {{ lead.mensagens_nao_lidas }}
               </span>
               <span v-else>-</span>

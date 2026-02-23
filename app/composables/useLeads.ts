@@ -24,6 +24,9 @@ export interface LeadTask {
     score?: number;
     vendedor_id?: string | number | null;
     vendedorOnline?: boolean;
+    temperatura?: string;
+    profissional_id?: string | number | null;
+    vendedor_nome_full?: string;
 }
 
 export interface LeadStatus {
@@ -45,7 +48,7 @@ export interface KanbanColumn extends LeadStatus {
 
 export const useLeads = () => {
     const supabase = useSupabaseClient()
-    const { profile } = useAuth()
+    const { profile, isOnlineCalculated } = useAuth()
     const allLeads = useState<any[]>('leads-all-data', () => [])
     const leadStatuses = useState<LeadStatus[]>('leads-statuses', () => [])
     const searchQuery = useState<string>('leads-search-query', () => '')
@@ -202,20 +205,110 @@ export const useLeads = () => {
                 id: leadId,
                 status: statusFinal,
                 vendedor_id: lead.vendedor_id || lead.profissional_id || null,
-                vendedor_nome: nomeVendedor
+                vendedor_nome: nomeVendedor,
+                vendedor_nome_full: rawNomeVendedor
             }
         })
     }
 
+    // NOVO: Propriedade computada para enriquecer os leads com dados de UI e presença
+    const enrichedLeadsList = computed(() => {
+        return allLeads.value.map(l => {
+            const vId = l.vendedor_id;
+
+            // Busca informações do vendedor (seja o próprio ou outro)
+            const vendedorOnline = (() => {
+                if (!vId && !l.vendedor_nome) return false;
+
+                // 1. Tenta pelo perfil logado (velocidade instantânea)
+                // Usamos ID, UserID ou Nome (Full) como fallback caso o ID venha nulo da view
+                if (profile.value && (
+                    (vId && String(profile.value.id) === String(vId)) ||
+                    (vId && String(profile.value.user_id) === String(vId)) ||
+                    (l.vendedor_nome_full && profile.value.nome &&
+                        l.vendedor_nome_full.trim().toLowerCase() === profile.value.nome.trim().toLowerCase())
+                )) {
+                    return isOnlineCalculated.value;
+                }
+
+                // 2. Tenta pela lista de vendedores (outros usuários)
+                const vInfo = vendedores.value.find(v =>
+                    (vId && String(v.id) === String(vId)) ||
+                    (vId && String(v.user_id) === String(vId)) ||
+                    (l.vendedor_nome_full && v.nome &&
+                        l.vendedor_nome_full.trim().toLowerCase() === v.nome.trim().toLowerCase())
+                );
+
+                if (!vInfo) return false;
+
+                const isOnline = vInfo.is_online === true;
+                const lastActivity = vInfo.last_activity ? new Date(vInfo.last_activity).getTime() : 0;
+                const now = new Date().getTime();
+                return isOnline && (now - lastActivity < 300000); // 5 minutos
+            })();
+
+            const vendedorLastSeenText = (() => {
+                const isMe = profile.value && (
+                    (vId && String(profile.value.id) === String(vId)) ||
+                    (l.vendedor_nome_full && profile.value.nome === l.vendedor_nome_full)
+                );
+
+                if (isMe) return undefined; // Se sou eu, não precisa de "visto há..."
+
+                const vInfo = vendedores.value.find(v =>
+                    (vId && String(v.id) === String(vId)) ||
+                    (l.vendedor_nome_full && v.nome === l.vendedor_nome_full)
+                );
+
+                if (vInfo?.last_activity) {
+                    const time = formatRelativeTime(String(vInfo.last_activity));
+                    return time ? `visto ${time}` : undefined;
+                }
+                return undefined;
+            })();
+
+            // Abreviação para o Avatar (JC para José Carlos)
+            const avatarText = (() => {
+                const vName = l.vendedor_nome || '';
+                if (!vName || vName === 'Não Atribuído') return '??';
+
+                const preposicoes = ['de', 'da', 'do', 'das', 'dos', 'e', 'para', 'com'];
+                const ns = String(vName).trim().split(/\s+/)
+                    .filter(part => !preposicoes.includes(part.toLowerCase()));
+
+                const f = ns[0];
+                const s = ns[1];
+                if (ns.length >= 2 && f && s && f[0] && s[0]) {
+                    return (f[0] + s[0]).toUpperCase();
+                }
+                return vName.substring(0, 2).toUpperCase() || '??';
+            })();
+
+            return {
+                ...l,
+                leadName: l.nome,
+                phone: l.telefone,
+                vendedorNome: l.vendedor_nome,
+                vendedorOnline,
+                vendedorLastSeenText,
+                avatarText,
+                lastActivityText: formatRelativeTime(l.ultima_mensagem_data),
+                unreadMessages: (l.mensagens_nao_lidas || 0) > 0 ? l.mensagens_nao_lidas : undefined,
+                statusIcon: getStatusIcon(l.status, l.mensagens_nao_lidas || 0)
+            } as LeadTask;
+        });
+    });
+
     const filteredLeadsList = computed(() => {
-        if (!searchQuery.value) return allLeads.value
-        const query = searchQuery.value.toLowerCase()
-        return allLeads.value.filter(lead =>
+        const list = enrichedLeadsList.value;
+        if (!searchQuery.value) return list;
+        const query = searchQuery.value.toLowerCase();
+        return list.filter(lead =>
             (lead.nome && lead.nome.toLowerCase().includes(query)) ||
             (lead.telefone && lead.telefone.toLowerCase().includes(query)) ||
             (lead.vendedor_nome && lead.vendedor_nome.toLowerCase().includes(query))
-        )
-    })
+        );
+    });
 
     // Funções Administrativas para Gerenciamento de Status
     const addStatus = async (status: Partial<LeadStatus>) => {
@@ -285,80 +378,7 @@ export const useLeads = () => {
                     const normalLeadStatus = String(l.status).toLowerCase().trim().replace(/\s+/g, '_');
                     const normalStatusId = status.id.toLowerCase().trim();
                     return normalLeadStatus === normalStatusId || l.status === status.id;
-                })
-                .map(l => ({
-                    id: String(l.id),
-                    leadName: l.nome,
-                    phone: l.telefone,
-                    avatarText: (() => {
-                        const vName = l.vendedor_nome || '';
-                        if (!vName || vName === 'Não Atribuído') return '??';
-
-                        const preposicoes = ['de', 'da', 'do', 'das', 'dos', 'e'];
-                        const ns = String(vName).trim().split(/\s+/)
-                            .filter(part => !preposicoes.includes(part.toLowerCase()));
-
-                        const f = ns[0];
-                        const s = ns[1];
-                        if (ns.length >= 2 && f && s && f[0] && s[0]) {
-                            return (f[0] + s[0]).toUpperCase();
-                        }
-                        return vName.substring(0, 2).toUpperCase() || '??';
-                    })(),
-                    unreadMessages: l.mensagens_nao_lidas > 0 ? l.mensagens_nao_lidas : undefined,
-                    lastActivityText: formatRelativeTime(l.ultima_mensagem_data),
-                    vendedorNome: l.vendedor_nome,
-                    vendedorLastSeenText: (() => {
-                        const vId = l.vendedor_id;
-                        if (!vId) return undefined;
-
-                        const vInfo = vendedores.value.find(v =>
-                            String(v.id) === String(vId) ||
-                            String(v.user_id) === String(vId)
-                        );
-
-                        if (vInfo?.last_activity) {
-                            const time = formatRelativeTime(String(vInfo.last_activity));
-                            return time ? `visto ${time}` : undefined;
-                        }
-                        return undefined;
-                    })(),
-                    vendedorOnline: (() => {
-                        if (!l.vendedor_id) return false;
-
-                        // Se for o próprio usuário logado, usa o perfil reativo dele para velocidade instantânea
-                        if (profile.value && (
-                            String(profile.value.id) === String(l.vendedor_id) ||
-                            String(profile.value.user_id) === String(l.vendedor_id)
-                        )) {
-                            // Usamos a lógica de cálculo baseada no perfil local
-                            const isOnline = profile.value.is_online === true;
-                            const lastActivity = profile.value.last_activity ? new Date(profile.value.last_activity).getTime() : 0;
-                            const now = new Date().getTime();
-                            return isOnline && (now - lastActivity < 300000);
-                        }
-
-                        // Senão, busca o status na lista de vendedores sincronizada
-                        const vInfo = vendedores.value.find(v =>
-                            String(v.id) === String(l.vendedor_id) ||
-                            String(v.user_id) === String(l.vendedor_id)
-                        );
-                        if (!vInfo) return false;
-
-                        const isOnline = vInfo.is_online === true;
-                        const lastActivity = vInfo.last_activity ? new Date(vInfo.last_activity).getTime() : 0;
-                        const now = new Date().getTime();
-
-                        return isOnline && (now - lastActivity < 300000);
-                    })(),
-                    statusIcon: getStatusIcon(l.status, l.mensagens_nao_lidas || 0),
-                    status: l.status,
-                    nome: l.nome,
-                    telefone: l.telefone,
-                    score: l.score,
-                    ultima_mensagem_data: l.ultima_mensagem_data,
-                    vendedor_id: l.vendedor_id
-                })) as LeadTask[];
+                });
 
             return {
                 ...status,
