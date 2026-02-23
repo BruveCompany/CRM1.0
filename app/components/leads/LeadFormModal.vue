@@ -276,7 +276,7 @@ function resetForm() {
 <style scoped>
 /* Estilos Ultra Compactos para Eliminar Rolagem */
 .modal-form-scroll-container {
-  background-color: #f8fafc;
+  background-color: #ffffff;
   padding: 0.5rem 0.75rem;
   border-radius: 12px;
 }
@@ -365,7 +365,7 @@ function resetForm() {
 .field-input, .field-select, .field-textarea {
   width: 100%;
   padding: 0.45rem 0.75rem 0.45rem 2.15rem;
-  background-color: #f1f5f9;
+  background-color: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   font-size: 0.8rem;

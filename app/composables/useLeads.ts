@@ -13,6 +13,7 @@ export interface LeadTask {
     lastActivityText?: string;
     statusIcon?: string;
     vendedorNome?: string;
+    vendedorLastSeenText?: string;
     status: string;
     nome?: string; // Original database fields
     telefone?: string;
@@ -25,10 +26,19 @@ export interface LeadTask {
     vendedorOnline?: boolean;
 }
 
-export interface KanbanColumn {
+export interface LeadStatus {
     id: string;
-    title: string;
-    color: string;
+    display_name: string;
+    color_bg: string;
+    color_text: string;
+    order_index: number;
+    font_size?: string;  // Padrão: 'text-xs'
+    font_weight?: string; // Padrão: 'font-bold'
+    font_family?: string; // Padrão: 'font-sans'
+    status_icon?: string;
+}
+
+export interface KanbanColumn extends LeadStatus {
     tasks: LeadTask[];
     totalDeals?: number;
 }
@@ -37,6 +47,7 @@ export const useLeads = () => {
     const supabase = useSupabaseClient()
     const { profile } = useAuth()
     const allLeads = useState<any[]>('leads-all-data', () => [])
+    const leadStatuses = useState<LeadStatus[]>('leads-statuses', () => [])
     const searchQuery = useState<string>('leads-search-query', () => '')
     const showKanbanView = useState<boolean>('leads-view-mode-toggle', () => true)
 
@@ -49,24 +60,37 @@ export const useLeads = () => {
     const vendedores = useState<any[]>('leads-vendedores', () => [])
     const selectedVendedorId = useState<string | null>('leads-selected-vendedor-id', () => null)
     const showMyLeads = useState<boolean>('leads-show-my-leads', () => false)
+    const isEditingStatuses = useState<boolean>('leads-is-editing-statuses', () => false)
 
     const openDetails = (id: string) => {
         selectedLeadId.value = id
         showDetailsModal.value = true
     }
 
-    // Colunas do Kanban (Status originais da View)
-    const columns = ref<KanbanColumn[]>([
-        { id: 'leads_novos', title: 'Leads Novos', color: '#3B82F6', tasks: [] },
-        { id: 'contato_feito', title: 'Contato Feito', color: '#F59E0B', tasks: [] },
-        { id: 'necessidades', title: 'Necessidades', color: '#EC4899', tasks: [] },
-        { id: 'em_atendimento', title: 'Em Atendimento', color: '#6366f1', tasks: [] },
-        { id: 'qualificado', title: 'Qualificado', color: '#8B5CF6', tasks: [] },
-        { id: 'em_negociacao', title: 'Em Negociação', color: '#06B6D4', tasks: [] },
-        { id: 'proposta', title: 'Proposta', color: '#f97316', tasks: [] },
-        { id: 'ganho', title: 'Ganho', color: '#10B981', tasks: [] },
-        { id: 'perdido', title: 'Perdido', color: '#EF4444', tasks: [] },
-    ])
+    // Busca de status no banco de dados
+    const fetchStatuses = async () => {
+        const { data, error } = await supabase
+            .from('ag_lead_statuses')
+            .select('*')
+            .order('order_index', { ascending: true })
+
+        if (!error && data) {
+            leadStatuses.value = data
+        }
+    }
+
+    /**
+     * SUBSCRIPÇÃO REALTIME PARA STATUS
+     * Mantém o Kanban atualizado em tempo real quando um administrador faz alterações.
+     */
+    const subscribeToStatusChanges = () => {
+        return (supabase as any)
+            .channel('public:ag_lead_statuses')
+            .on('postgres_changes', { event: '*', table: 'ag_lead_statuses', schema: 'public' }, () => {
+                fetchStatuses()
+            })
+            .subscribe()
+    }
 
     // Helpers de Formatação
     const formatRelativeTime = (dateString: string) => {
@@ -114,7 +138,7 @@ export const useLeads = () => {
             } else {
                 // Se o perfil não está carregado, buscamos na hora para garantir a filtragem
                 const user = useSupabaseUser()
-                if (user.value) {
+                if (user.value?.id) {
                     const { data: profileData } = await supabase
                         .from('ag_profiles')
                         .select('id')
@@ -130,7 +154,7 @@ export const useLeads = () => {
                     }
                 }
             }
-        } else if (selectedVendedorId.value && selectedVendedorId.value !== 'all') {
+        } else if (selectedVendedorId.value && selectedVendedorId.value !== 'all' && selectedVendedorId.value !== 'undefined') {
             query = query.eq('vendedor_id', selectedVendedorId.value)
         }
 
@@ -143,13 +167,13 @@ export const useLeads = () => {
         }
 
         allLeads.value = (leadsData as any[]).map(lead => {
-            const leadId = String(lead.id)
-            let statusFinal = lead.status
+            const leadId = lead.id ? String(lead.id) : '';
+            let statusFinal = lead.status || 'leads_novos';
 
-            if (pendingStatusUpdates.value[leadId]) {
+            if (leadId && pendingStatusUpdates.value[leadId]) {
                 const targetStatus = pendingStatusUpdates.value[leadId]
-                const normalizedCurrent = (statusFinal as string)?.toLowerCase().trim().replace(/\s+/g, '_')
-                const normalizedTarget = (targetStatus as string).toLowerCase().trim().replace(/\s+/g, '_')
+                const normalizedCurrent = String(statusFinal).toLowerCase().trim().replace(/\s+/g, '_')
+                const normalizedTarget = String(targetStatus).toLowerCase().trim().replace(/\s+/g, '_')
 
                 if (normalizedCurrent === normalizedTarget) {
                     delete pendingStatusUpdates.value[leadId]
@@ -158,11 +182,6 @@ export const useLeads = () => {
                 }
             }
 
-            /**
-             * LÓGICA DE NORMALIZAÇÃO DO NOME DO VENDEDOR
-             * Tenta obter o nome por diversas chaves possíveis vindas da View.
-             * Aplica filtro para remover preposições e manter Nome + Sobrenome.
-             */
             const rawNomeVendedor = lead.vendedor_nome ||
                 lead.vendedor_nome_display ||
                 lead.nome_vendedor ||
@@ -171,7 +190,7 @@ export const useLeads = () => {
                 'Não Atribuído';
 
             const preposicoes = ['de', 'da', 'do', 'das', 'dos', 'e'];
-            const allParts = rawNomeVendedor.trim().split(/\s+/);
+            const allParts = String(rawNomeVendedor).trim().split(/\s+/);
             const filteredParts = allParts.filter((part: string) => !preposicoes.includes(part.toLowerCase()));
 
             const nomeVendedor = filteredParts.length >= 2
@@ -182,6 +201,7 @@ export const useLeads = () => {
                 ...lead,
                 id: leadId,
                 status: statusFinal,
+                vendedor_id: lead.vendedor_id || lead.profissional_id || null,
                 vendedor_nome: nomeVendedor
             }
         })
@@ -197,14 +217,74 @@ export const useLeads = () => {
         )
     })
 
-    // Popula o Kanban com os dados do Original
+    // Funções Administrativas para Gerenciamento de Status
+    const addStatus = async (status: Partial<LeadStatus>) => {
+        const { data, error } = await (supabase
+            .from('ag_lead_statuses') as any)
+            .insert([{
+                ...status,
+                id: status.display_name?.toLowerCase().trim().replace(/\s+/g, '_'),
+                order_index: leadStatuses.value.length + 1,
+                font_size: status.font_size || 'text-xs',
+                font_weight: status.font_weight || 'font-bold',
+                font_family: status.font_family || 'font-sans',
+                status_icon: status.status_icon || null
+            }])
+            .select()
+        return { data, error }
+    }
+
+    const updateStatus = async (id: string, updates: Partial<LeadStatus>) => {
+        const { error } = await (supabase
+            .from('ag_lead_statuses') as any)
+            .update(updates)
+            .eq('id', id)
+        return { error }
+    }
+
+    const deleteStatus = async (id: string, reassignToId?: string) => {
+        // Se houver leads e um novo status para reatribuição for fornecido
+        if (reassignToId) {
+            await (supabase
+                .from('ag_leads') as any)
+                .update({ status: reassignToId })
+                .eq('status', id)
+        }
+
+        const { error } = await (supabase
+            .from('ag_lead_statuses') as any)
+            .delete()
+            .eq('id', id)
+        return { error }
+    }
+
+    const reorderStatuses = async (newOrderedStatuses: LeadStatus[]) => {
+        const updates = newOrderedStatuses.map((s, index) => ({
+            id: s.id,
+            display_name: s.display_name,
+            color_bg: s.color_bg,
+            color_text: s.color_text,
+            order_index: index + 1,
+            font_size: s.font_size,
+            font_weight: s.font_weight,
+            font_family: s.font_family,
+            status_icon: s.status_icon
+        }))
+
+        const { error } = await (supabase
+            .from('ag_lead_statuses') as any)
+            .upsert(updates)
+        return { error }
+    }
+
+    // Popula o Kanban com os dados dinâmicos da tabela ag_lead_statuses
     const columnsWithTotals = computed(() => {
-        return columns.value.map(col => {
+        return leadStatuses.value.map(status => {
             const tasks = filteredLeadsList.value
                 .filter(l => {
                     const normalLeadStatus = String(l.status).toLowerCase().trim().replace(/\s+/g, '_');
-                    const normalColId = col.id.toLowerCase().trim();
-                    return normalLeadStatus === normalColId || l.status === col.id;
+                    const normalStatusId = status.id.toLowerCase().trim();
+                    return normalLeadStatus === normalStatusId || l.status === status.id;
                 })
                 .map(l => ({
                     id: String(l.id),
@@ -228,6 +308,21 @@ export const useLeads = () => {
                     unreadMessages: l.mensagens_nao_lidas > 0 ? l.mensagens_nao_lidas : undefined,
                     lastActivityText: formatRelativeTime(l.ultima_mensagem_data),
                     vendedorNome: l.vendedor_nome,
+                    vendedorLastSeenText: (() => {
+                        const vId = l.vendedor_id;
+                        if (!vId) return undefined;
+
+                        const vInfo = vendedores.value.find(v =>
+                            String(v.id) === String(vId) ||
+                            String(v.user_id) === String(vId)
+                        );
+
+                        if (vInfo?.last_activity) {
+                            const time = formatRelativeTime(String(vInfo.last_activity));
+                            return time ? `visto ${time}` : undefined;
+                        }
+                        return undefined;
+                    })(),
                     vendedorOnline: (() => {
                         if (!l.vendedor_id) return false;
 
@@ -266,7 +361,7 @@ export const useLeads = () => {
                 })) as LeadTask[];
 
             return {
-                ...col,
+                ...status,
                 tasks,
                 totalDeals: tasks.length
             }
@@ -275,6 +370,7 @@ export const useLeads = () => {
 
     return {
         allLeads,
+        leadStatuses,
         searchQuery,
         showKanbanView,
         pendingStatusUpdates,
@@ -283,11 +379,18 @@ export const useLeads = () => {
         vendedores,
         selectedVendedorId,
         showMyLeads,
+        isEditingStatuses,
         openDetails,
         columnsWithTotals,
         filteredLeadsList,
         fetchLeads,
+        fetchStatuses,
+        subscribeToStatusChanges,
         fetchVendedores,
+        addStatus,
+        updateStatus,
+        deleteStatus,
+        reorderStatuses,
         formatRelativeTime
     }
 }

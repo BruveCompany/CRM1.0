@@ -92,7 +92,10 @@
           </div>
           <div class="vendedor-info">
             <span class="vendedor-nome" :title="task.vendedorNome || 'Não Atribuído'">{{ task.vendedorNome || 'Não Atribuído' }}</span>
-            <span v-if="task.lastActivityText" class="card-last-activity-small">{{ task.lastActivityText }}</span>
+            <span v-if="task.vendedorOnline" class="card-last-activity-small" style="color: #10b981; font-weight: 700;">Online agora</span>
+            <span v-else-if="task.lastActivityText || task.vendedorLastSeenText" class="card-last-activity-small">
+              {{ task.lastActivityText || task.vendedorLastSeenText }}
+            </span>
           </div>
         </div>
         <div class="card-meta-right">
@@ -162,8 +165,10 @@ const showActionsMenu = ref(false);
 const showReassignModal = ref(false);
 const isAdmin = ref(false);
 
+const isMounted = ref(false);
 onMounted(async () => {
   isAdmin.value = await checkIsAdmin();
+  isMounted.value = true;
 });
 
 // Cálculo de Temperatura Quente (Lead com score alto)
@@ -171,8 +176,7 @@ const isHot = computed(() => (props.task.score || 0) > 50);
 
 // Cálculo de Temperatura Fria (Lead sem atividade por mais de 7 dias)
 const isCold = computed(() => {
-  // Evita erro de hidratação calculando apenas no cliente ou garantindo consistência
-  if (!props.task.ultima_mensagem_data || import.meta.server) return false;
+  if (!isMounted.value || !props.task.ultima_mensagem_data) return false;
   const lastDate = new Date(props.task.ultima_mensagem_data);
   const diffTime = Math.abs(new Date().getTime() - lastDate.getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -284,7 +288,7 @@ defineEmits(['dragstart']);
   background-color: #ffffff;
   border-radius: 8px;
   padding: 0;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0; /* Removido: agora quem controla o espaçamento é o gap da lista */
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
   cursor: grab;
   transition: all 0.2s;
@@ -292,8 +296,9 @@ defineEmits(['dragstart']);
   display: flex;
   align-items: stretch;
   border: 1px solid #e2e8f0;
-  min-height: 85px;
-  overflow: visible; /* Mudado para permitir o menu sair do card */
+  min-height: 70px; /* Um pouco mais de espaço para as labels */
+  flex-shrink: 0; 
+  overflow: visible;
   user-select: none;
 }
 
@@ -502,51 +507,59 @@ defineEmits(['dragstart']);
 /* --- Resto do Estilo --- */
 .card-content {
   flex-grow: 1;
-  padding: 0.5rem 0.65rem;
+  padding: 0.25rem 0.5rem; /* Ultra compacto */
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0; /* Removido gap para controle manual via margin */
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 0.5rem;
+  align-items: center; 
+  gap: 0.4rem;
   margin-bottom: 0.1rem;
-  padding-left: 20px; /* Reduzi um pouco para dar mais espaço */
+  padding-left: 28px; 
+  position: relative;
+  min-width: 0; /* Permite que o flex child encolha */
+  width: 100%;
 }
 
 .card-header-right {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-top: -2px; /* Ajuste fino de verticalidade */
+  gap: 2px;
+  flex-shrink: 0; /* Garante que os ícones e menu não sumam */
 }
 
 .card-title {
-  font-weight: 600;
-  font-size: 0.95rem;
-  color: #334155;
+  font-weight: 700; /* Um pouco mais de peso para destaque */
+  font-size: 0.9rem;
+  color: #1e293b;
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100%;
+  flex: 1;
+  min-width: 0; /* ESSENCIAL para o text-overflow: ellipsis funcionar em flex */
 }
 
 .card-phone-number {
   font-size: 0.8rem;
   color: #64748b;
   margin: 0;
+  padding-left: 28px; /* Alinhado com o título */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .card-meta {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 0.4rem;
-  padding-top: 0.4rem;
+  margin-top: 0.25rem;
+  padding-top: 0.25rem;
   border-top: 1px solid color-mix(in srgb, var(--column-color), transparent 92%);
 }
 
@@ -554,6 +567,8 @@ defineEmits(['dragstart']);
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex: 1;
+  overflow: hidden;
 }
 
 .vendedor-avatar-wrapper {
@@ -612,6 +627,7 @@ defineEmits(['dragstart']);
 .vendedor-info {
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .vendedor-nome {
@@ -622,7 +638,7 @@ defineEmits(['dragstart']);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 120px; /* Limite para não empurrar os ícones da direita */
+  max-width: 120px;
 }
 
 .card-last-activity-small {

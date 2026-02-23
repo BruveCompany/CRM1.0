@@ -3,9 +3,13 @@
     <div 
       v-if="modelValue" 
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      :style="$attrs.class && String($attrs.class).includes('delete-modal-high-z') ? 'z-index: 100' : ''"
       @click.self="$emit('update:modelValue', false)"
     >
-      <div :class="['bg-white rounded-lg shadow-2xl w-full mx-4 transform transition-all flex flex-col max-h-[calc(100vh-2rem)]', maxWidthClass]">
+      <div 
+        :class="['bg-white rounded-lg shadow-2xl w-full mx-4 transform transition-all flex flex-col max-h-[calc(100vh-2rem)]', maxWidthClass]"
+        :style="$attrs.class && String($attrs.class).includes('delete-modal-high-z') ? 'z-index: 100' : ''"
+      >
         <!-- Header -->
         <div v-if="!hideHeader" class="px-5 py-3.5 flex items-center justify-between border-b border-neutral-100 flex-shrink-0">
           <slot name="header">

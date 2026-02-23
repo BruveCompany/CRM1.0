@@ -1,31 +1,34 @@
 <template>
-  <div class="header-user-presence" v-if="user">
-    <!-- Perfil Real ou Metadados do Auth -->
-    <div class="user-profile">
-      <div class="user-info">
-        <span class="user-name">
-          {{ formattedName }}
-        </span>
-        <span 
-          class="user-status-text" 
-          :class="isOnline ? 'online' : 'offline'"
-        >
-          {{ isOnline ? 'online' : 'offline' }}
-        </span>
-      </div>
-      <div class="avatar-wrapper">
-        <img 
-          :src="`https://api.dicebear.com/7.x/initials/svg?seed=${formattedName}&backgroundColor=818cf8`" 
-          alt="Avatar" 
-          class="user-avatar" 
-        />
-        <div 
-          class="online-indicator" 
-          :class="{ 'is-online': isOnline }"
-        ></div>
+  <ClientOnly>
+    <div class="header-user-presence" v-if="user">
+      <!-- Perfil Real ou Metadados do Auth -->
+      <div class="user-profile">
+        <div class="user-info">
+          <span class="user-name">
+            {{ formattedName }}
+          </span>
+          <span 
+            class="user-status-text" 
+            :class="isOnline ? 'online' : 'offline'"
+          >
+            {{ isOnline ? 'online' : 'offline' }}
+          </span>
+        </div>
+        <div class="avatar-wrapper">
+          <img 
+            v-if="formattedName"
+            :src="`https://api.dicebear.com/7.x/initials/svg?seed=${formattedName}&backgroundColor=818cf8`" 
+            alt="Avatar" 
+            class="user-avatar" 
+          />
+          <div 
+            class="online-indicator" 
+            :class="{ 'is-online': isOnline }"
+          ></div>
+        </div>
       </div>
     </div>
-  </div>
+  </ClientOnly>
 </template>
 
 <script setup lang="ts">

@@ -279,13 +279,13 @@ watch(() => isOpen.value, (val: boolean) => {
 });
 
 async function fetchProfissionalId() {
-  if (!user.value) return;
+  if (!user.value?.id) return;
   try {
     const { data: profile } = await supabase
       .from('ag_profiles')
       .select('id')
       .eq('user_id', user.value.id)
-      .single();
+      .maybeSingle();
     
     if (profile) {
       const { data: profissional } = await (supabase.from('ag_profissionais') as any)

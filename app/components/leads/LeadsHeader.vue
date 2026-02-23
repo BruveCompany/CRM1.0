@@ -2,6 +2,17 @@
   <header class="page-header">
     <!-- Esquerda: Controles de Vista e Add Lead -->
     <div class="header-left-group">
+      <!-- BOTÃO DE CONFIGURAÇÃO (Apenas Ícone) -->
+      <button 
+        v-if="isAdmin && showKanbanView"
+        @click="isEditingStatuses = !isEditingStatuses"
+        class="admin-config-gear-btn"
+        :class="{ 'is-active': isEditingStatuses }"
+        title="Configurar Status"
+      >
+        <Icon :name="isEditingStatuses ? 'lucide:check-circle' : 'lucide:settings'" />
+      </button>
+
       <div class="view-toggle-group">
         <button class="view-toggle-btn" @click="showKanbanView = true" :class="{ 'active': showKanbanView }">
             <Icon name="lucide:columns-3" class="btn-icon" />
@@ -12,48 +23,61 @@
             <span>Lista</span>
         </button>
       </div>
+
+      <!-- Botão Novo Status (Só aparece em edição) -->
+      <button 
+        v-if="isAdmin && showKanbanView && isEditingStatuses"
+        @click="handleAddNewStatus"
+        class="admin-add-btn-header"
+      >
+        <Icon name="lucide:plus-circle" />
+        <span>Novo Status</span>
+      </button>
+
       <button class="btn-add-lead" @click="showAddLeadModal = true">+ Criar Lead</button>
     </div>
 
     <!-- Centro: Filtros e Barra de Pesquisa -->
     <div class="header-center-group">
-      <div class="filters-container">
-        <!-- Filtro Vendedor -->
-        <div class="filter-item">
-          <select 
-            v-model="selectedVendedorId" 
-            class="filter-select"
-            :disabled="showMyLeads"
-          >
-            <option :value="null">Todos os Vendedores</option>
-            <option v-for="v in vendedores" :key="v.id" :value="v.id">
-              {{ v.nome }}
-            </option>
-          </select>
-        </div>
+      <ClientOnly>
+        <div class="filters-container">
+          <!-- Filtro Vendedor -->
+          <div class="filter-item">
+            <select 
+              v-model="selectedVendedorId" 
+              class="filter-select"
+              :disabled="showMyLeads"
+            >
+              <option :value="null">Todos os Vendedores</option>
+              <option v-for="v in vendedores" :key="v.id" :value="v.id">
+                {{ v.nome }}
+              </option>
+            </select>
+          </div>
 
-        <!-- Filtro Meus Leads -->
-        <div class="filter-item">
-          <button 
-            @click="showMyLeads = !showMyLeads" 
-            class="my-leads-btn"
-            :class="{ 'active': showMyLeads }"
-          >
-            <Icon :name="showMyLeads ? 'lucide:user-check' : 'lucide:users'" class="btn-icon" />
-            <span>Meus Leads</span>
-          </button>
-        </div>
+          <!-- Filtro Meus Leads -->
+          <div class="filter-item">
+            <button 
+              @click="showMyLeads = !showMyLeads" 
+              class="my-leads-btn"
+              :class="{ 'active': showMyLeads }"
+            >
+              <Icon :name="showMyLeads ? 'lucide:user-check' : 'lucide:users'" class="btn-icon" />
+              <span>Meus Leads</span>
+            </button>
+          </div>
 
-        <div class="search-container">
-          <Icon name="lucide:search" class="search-icon" />
-          <input 
-            v-model="searchQuery" 
-            type="text" 
-            placeholder="Pesquisar leads..." 
-            class="search-input"
-          />
+          <div class="search-container">
+            <Icon name="lucide:search" class="search-icon" />
+            <input 
+              v-model="searchQuery" 
+              type="text" 
+              placeholder="Pesquisar leads..." 
+              class="search-input"
+            />
+          </div>
         </div>
-      </div>
+      </ClientOnly>
     </div>
 
     <!-- Direita: Perfil do Vendedor e Status -->
@@ -63,6 +87,12 @@
 
     <!-- Modal de Criação de Lead -->
     <LeadFormModal v-model="showAddLeadModal" />
+
+    <!-- NOVO: Modal de Criação de Status -->
+    <LeadsStatusCreateModal 
+      v-model="showCreateStatusModal" 
+      @create="onConfirmCreateStatus"
+    />
   </header>
 </template>
 
@@ -70,6 +100,7 @@
 import { ref, onMounted, watch } from 'vue';
 import { useLeads } from '~/composables/useLeads';
 import LeadFormModal from './LeadFormModal.vue';
+import LeadsStatusCreateModal from './LeadsStatusCreateModal.vue';
 
 const { 
   showKanbanView, 
@@ -78,14 +109,45 @@ const {
   selectedVendedorId, 
   showMyLeads,
   fetchLeads,
-  fetchVendedores
+  fetchStatuses,
+  fetchVendedores,
+  isEditingStatuses,
+  addStatus
 } = useLeads();
 
+const { profile, checkIsAdmin } = useAuth();
+const isAdmin = ref(false);
 const showAddLeadModal = ref(false);
+const showCreateStatusModal = ref(false);
 
-onMounted(() => {
+const toast = useState('leads-local-toast', () => ({
+  show: false,
+  message: '',
+  type: 'success' as 'success' | 'error'
+}));
+
+const showLocalToast = (message: string, type: 'success' | 'error' = 'success') => {
+  toast.value = { show: true, message, type };
+  setTimeout(() => { toast.value.show = false; }, 4000);
+};
+
+onMounted(async () => {
+  isAdmin.value = await checkIsAdmin();
   fetchVendedores();
 });
+
+const handleAddNewStatus = () => {
+  showCreateStatusModal.value = true;
+};
+
+const onConfirmCreateStatus = async (statusData: any) => {
+  const { error } = await addStatus(statusData);
+  if (error) showLocalToast('Erro ao criar status: ' + error.message, 'error');
+  else {
+    await fetchStatuses();
+    showLocalToast('Novo status criado!', 'success');
+  }
+};
 
 // Atualiza a lista quando os filtros mudam
 watch([selectedVendedorId, showMyLeads], () => {
@@ -240,6 +302,54 @@ watch(() => showMyLeads.value, (val) => {
 
 .btn-add-lead:hover {
   background-color: #e0e7ff;
+}
+
+/* --- Botões Admin no Header --- */
+.admin-config-gear-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  background: white;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.admin-config-gear-btn:hover {
+  background: #f8fafc;
+  color: #1e293b;
+}
+
+.admin-config-gear-btn.is-active {
+  background: #eef2ff;
+  color: #4f46e5;
+  border-color: #cbd5e1;
+}
+
+.admin-add-btn-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.75rem;
+  height: 34px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #4f46e5;
+  color: white;
+  border: none;
+}
+
+.admin-add-btn-header:hover {
+  background: #4338ca;
+  transform: translateY(-1px);
 }
 
 /* --- Header Search --- */

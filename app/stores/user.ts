@@ -6,7 +6,7 @@ import type { Database } from '../../shared/types/database'
 export const useUserStore = defineStore('user', () => {
   const supabase = useSupabaseClient<Database>()
   const supabaseUser = useSupabaseUser()
-  
+
   // State
   const profile = ref<AgProfile | null>(null)
   const loading = ref(false)
@@ -32,11 +32,17 @@ export const useUserStore = defineStore('user', () => {
     error.value = null
 
     try {
-      console.log('user_id buscado:', supabaseUser.value.id)
+      const targetId = supabaseUser.value.sub || supabaseUser.value.id
+      console.log('user_id buscado:', targetId)
+
+      if (!targetId) {
+        throw new Error('ID do usuário não localizado no objeto de autenticação')
+      }
+
       const { data, error: fetchError } = await supabase
         .from('ag_profiles')
         .select('*')
-        .eq('user_id', supabaseUser.value.sub)
+        .eq('user_id', targetId)
         .single()
       console.log('Resultado da busca:', { data, fetchError })
       if (fetchError) throw fetchError
@@ -67,7 +73,11 @@ export const useUserStore = defineStore('user', () => {
       }
     }
 
-    try{
+    try {
+      if (!supabaseUser.value.id) {
+        throw new Error('ID do usuário não localizado para atualização')
+      }
+
       const { data, error: updateError } = await supabase
         .from('ag_profiles')
         // @ts-expect-error - Supabase type inference issue
@@ -100,13 +110,13 @@ export const useUserStore = defineStore('user', () => {
     profile,
     loading,
     error,
-    
+
     // Getters
     user,
     isAuthenticated,
     userName,
     userRole,
-    
+
     // Actions
     fetchProfile,
     updateProfile,

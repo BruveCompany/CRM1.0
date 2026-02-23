@@ -81,3 +81,9 @@ CREATE POLICY "Admins podem ver todos os perfis"
 ON public.ag_profiles 
 FOR SELECT 
 USING (public.ag_isadmin());
+
+-- ADICIONAR COLUNAS DE DESIGN AOS STATUS
+ALTER TABLE public.ag_lead_statuses ADD COLUMN IF NOT EXISTS status_icon TEXT;
+ALTER TABLE public.ag_lead_statuses ADD COLUMN IF NOT EXISTS font_family TEXT DEFAULT 'font-sans';
+ALTER TABLE public.ag_lead_statuses ADD COLUMN IF NOT EXISTS font_size TEXT DEFAULT 'text-lg';
+ALTER TABLE public.ag_lead_statuses ADD COLUMN IF NOT EXISTS font_weight TEXT DEFAULT 'font-bold';

@@ -42,7 +42,10 @@
               </div>
             </td>
             <td style="width: 110px;" :title="lead.ultima_mensagem_data ? formatRelativeTime(lead.ultima_mensagem_data) : 'N/A'">
-              {{ lead.ultima_mensagem_data ? formatRelativeTime(lead.ultima_mensagem_data) : 'N/A' }}
+              <ClientOnly>
+                {{ lead.ultima_mensagem_data ? formatRelativeTime(lead.ultima_mensagem_data) : 'N/A' }}
+                <template #placeholder>---</template>
+              </ClientOnly>
             </td>
             <td style="width: 100px; text-align: center;" :title="String(lead.mensagens_nao_lidas || '0')">
               <span v-if="lead.mensagens_nao_lidas > 0" class="unread-count-table">

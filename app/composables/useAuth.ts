@@ -17,14 +17,26 @@ export const useAuth = () => {
       const userId = user.value.id
       const userSub = (user.value as any).sub
 
+      if (!userId && !userSub) {
+        console.warn('⚠️ userId e userSub são indefinidos, abortando busca de perfil.')
+        return
+      }
+
       console.log('🔄 Iniciando busca de perfil:', { id: userId, sub: userSub })
 
       // Tenta pelo ID primeiro
-      let { data, error } = await (supabase
-        .from('ag_profiles') as any)
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle()
+      let data: any = null
+      let error: any = null
+
+      if (userId) {
+        const { data: idData, error: idError } = await (supabase
+          .from('ag_profiles') as any)
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle()
+        data = idData
+        error = idError
+      }
 
       // Se não achar pelo ID e o SUB for diferente, tenta pelo SUB
       if (!data && userSub && userSub !== userId) {
@@ -101,14 +113,16 @@ export const useAuth = () => {
       }
 
       if (data.user) {
+        if (!data.user.id) return { success: true, user: data.user }
+
         // Atualiza status para Online
-        const { data: profile } = await (supabase
+        const { data: pData } = await (supabase
           .from('ag_profiles') as any)
           .select('id')
           .eq('user_id', data.user.id)
-          .single();
+          .maybeSingle();
 
-        if (profile) {
+        if (pData) {
           await (supabase
             .from('ag_profiles') as any)
             .update({
@@ -116,7 +130,7 @@ export const useAuth = () => {
               last_login: new Date().toISOString(),
               last_activity: new Date().toISOString()
             })
-            .eq('id', (profile as any).id);
+            .eq('id', (pData as any).id);
         }
 
         await fetchProfile() // Carrega o perfil completo
@@ -135,21 +149,21 @@ export const useAuth = () => {
 
   const logout = async () => {
     try {
-      if (user.value) {
-        const { data: profile } = await (supabase
+      if (user.value && user.value.id) {
+        const { data: pData } = await (supabase
           .from('ag_profiles') as any)
           .select('id')
           .eq('user_id', user.value.id)
-          .single();
+          .maybeSingle();
 
-        if (profile) {
+        if (pData) {
           await (supabase
             .from('ag_profiles') as any)
             .update({
               is_online: false,
               last_logout: new Date().toISOString()
             })
-            .eq('id', (profile as any).id);
+            .eq('id', (pData as any).id);
         }
       }
 
@@ -308,7 +322,7 @@ export const useAuth = () => {
       // Busca o perfil para garantir que temos o ID correto para atualizar
       let currentProfile = profile.value
 
-      if (!currentProfile) {
+      if (!currentProfile && user.value?.id) {
         const { data: pData } = await (supabase
           .from('ag_profiles') as any)
           .select('id, user_id, is_online')
@@ -384,3 +398,4 @@ export const useAuth = () => {
     updateHeartbeat
   }
 }
+
