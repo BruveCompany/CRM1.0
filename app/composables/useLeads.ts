@@ -1,3 +1,7 @@
+/**
+ * Composable useLeads
+ * Gerencia o estado global, busca e processamento de dados relacionados aos Leads.
+ */
 import { ref, computed } from 'vue'
 
 export interface LeadTask {
@@ -35,7 +39,11 @@ export const useLeads = () => {
     const allLeads = useState<any[]>('leads-all-data', () => [])
     const searchQuery = useState<string>('leads-search-query', () => '')
     const showKanbanView = useState<boolean>('leads-view-mode-toggle', () => true)
+
+    // Armazena IDs de leads sendo movidos para atualização otimista na interface
     const pendingStatusUpdates = ref<Record<string, string>>({})
+
+    // Estados reativos para modais e filtros
     const selectedLeadId = useState<string | null>('selected-lead-id', () => null)
     const showDetailsModal = useState<boolean>('show-details-modal', () => false)
     const vendedores = useState<any[]>('leads-vendedores', () => [])
@@ -150,6 +158,11 @@ export const useLeads = () => {
                 }
             }
 
+            /**
+             * LÓGICA DE NORMALIZAÇÃO DO NOME DO VENDEDOR
+             * Tenta obter o nome por diversas chaves possíveis vindas da View.
+             * Aplica filtro para remover preposições e manter Nome + Sobrenome.
+             */
             const rawNomeVendedor = lead.vendedor_nome ||
                 lead.vendedor_nome_display ||
                 lead.nome_vendedor ||
@@ -157,10 +170,7 @@ export const useLeads = () => {
                 lead.vendedor ||
                 'Não Atribuído';
 
-            // Lista de preposições para ignorar
             const preposicoes = ['de', 'da', 'do', 'das', 'dos', 'e'];
-
-            // Filtra o nome ignorando as preposições
             const allParts = rawNomeVendedor.trim().split(/\s+/);
             const filteredParts = allParts.filter((part: string) => !preposicoes.includes(part.toLowerCase()));
 

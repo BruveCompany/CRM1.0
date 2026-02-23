@@ -1,3 +1,7 @@
+<!--
+  Componente Sidebar (Barra Lateral de Navegação)
+  Gerencia os links principais do sistema, controle de acesso por nível de usuário e recolhimento da barra.
+-->
 <template>
   <aside :class="['bg-white border-r border-gray-100 flex flex-col h-screen transition-all duration-300 relative', isCollapsed ? 'w-20' : 'w-64']">
     <!-- Toggle Button Overlay -->
@@ -68,12 +72,14 @@ const user = useSupabaseUser()
 const { logout } = useAuth()
 const userStore = useUserStore()
 
-onMounted(() => {
-  userStore.fetchProfile()
-})
-
+// Estado de recolhimento da sidebar
 const isCollapsed = ref(false)
 
+/**
+ * Itens de Navegação Dinâmicos
+ * Define a ordem e os ícones dos links na sidebar.
+ * Adiciona o link 'Admin' apenas para usuários com role 'admin'.
+ */
 const navItems = computed(() => {
   const items = [
     { label: 'Dashboard', to: '/', icon: HomeIcon },

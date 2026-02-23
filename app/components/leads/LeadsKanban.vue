@@ -1,3 +1,7 @@
+<!--
+  Componente de Quadro Kanban para Leads
+  Permite a visualização organizada por colunas e o movimento de cards via Drag and Drop.
+-->
 <template>
   <div class="kanban-board-wrapper">
     <div class="kanban-board" ref="board">
@@ -40,6 +44,9 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * LÓGICA DO QUADRO KANBAN
+ */
 import { useLeads } from '~/composables/useLeads';
 import KanbanCard from './KanbanCard.vue';
 
@@ -68,6 +75,10 @@ const onDragStartCard = (event: DragEvent, taskId: string) => {
   }
 };
 
+/**
+ * LÓGICA DE DROP (SOLTAR O CARD)
+ * Gerencia a atualização de status no banco de dados com suporte a atualização otimista.
+ */
 const onDropCard = async (event: DragEvent, newStatus: string) => {
   const taskId = event.dataTransfer?.getData('taskId');
   if (!taskId) return;

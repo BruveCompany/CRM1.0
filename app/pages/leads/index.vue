@@ -1,3 +1,7 @@
+<!--
+  Página Principal de Leads
+  Gerencia a visualização em Kanban ou Tabela, além de centralizar as notificações locais.
+-->
 <template>
   <NuxtLayout>
     <div class="page-container">
@@ -29,6 +33,9 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * Importações e Configurações da Página
+ */
 import { useLeads } from '~/composables/useLeads';
 
 definePageMeta({
@@ -37,7 +44,11 @@ definePageMeta({
 
 const { showKanbanView, fetchLeads } = useLeads();
 
-// TOAST LOCAL (Como estava no original)
+/**
+ * ESTADO DO TOAST LOCAL
+ * Utilizado para notificações rápidas dentro desta página (ex: ao mover leads no Kanban).
+ * Definido como useState para ser acessível por componentes filhos via chave string.
+ */
 const toast = useState('leads-local-toast', () => ({
   show: false,
   message: '',
@@ -80,8 +91,8 @@ onMounted(() => {
   border: 1px solid #f1f5f9;
 }
 
-.toast-notification.success { border-left: 5px solid #10b981; }
-.toast-notification.error { border-left: 5px solid #ef4444; }
+.toast-notification.success { border-left: 3px solid #10b981; }
+.toast-notification.error { border-left: 3px solid #ef4444; }
 
 .toast-content {
   padding: 14px 18px;
@@ -103,7 +114,7 @@ onMounted(() => {
 .toast-notification.error .toast-icon { color: #ef4444; }
 
 .toast-progress {
-  height: 3px;
+  height: 2px;
   width: 100%;
   background: #f1f5f9;
   position: relative;

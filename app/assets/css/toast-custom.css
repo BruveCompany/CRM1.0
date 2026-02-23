@@ -1,3 +1,9 @@
+/**
+ * CUSTOMIZAÇÃO PREMIUM DE NOTIFICAÇÕES (vue-toastification)
+ * 
+ * Este arquivo define o visual "minimalista e profissional" das notificações globais.
+ * Padrão atual: Borda lateral de 3px e barra de progresso de 2px.
+ */
 /* Customização Premium das notificações (vue-toastification) */
 
 .Vue-Toastification__toast {
@@ -21,7 +27,7 @@
 
 /* Estilo para Sucesso */
 .Vue-Toastification__toast--success {
-  border-left: 5px solid #10b981 !important;
+  border-left: 3px solid #10b981 !important;
 }
 
 .Vue-Toastification__toast--success .Vue-Toastification__icon {
@@ -30,13 +36,13 @@
 
 .Vue-Toastification__progress-bar--success {
   background-color: #10b981 !important;
-  height: 3px !important;
+  height: 2px !important;
   bottom: 0 !important;
 }
 
 /* Estilo para Erro */
 .Vue-Toastification__toast--error {
-  border-left: 5px solid #ef4444 !important;
+  border-left: 3px solid #ef4444 !important;
 }
 
 .Vue-Toastification__toast--error .Vue-Toastification__icon {
@@ -45,14 +51,14 @@
 
 .Vue-Toastification__progress-bar--error {
   background-color: #ef4444 !important;
-  height: 3px !important;
+  height: 2px !important;
   bottom: 0 !important;
 }
 
 /* Info e Warning (seguindo o padrão de sucesso com tons diferentes se necessário) */
-.Vue-Toastification__toast--info, 
+.Vue-Toastification__toast--info,
 .Vue-Toastification__toast--warning {
-  border-left: 5px solid #3b82f6 !important;
+  border-left: 3px solid #3b82f6 !important;
 }
 
 .Vue-Toastification__toast--info .Vue-Toastification__icon,

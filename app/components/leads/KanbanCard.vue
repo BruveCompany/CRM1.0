@@ -1,3 +1,7 @@
+<!--
+  Card Individual do Kanban
+  Exibe informações resumidas do Lead, indicadores de temperatura e ações rápidas.
+-->
 <template>
   <div 
     class="kanban-card" 
@@ -135,6 +139,9 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * LÓGICA DO CARD DE LEAD
+ */
 import { ref, computed, onMounted } from 'vue';
 import { useLeads } from '~/composables/useLeads';
 import type { LeadTask } from '~/composables/useLeads';
@@ -159,7 +166,10 @@ onMounted(async () => {
   isAdmin.value = await checkIsAdmin();
 });
 
+// Cálculo de Temperatura Quente (Lead com score alto)
 const isHot = computed(() => (props.task.score || 0) > 50);
+
+// Cálculo de Temperatura Fria (Lead sem atividade por mais de 7 dias)
 const isCold = computed(() => {
   // Evita erro de hidratação calculando apenas no cliente ou garantindo consistência
   if (!props.task.ultima_mensagem_data || import.meta.server) return false;
@@ -174,6 +184,10 @@ const openReassignModal = () => {
   showReassignModal.value = true;
 };
 
+/**
+ * ATRIBUIR A MIM
+ * Associa o lead ao corretor/vendedor atualmente logado.
+ */
 const assignToMe = async () => {
   showActionsMenu.value = false;
   console.log("--> INICIANDO ATRIBUIR A MIM PARA LEAD ID:", props.task.id, "<--");
