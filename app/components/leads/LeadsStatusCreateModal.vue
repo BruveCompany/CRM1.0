@@ -183,7 +183,7 @@ const newStatus = ref({
   color_text: '#1e293b',
   font_family: 'font-sans',
   font_size: 'text-lg',
-  font_weight: 'font-bold'
+  font_weight: 'font-normal'
 });
 
 const availableIcons = [
@@ -212,7 +212,7 @@ watch(() => props.modelValue, (isOpen) => {
       color_text: '#1e293b',
       font_family: 'font-sans',
       font_size: 'text-lg',
-      font_weight: 'font-bold'
+      font_weight: 'font-normal'
     };
     setTimeout(() => nameInput.value?.focus(), 100);
   }
@@ -242,8 +242,8 @@ const handleCreate = async () => {
 .header-icon-badge.create { background: #f0fdf4; color: #10b981; }
 
 .header-texts { display: flex; flex-direction: column; }
-.modal-title { font-size: 1.1rem; font-weight: 800; color: #1e293b; margin: 0; }
-.modal-subtitle { font-size: 0.75rem; color: #64748b; margin: 0; }
+.modal-title { font-size: 1.1rem; font-weight: 700; color: #1e293b; margin: 0; }
+.modal-subtitle { font-size: 0.75rem; color: #64748b; margin: 0; opacity: 0.8; }
 
 .status-config-container {
   display: grid;
@@ -253,8 +253,8 @@ const handleCreate = async () => {
 }
 
 .group-label {
-  display: block; font-size: 0.7rem; font-weight: 800; color: #64748b;
-  text-transform: uppercase; letter-spacing: 0.02em; margin-bottom: 0.4rem;
+  display: block; font-size: 0.7rem; font-weight: 600; color: #64748b;
+  text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 0.4rem;
 }
 
 .icon-grid {
@@ -274,14 +274,14 @@ const handleCreate = async () => {
 .info-alert {
   margin-top: 1rem; padding: 0.75rem; background: #eff6ff;
   border-radius: 10px; color: #1e40af; font-size: 0.75rem;
-  display: flex; align-items: center; gap: 0.5rem; font-weight: 600;
+  display: flex; align-items: center; gap: 0.5rem; font-weight: 500;
 }
 
 .preview-box {
   background: #f1f5f9; padding: 0.6rem 0.8rem; border-radius: 12px;
   border: 1px dashed #cbd5e1; margin-bottom: 0.75rem;
 }
-.small-label { font-size: 0.65rem; font-weight: 800; color: #64748b; display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.5rem; text-transform: uppercase; }
+.small-label { font-size: 0.65rem; font-weight: 600; color: #64748b; display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.5rem; text-transform: uppercase; }
 
 .preview-render {
   background: white; padding: 0 0.75rem; height: 42px; border-radius: 8px;
@@ -289,7 +289,7 @@ const handleCreate = async () => {
 }
 .mini-icon-circle { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
 .mini-title { font-size: 0.85rem; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; }
-.mini-badge { font-size: 8px; font-weight: 800; padding: 1px 5px; border-radius: 8px; }
+.mini-badge { font-size: 8px; font-weight: 700; padding: 1px 5px; border-radius: 8px; }
 
 .color-presets-unified { margin-bottom: 0.5rem; }
 .presets-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.25rem; }
@@ -310,7 +310,7 @@ const handleCreate = async () => {
 .custom-color-wrapper { position: relative; }
 
 .typo-box-compact { background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.4rem; display: flex; flex-direction: column; gap: 0.4rem; }
-.mini-select { width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid #f1f5f9; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+.mini-select { width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid #f1f5f9; font-size: 0.8rem; font-weight: 500; cursor: pointer; }
 .font-actions { display: grid; grid-template-columns: 1fr 50px; gap: 0.4rem; }
 .mini-btn-bold {
   height: 32px; border-radius: 6px; border: 1px solid #e2e8f0;
@@ -321,14 +321,14 @@ const handleCreate = async () => {
 
 .prime-input {
   width: 100%; padding: 0.7rem 0.8rem 0.7rem 2.4rem; border-radius: 10px;
-  border: 1.5px solid #e2e8f0; font-size: 0.9rem; font-weight: 600; color: #1e293b;
+  border: 1.5px solid #e2e8f0; font-size: 0.9rem; font-weight: 500; color: #1e293b;
 }
 .input-with-icon { position: relative; display: flex; align-items: center; }
 .field-icon { position: absolute; left: 0.8rem; color: #94a3b8; font-size: 0.9rem; }
 
 .modal-footer-actions { display: flex; justify-content: flex-end; gap: 0.75rem; width: 100%; }
-.btn-cancel { padding: 0.7rem 1.25rem; border-radius: 10px; font-weight: 700; color: #64748b; background: #f1f5f9; border: none; cursor: pointer; font-size: 0.85rem; }
-.btn-save.create { padding: 0.7rem 1.5rem; border-radius: 10px; font-weight: 800; color: white; background: #10b981; border: none; display: flex; align-items: center; gap: 0.6rem; cursor: pointer; font-size: 0.85rem; }
+.btn-cancel { padding: 0.7rem 1.25rem; border-radius: 10px; font-weight: 600; color: #64748b; background: #f1f5f9; border: none; cursor: pointer; font-size: 0.85rem; }
+.btn-save.create { padding: 0.7rem 1.5rem; border-radius: 10px; font-weight: 700; color: white; background: #10b981; border: none; display: flex; align-items: center; gap: 0.6rem; cursor: pointer; font-size: 0.85rem; }
 .btn-save.create:hover { background: #059669; transform: translateY(-1px); }
 .btn-save.create:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 </style>

@@ -96,94 +96,106 @@
       </div>
       <p class="card-phone-number">{{ task.phone }}</p>
       
-      <div class="card-meta">
-        <div class="card-meta-left">
-          <div class="vendedor-avatar-wrapper">
-            <img 
-              v-if="task.vendedorNome && task.vendedorNome !== 'Não Atribuído'"
-              :src="`https://api.dicebear.com/7.x/initials/svg?seed=${task.vendedorNome}&backgroundColor=818cf8`" 
-              alt="Avatar" 
-              class="vendedor-img" 
-            />
-            <div 
-              v-if="task.vendedorNome && task.vendedorNome !== 'Não Atribuído'"
-              class="vendedor-status-dot"
-              :class="{ 'is-online': task.vendedorOnline }"
-            ></div>
-            <div v-else class="vendedor-avatar-placeholder">
-              <span>??</span>
+      <!-- Módulo de Agendamento Moderno -->
+      <div 
+        v-if="task.nextAppointment" 
+        class="card-appointment-module" 
+        :class="{ 'is-late': isAppointmentLate }"
+        @click.stop="openAppointmentModalForView(task.id)"
+      >
+        <div class="appointment-accent" :style="{ backgroundColor: isAppointmentLate ? '#ef4444' : '#10b981' }"></div>
+        <div class="appointment-content">
+          <div class="appointment-header">
+            <Icon :name="isAppointmentLate ? 'lucide:calendar-clock' : 'lucide:calendar-days'" class="module-icon" />
+            <span class="appointment-time">{{ formatAppointmentDate(task.nextAppointment.appointment_date) }}</span>
+          </div>
+          <p class="appointment-task-title" :title="task.nextAppointment.titulo">
+            {{ task.nextAppointment.titulo || 'Contatar Lead' }}
+          </p>
+        </div>
+      </div>
+      
+      <!-- Footer do Card Enriquecido -->
+      <div class="card-footer-modern">
+        <div class="footer-left">
+          <div class="vendedor-compact">
+            <div class="avatar-mini-wrapper">
+              <img 
+                v-if="task.vendedorNome && task.vendedorNome !== 'Não Atribuído'"
+                :src="`https://api.dicebear.com/7.x/initials/svg?seed=${task.vendedorNome}&backgroundColor=818cf8`" 
+                alt="Avatar" 
+                class="avatar-mini" 
+              />
+              <div v-else class="avatar-placeholder-mini">
+                <span>{{ task.leadName.charAt(0).toUpperCase() }}</span>
+              </div>
+              <div 
+                v-if="task.vendedorNome && task.vendedorNome !== 'Não Atribuído'"
+                class="status-orbit"
+                :class="{ 'is-online': task.vendedorOnline }"
+              ></div>
+            </div>
+            <div class="vendedor-details">
+              <span class="corretor-label">{{ task.vendedorNome || 'Livre' }}</span>
+              <span v-if="task.vendedorOnline" class="online-indicator-text">Online agora</span>
             </div>
           </div>
-          <div class="vendedor-info">
-            <span class="vendedor-nome" :title="task.vendedorNome || 'Não Atribuído'">{{ task.vendedorNome || 'Não Atribuído' }}</span>
-            <span v-if="task.vendedorOnline" class="card-last-activity-small" style="color: #10b981; font-weight: 400; font-size: 0.65rem;">Online agora</span>
-            <span v-else-if="task.lastActivityText || task.vendedorLastSeenText" class="card-last-activity-small">
-              {{ task.lastActivityText || task.vendedorLastSeenText }}
-            </span>
-          </div>
         </div>
-        <div class="card-meta-right">
-          <div v-if="task.unreadMessages" class="card-unread-messages">
-            <span class="message-count">{{ task.unreadMessages }}</span>
+
+        <div class="footer-right">
+          <!-- Badges de Atividade -->
+          <div class="badges-row">
+            <div v-if="task.unreadMessages" class="badge-msg" title="Mensagens não lidas">
+              {{ task.unreadMessages }}
+            </div>
+            
+            <div 
+              v-if="task.appointmentsCount && task.appointmentsCount > 1" 
+              class="badge-count" 
+              title="Total de agendamentos"
+            >
+              <Icon name="lucide:layers" class="mini-icon" />
+              <span>{{ task.appointmentsCount }}</span>
+            </div>
           </div>
 
-          <!-- Indicador de Próximo Agendamento -->
-          <div 
-            v-if="task.nextAppointment" 
-            class="card-appointment-pill"
-            :class="appointmentClass"
-            :title="appointmentTooltip"
-            @click.stop="openAppointmentModalForView(task.id)"
-          >
-            <Icon 
-              :name="isAppointmentLate ? 'lucide:calendar-clock' : 'lucide:calendar-check'" 
-              class="pill-icon" 
-            />
-            <span v-if="task.nextAppointment" class="pill-date">
-              {{ formatAppointmentDate(task.nextAppointment.appointment_date) }}
-            </span>
-          </div>
-          <div v-else class="card-appointment-pill status-none" title="Nenhum agendamento futuro">
-            <Icon name="lucide:calendar-days" class="pill-icon" />
-          </div>
-
-          <div class="card-arrow-icon">
-            <Icon name="lucide:chevron-right" />
+          <div class="last-seen-text" v-if="!task.vendedorOnline">
+             {{ task.lastActivityText || task.vendedorLastSeenText || 'Sem atividade' }}
           </div>
         </div>
       </div>
-
-      <!-- Modal de Reatribuição (Movido para o final do card-content) -->
-      <BaseModal 
-        v-model="showReassignModal"
-      >
-        <template #header>
-          <h3 class="text-lg font-bold text-neutral-900">Reatribuir Lead</h3>
-        </template>
-
-        <div class="reassign-modal-content">
-          <p class="modal-subtitle">Selecione o novo vendedor para <strong>{{ task.leadName }}</strong>:</p>
-          
-          <div class="sellers-list-grid">
-            <button 
-              v-for="v in vendedores" 
-              :key="v.id" 
-              class="seller-selection-btn"
-              @click="reassignTo(v.id, v.nome)"
-            >
-              <div class="seller-btn-info">
-                <div class="seller-avatar-small" :style="{ backgroundColor: '#eef2ff', color: '#4f46e5' }">
-                  {{ getInitials(v.nome) }}
-                </div>
-                <span>{{ v.nome }}</span>
-              </div>
-              <Icon name="lucide:chevron-right" class="btn-arrow" />
-            </button>
-          </div>
-        </div>
-      </BaseModal>
     </div>
   </div>
+
+  <!-- Modal de Reatribuição (Movido para fora da div .kanban-card para evitar conflitos de transform/hover) -->
+  <BaseModal 
+    v-model="showReassignModal"
+  >
+    <template #header>
+      <h3 class="text-lg font-bold text-neutral-900">Reatribuir Lead</h3>
+    </template>
+
+    <div class="reassign-modal-content">
+      <p class="modal-subtitle">Selecione o novo vendedor para <strong>{{ task.leadName }}</strong>:</p>
+      
+      <div class="sellers-list-grid">
+        <button 
+          v-for="v in vendedores" 
+          :key="v.id" 
+          class="seller-selection-btn"
+          @click="reassignTo(v.id, v.nome)"
+        >
+          <div class="seller-btn-info">
+            <div class="seller-avatar-small" :style="{ backgroundColor: '#eef2ff', color: '#4f46e5' }">
+              {{ getInitials(v.nome) }}
+            </div>
+            <span class="seller-name-atrib">{{ v.nome }}</span>
+          </div>
+          <Icon name="lucide:chevron-right" class="btn-arrow" />
+        </button>
+      </div>
+    </div>
+  </BaseModal>
 </template>
 
 <script setup lang="ts">
@@ -401,19 +413,17 @@ const emit = defineEmits(['dragstart', 'open-appointment-new', 'open-appointment
 <style scoped>
 .kanban-card {
   background-color: #ffffff;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 0;
-  margin-bottom: 0; /* Removido: agora quem controla o espaçamento é o gap da lista */
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); /* Sombra ultra leve */
   cursor: grab;
-  transition: all 0.2s;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, border-color 0.2s ease;
   position: relative;
   display: flex;
   align-items: stretch;
-  border: 1px solid #e2e8f0;
-  min-height: 70px; /* Um pouco mais de espaço para as labels */
+  border: 1px solid #f1f5f9;
+  min-height: 70px; 
   flex-shrink: 0; 
-  overflow: visible;
   user-select: none;
 }
 
@@ -424,10 +434,11 @@ const emit = defineEmits(['dragstart', 'open-appointment-new', 'open-appointment
 
 .temperature-indicators {
   position: absolute;
-  top: 8px;
-  left: 8px;
+  top: 10px;
+  left: 10px;
   display: flex;
   gap: 4px;
+  z-index: 5;
 }
 
 .temp-icon {
@@ -472,9 +483,10 @@ const emit = defineEmits(['dragstart', 'open-appointment-new', 'open-appointment
 }
 
 .kanban-card:hover {
-  background-color: #fcfdfe;
+  background-color: #ffffff;
   border-color: #cbd5e1;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
 }
 
 .quick-actions-trigger {
@@ -614,7 +626,13 @@ const emit = defineEmits(['dragstart', 'open-appointment-new', 'open-appointment
 .seller-selection-btn:hover {
   background: #f1f5f9;
   border-color: #cbd5e1;
-  transform: translateX(4px);
+}
+
+.seller-name-atrib {
+  font-weight: 500; /* Suavizado conforme solicitado anteriormente */
+  color: #1e293b;
+  font-size: 0.9rem;
+  text-align: left;
 }
 
 .seller-btn-info {
@@ -634,11 +652,7 @@ const emit = defineEmits(['dragstart', 'open-appointment-new', 'open-appointment
   font-weight: 700;
 }
 
-.seller-selection-btn span {
-  font-weight: 600;
-  color: #1e293b;
-  font-size: 0.9rem;
-}
+
 
 .btn-arrow {
   width: 1.1rem;
@@ -658,12 +672,12 @@ const emit = defineEmits(['dragstart', 'open-appointment-new', 'open-appointment
 .card-header {
   display: flex;
   justify-content: space-between;
-  align-items: center; 
+  align-items: flex-start; 
   gap: 0.4rem;
   margin-bottom: 0.1rem;
-  padding-left: 48px; /* Aumentado de 28px para não encavalar com o score */
+  padding-left: 42px; 
   position: relative;
-  min-width: 0; /* Permite que o flex child encolha */
+  min-width: 0;
   width: 100%;
 }
 
@@ -675,163 +689,225 @@ const emit = defineEmits(['dragstart', 'open-appointment-new', 'open-appointment
 }
 
 .card-title {
-  font-weight: 600; /* Suavizado de 700 para 600 */
+  font-weight: 500; /* Suavizado de 600 para 500 */
   font-size: 0.9rem;
   color: #1e293b;
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: -0.01em;
   flex: 1;
-  min-width: 0; /* ESSENCIAL para o text-overflow: ellipsis funcionar em flex */
 }
 
 .card-phone-number {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #64748b;
+  margin: -2px 0 0 0;
+  padding-left: 42px;
+  opacity: 0.7;
+}
+
+/* MÓDULO DE AGENDAMENTO PREMIUM */
+.card-appointment-module {
+  margin: 0.4rem 0.25rem 0.25rem 0.25rem;
+  background-color: #f8fafc;
+  border-radius: 6px;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border: 1px solid #f1f5f9;
+}
+
+.card-appointment-module:hover {
+  background-color: #f1f5f9;
+}
+
+.appointment-accent {
+  width: 3px;
+  height: 100%;
+  flex-shrink: 0;
+}
+
+.appointment-content {
+  padding: 0.3rem 0.5rem;
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.appointment-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 2px;
+}
+
+.module-icon {
+  width: 12px;
+  height: 12px;
+  color: #64748b;
+}
+
+.appointment-time {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.appointment-task-title {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #334155;
   margin: 0;
-  padding-left: 48px; /* Alinhado com o título (Aumentado de 28px) */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.card-meta {
+.card-appointment-module.is-late {
+  background-color: #fff1f2;
+  border-color: #ffe4e6;
+}
+
+.card-appointment-module.is-late .appointment-time,
+.card-appointment-module.is-late .module-icon {
+  color: #e11d48;
+}
+
+/* FOOTER MODERNO */
+.card-footer-modern {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 0.25rem;
-  padding-top: 0.25rem;
-  border-top: 1px solid color-mix(in srgb, var(--column-color), transparent 92%);
+  padding: 0.35rem 0.4rem 0.35rem 0.4rem;
+  border-top: 1px solid #f8fafc;
+  margin-top: 0.1rem;
 }
 
-.card-meta-left {
+.vendedor-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.online-indicator-text {
+  font-size: 0.6rem;
+  color: #10b981;
+  font-weight: 400; /* Suavizado de 500 para 400 */
+  line-height: 1;
+  margin-top: 1px;
+}
+
+.vendedor-compact {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  flex: 1;
-  overflow: hidden;
+  gap: 0.4rem;
 }
 
-.vendedor-avatar-wrapper {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  flex-shrink: 0;
+.avatar-mini-wrapper {
   position: relative;
+  width: 20px;
+  height: 20px;
 }
 
-.vendedor-img {
+.avatar-mini {
   width: 100%;
   height: 100%;
   border-radius: 50%;
   object-fit: cover;
-  border: 1.5px solid white;
-  box-shadow: 0 0 0 1px #e2e8f0;
 }
 
-.vendedor-status-dot {
-  position: absolute;
-  bottom: -1px;
-  right: -1px;
-  width: 8px;
-  height: 8px;
+.avatar-placeholder-mini {
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  background-color: #94a3b8;
-  border: 1.5px solid white;
-  transition: all 0.3s;
-}
-
-.vendedor-status-dot.is-online {
-  background-color: #22c55e;
-  box-shadow: 0 0 0 1px #22c55e40;
-  animation: pulse-presence 2s infinite;
-}
-
-@keyframes pulse-presence {
-  0% { box-shadow: 0 0 0 0px rgba(34, 197, 94, 0.7); }
-  70% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
-  100% { box-shadow: 0 0 0 0px rgba(34, 197, 94, 0); }
-}
-
-.vendedor-avatar-placeholder {
-  width: 100%;
-  height: 100%;
+  background: #e2e8f0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f1f5f9;
-  color: #94a3b8;
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   font-weight: 700;
+  color: #64748b;
 }
 
-.vendedor-info {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+.status-orbit {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1.5px solid white;
+  background-color: #cbd5e1;
 }
 
-.vendedor-nome {
-  font-size: 0.75rem;
+.status-orbit.is-online {
+  background-color: #10b981;
+}
+
+.corretor-label {
+  font-size: 0.7rem;
   font-weight: 600;
-  color: #475569;
-  line-height: 1.2;
+  color: #64748b;
+  max-width: 80px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 120px;
 }
 
-.card-last-activity-small {
-  font-size: 0.7rem;
-  color: #94a3b8;
-}
-
-.card-meta-right {
+.footer-right {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
 }
 
-.card-unread-messages {
-  background-color: #dc2626;
-  color: white;
-  min-width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.7rem;
-  font-weight: 700;
-  padding: 0 4px;
-}
-
-.card-status-icon-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 1px solid transparent;
-  background-color: white;
-}
-
-/* --- Estilos do Pill de Agendamento --- */
-.card-appointment-pill {
+.badges-row {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 6px;
-  border-radius: 6px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  transition: all 0.2s;
-  cursor: pointer;
 }
 
+.badge-msg {
+  background-color: #ef4444;
+  color: white;
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 10px;
+  min-width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.badge-count {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background-color: #f1f5f9;
+  color: #64748b;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+}
+
+.mini-icon {
+  width: 10px;
+  height: 10px;
+}
+
+.last-seen-text {
+  font-size: 0.6rem;
+  color: #94a3b8;
+  font-weight: 400;
+}
 .card-appointment-pill.status-upcoming {
   background-color: #f0fdf4;
   color: #16a34a;
@@ -849,6 +925,71 @@ const emit = defineEmits(['dragstart', 'open-appointment-new', 'open-appointment
   color: #cbd5e1;
   background-color: #f8fafc;
   opacity: 0.6;
+}
+
+/* --- Nova Linha de Agendamento --- */
+.card-appointment-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  margin-bottom: 2px;
+  padding: 4px 8px;
+  background-color: #f0fdf4;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid #dcfce7;
+  transition: all 0.2s;
+}
+
+.card-appointment-line:hover {
+  background-color: #dcfce7;
+}
+
+.card-appointment-line.is-late {
+  background-color: #fff7ed;
+  border-color: #ffedd5;
+}
+
+.card-appointment-line.is-late:hover {
+  background-color: #ffedd5;
+}
+
+.line-icon {
+  width: 14px;
+  height: 14px;
+  color: #16a34a;
+}
+
+.is-late .line-icon {
+  color: #ea580c;
+}
+
+.line-text {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #166534;
+}
+
+.is-late .line-text {
+  color: #9a3412;
+}
+
+.late-label {
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 0.6rem;
+  margin-right: 2px;
+}
+
+.appointment-title {
+  display: inline-block;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+  font-weight: 700;
 }
 
 .pill-icon {

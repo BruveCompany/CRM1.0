@@ -276,8 +276,8 @@ const handleDeleteRequest = () => {
 }
 
 .header-texts { display: flex; flex-direction: column; }
-.modal-title { font-size: 1.1rem; font-weight: 800; color: #1e293b; margin: 0; }
-.modal-subtitle { font-size: 0.75rem; color: #64748b; margin: 0; }
+.modal-title { font-size: 1.1rem; font-weight: 700; color: #1e293b; margin: 0; }
+.modal-subtitle { font-size: 0.75rem; color: #64748b; margin: 0; opacity: 0.8; }
 
 .status-config-container {
   display: grid;
@@ -289,10 +289,10 @@ const handleDeleteRequest = () => {
 .group-label {
   display: block;
   font-size: 0.7rem;
-  font-weight: 800;
+  font-weight: 600;
   color: #64748b;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
   margin-bottom: 0.4rem;
 }
 
@@ -336,8 +336,8 @@ const handleDeleteRequest = () => {
   justify-content: space-between;
 }
 
-.danger-title { font-size: 0.8rem; font-weight: 800; color: #9f1239; margin: 0; }
-.danger-desc { font-size: 0.7rem; color: #be123c; margin: 0; opacity: 0.8; }
+.danger-title { font-size: 0.8rem; font-weight: 700; color: #9f1239; margin: 0; }
+.danger-desc { font-size: 0.7rem; color: #be123c; margin: 0; opacity: 0.7; }
 
 .btn-delete-minimal {
   width: 32px; height: 32px;
@@ -356,7 +356,7 @@ const handleDeleteRequest = () => {
   margin-bottom: 0.75rem;
 }
 
-.small-label { font-size: 0.65rem; font-weight: 800; color: #64748b; display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.5rem; text-transform: uppercase; }
+.small-label { font-size: 0.65rem; font-weight: 600; color: #64748b; display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.5rem; text-transform: uppercase; }
 
 .preview-render {
   background: white;
@@ -371,12 +371,12 @@ const handleDeleteRequest = () => {
 
 .mini-icon-circle { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
 .mini-title { font-size: 0.85rem; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; }
-.mini-badge { font-size: 8px; font-weight: 800; padding: 1px 5px; border-radius: 8px; }
+.mini-badge { font-size: 8px; font-weight: 700; padding: 1px 5px; border-radius: 8px; }
 
 .style-group { margin-bottom: 1rem; }
 
 .color-pick { flex: 1; display: flex; flex-direction: column; }
-.tiny-label { font-size: 0.7rem; color: #94a3b8; font-weight: 600; display: block; margin-bottom: 0.25rem; }
+.tiny-label { font-size: 0.7rem; color: #94a3b8; font-weight: 500; display: block; margin-bottom: 0.25rem; }
 
 .color-action-row {
   display: flex;
@@ -521,7 +521,7 @@ const handleDeleteRequest = () => {
 }
 
 .typo-box-compact { background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.4rem; display: flex; flex-direction: column; gap: 0.4rem; }
-.mini-select { width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid #f1f5f9; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+.mini-select { width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid #f1f5f9; font-size: 0.8rem; font-weight: 500; cursor: pointer; }
 .font-actions { display: grid; grid-template-columns: 1fr 50px; gap: 0.4rem; }
 
 .mini-btn-bold {
@@ -543,7 +543,7 @@ const handleDeleteRequest = () => {
   border-radius: 10px;
   border: 1.5px solid #e2e8f0;
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 500;
   color: #1e293b;
 }
 
@@ -552,6 +552,6 @@ const handleDeleteRequest = () => {
 
 /* FOOTER */
 .modal-footer-actions { display: flex; justify-content: flex-end; gap: 0.75rem; width: 100%; }
-.btn-cancel { padding: 0.7rem 1.25rem; border-radius: 10px; font-weight: 700; color: #64748b; background: #f1f5f9; border: none; cursor: pointer; font-size: 0.85rem; }
-.btn-save { padding: 0.7rem 1.5rem; border-radius: 10px; font-weight: 800; color: white; background: #4f46e5; border: none; display: flex; align-items: center; gap: 0.6rem; cursor: pointer; font-size: 0.85rem; }
+.btn-cancel { padding: 0.7rem 1.25rem; border-radius: 10px; font-weight: 600; color: #64748b; background: #f1f5f9; border: none; cursor: pointer; font-size: 0.85rem; }
+.btn-save { padding: 0.7rem 1.5rem; border-radius: 10px; font-weight: 700; color: white; background: #4f46e5; border: none; display: flex; align-items: center; gap: 0.6rem; cursor: pointer; font-size: 0.85rem; }
 </style>

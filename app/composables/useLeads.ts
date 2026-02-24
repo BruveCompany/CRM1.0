@@ -30,7 +30,10 @@ export interface LeadTask {
     nextAppointment?: {
         appointment_date: string;
         status: string;
+        titulo?: string;
     } | null;
+    appointmentsCount?: number;
+    cliente_id?: number | null;
 }
 
 export interface LeadStatus {
@@ -59,15 +62,15 @@ export const useLeads = () => {
     const showKanbanView = useState<boolean>('leads-view-mode-toggle', () => true)
 
     // Armazena IDs de leads sendo movidos para atualização otimista na interface
-    const pendingStatusUpdates = ref<Record<string, string>>({})
-    const appointmentsMap = ref<Record<string, any>>({})
+    const pendingStatusUpdates = useState<Record<string, string>>('leads-pending-updates', () => ({}))
+    const appointmentsMap = useState<Record<string, any>>('leads-appointments-map', () => ({}))
     // Estados reativos para modais e filtros
     const selectedLeadId = useState<string | null>('selected-lead-id', () => null)
     const showDetailsModal = useState<boolean>('show-details-modal', () => false)
     const vendedores = useState<any[]>('leads-vendedores', () => [])
     const selectedVendedorId = useState<string | null>('leads-selected-vendedor-id', () => null)
     const showMyLeads = useState<boolean>('leads-show-my-leads', () => false)
-    const isEditingStatuses = ref(false)
+    const isEditingStatuses = useState<boolean>('leads-is-editing-statuses', () => false)
 
     const openDetails = (id: string) => {
         selectedLeadId.value = id
@@ -133,49 +136,153 @@ export const useLeads = () => {
     }
 
     /**
-     * Busca o próximo agendamento futuro para todos os leads carregados
+     * Busca o próximo agendamento futuro para todos os leads carregados.
+     * Tenta vincular leads a clientes pelo telefone caso o cliente_id esteja ausente.
      */
     const fetchNextAppointments = async () => {
         if (allLeads.value.length === 0) return;
 
-        const leadsWithClients = allLeads.value.filter(l => l.cliente_id).map(l => l.cliente_id);
-        if (leadsWithClients.length === 0) return;
+        // 1. Preparar lista de telefones para busca de vínculos (Leads SEM cliente_id)
+        const leadsWithoutClient = (allLeads.value as LeadTask[]).filter(l => !l.cliente_id && (l.telefone || l.phone));
+        const phoneToLeadMap: Record<string, string[]> = {};
+        const phonesToSearch: string[] = [];
 
-        const now = new Date();
-        const todayStr = now.toISOString().split('T')[0];
+        leadsWithoutClient.forEach((l: LeadTask) => {
+            const rawPhone = String(l.telefone || l.phone || '').replace(/\D/g, '');
+            if (rawPhone.length >= 8) {
+                if (!phoneToLeadMap[rawPhone]) phoneToLeadMap[rawPhone] = [];
+                phoneToLeadMap[rawPhone].push(String(l.id));
+                // Adicionamos variações comuns de busca ilike para garantir
+                phonesToSearch.push(rawPhone);
+            }
+        });
 
-        // Busca agendamentos ativos dos clientes vinculados aos leads
+        // 2. Buscar vínculos faltantes na ag_clientes
+        const autoClientIds: Record<string, number> = {};
+        if (phonesToSearch.length > 0) {
+            console.log(`🔍 [fetchNextAppointments] Tentando vincular ${phonesToSearch.length} leads via telefone...`);
+
+            // Busca em blocos se necessário, mas aqui faremos direto (in)
+            // Nota: O ideal é que o telefone no ag_clientes também esteja limpo, 
+            // mas buscaremos de forma ampla se possível.
+            const { data: clients, error: cErr } = await supabase
+                .from('ag_clientes')
+                .select('id, telefone')
+                .or(phonesToSearch.map(p => `telefone.ilike.%${p}%`).join(','));
+
+            if (!cErr && clients) {
+                (clients as { id: number; telefone: string }[]).forEach(c => {
+                    const cleanCPhone = String(c.telefone || '').replace(/\D/g, '');
+                    // Se o telefone do cliente contém nossos dígitos ou vice-versa
+                    for (const leadPhone in phoneToLeadMap) {
+                        if (cleanCPhone.includes(leadPhone) || leadPhone.includes(cleanCPhone)) {
+                            const matchingLeadIds = phoneToLeadMap[leadPhone];
+                            if (matchingLeadIds) {
+                                matchingLeadIds.forEach(lid => {
+                                    autoClientIds[lid] = c.id;
+                                });
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // 3. Montar mapa final de LeadID -> ClienteID e lista de ClientIDs únicos
+        const leadToClientMapping: Record<string, number> = {};
+        const allTargetClientIds = new Set<number>();
+
+        allLeads.value.forEach(l => {
+            const lid = String(l.id);
+            const cid = l.cliente_id || autoClientIds[lid];
+            if (cid) {
+                leadToClientMapping[lid] = Number(cid);
+                allTargetClientIds.add(Number(cid));
+                // Atualiza localmente o lead para que futuras consultas saibam o vínculo
+                l.cliente_id = cid;
+            }
+        });
+
+        if (allTargetClientIds.size === 0) {
+            console.log('⚠️ [fetchNextAppointments] Nenhum lead com cliente_id encontrado.');
+            appointmentsMap.value = {};
+            return;
+        }
+
+        // 4. Buscar TODOS os agendamentos ativos dos clientes encontrados
         const { data, error } = await supabase
             .from('ag_agendamentos')
-            .select('cliente_id, data, hora_inicio')
-            .in('cliente_id', leadsWithClients)
+            .select('cliente_id, data, hora_inicio, titulo')
+            .in('cliente_id', Array.from(allTargetClientIds))
             .eq('cancelado', false)
-            .gte('data', todayStr)
             .order('data', { ascending: true })
             .order('hora_inicio', { ascending: true });
 
-        if (!error && data) {
-            const newMap: Record<string, any> = {};
-
-            // Mapeia cliente_id -> Lead ID
-            const clientToLeadMap: Record<string, string> = {};
-            allLeads.value.forEach(l => {
-                if (l.cliente_id) clientToLeadMap[String(l.cliente_id)] = String(l.id);
-            });
-
-            data.forEach((app: any) => {
-                const leadId = clientToLeadMap[String(app.cliente_id)];
-                if (leadId && !newMap[leadId]) {
-                    // Combina data e hora para o campo virtual appointment_date
-                    const fullDateStr = `${app.data}T${app.hora_inicio.split(/[-+]/)[0]}`;
-                    newMap[leadId] = {
-                        appointment_date: fullDateStr,
-                        status: 'active'
-                    };
-                }
-            });
-            appointmentsMap.value = newMap;
+        if (error) {
+            console.error('❌ [fetchNextAppointments] Erro:', error);
+            return;
         }
+
+        console.log(`📡 [fetchNextAppointments] ${data.length} agendamentos totais encontrados para ${allTargetClientIds.size} clientes.`);
+
+        const newMap: Record<string, any> = {};
+        const now = new Date();
+        const nowTs = now.getTime();
+
+        // Inverte o mapeamento: ClienteID -> Lista de LeadIDs
+        const clientToLeads: Record<number, string[]> = {};
+        for (const lid in leadToClientMapping) {
+            const cid = leadToClientMapping[lid];
+            if (cid !== undefined) {
+                if (!clientToLeads[cid]) clientToLeads[cid] = [];
+                clientToLeads[cid].push(lid);
+            }
+        }
+
+        data.forEach((app: any) => {
+            const leadsMatching = clientToLeads[app.cliente_id];
+            if (leadsMatching) {
+                leadsMatching.forEach(leadId => {
+                    if (!newMap[leadId]) {
+                        newMap[leadId] = { count: 0, next: null };
+                    }
+
+                    // Corrige parsing de data ISO removendo offset se necessário ou tratando UTC
+                    const appDate = `${app.data}T${app.hora_inicio.split(/[-+]/)[0]}`;
+                    const appObj = {
+                        appointment_date: appDate,
+                        status: 'active',
+                        titulo: app.titulo
+                    };
+
+                    newMap[leadId].count++;
+                    const appTs = new Date(appDate).getTime();
+
+                    // Lógica de seleção do "Próximo" ou "Atrasado"
+                    if (!newMap[leadId].next) {
+                        newMap[leadId].next = appObj;
+                    } else {
+                        const currTs = new Date(newMap[leadId].next.appointment_date).getTime();
+
+                        if (appTs >= nowTs) {
+                            // Se o novo é futuro e o atual era passado, o futuro ganha.
+                            // Se ambos são futuro, o mais próximo ganha.
+                            if (currTs < nowTs || appTs < currTs) {
+                                newMap[leadId].next = appObj;
+                            }
+                        } else {
+                            // Se ambos são passado, o mais recente ganha.
+                            if (currTs < nowTs && appTs > currTs) {
+                                newMap[leadId].next = appObj;
+                            }
+                        }
+                    }
+                });
+            }
+        });
+
+        console.log('✅ [fetchNextAppointments] Mapeamento concluído para', Object.keys(newMap).length, 'leads.');
+        appointmentsMap.value = newMap;
     }
 
     /**
@@ -197,8 +304,6 @@ export const useLeads = () => {
     const fetchLeads = async () => {
         // Sempre atualiza a lista de vendedores para garantir que o status online esteja fresco
         await fetchVendedores()
-        // Adiciona a busca de agendamentos após buscar leads
-        await fetchNextAppointments();
 
         // Voltamos para a busca simples para garantir que nenhum lead suma
         let query = supabase.from('view_leads_crm').select('*')
@@ -277,6 +382,8 @@ export const useLeads = () => {
                 vendedor_nome_full: rawNomeVendedor
             }
         })
+
+        await fetchNextAppointments();
     }
 
     // NOVO: Propriedade computada para enriquecer os leads com dados de UI e presença
@@ -363,7 +470,8 @@ export const useLeads = () => {
                 lastActivityText: formatRelativeTime(l.ultima_mensagem_data),
                 unreadMessages: (l.mensagens_nao_lidas || 0) > 0 ? l.mensagens_nao_lidas : undefined,
                 statusIcon: getStatusIcon(l.status, l.mensagens_nao_lidas || 0),
-                nextAppointment: appointmentsMap.value[String(l.id)] || null
+                nextAppointment: appointmentsMap.value[String(l.id)]?.next || null,
+                appointmentsCount: appointmentsMap.value[String(l.id)]?.count || 0
             } as LeadTask;
         });
     });
