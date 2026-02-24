@@ -49,7 +49,7 @@ import { useAgendamento } from '~/composables/useAgendamento'
  */
 export const useAgendamentoStore = defineStore('agendamento', () => {
   const { buscarAgendamentosPorProfissional } = useAgendamento()
-  
+
   /**
    * Estado: Data de referência para navegação
    * Inicializada com a data/hora atual
@@ -88,11 +88,11 @@ export const useAgendamentoStore = defineStore('agendamento', () => {
   const diasSemana = computed(() => {
     const ref = new Date(dataReferencia.value)
     const currentDay = ref.getDay() // 0 (Domingo) a 6 (Sábado)
-    
+
     // Calcular o domingo da semana atual (início da semana)
     const startOfWeek = new Date(ref)
     startOfWeek.setDate(ref.getDate() - currentDay)
-    
+
     // Criar array com os 7 dias da semana
     const days = []
     for (let i = 0; i < 7; i++) {
@@ -138,8 +138,9 @@ export const useAgendamentoStore = defineStore('agendamento', () => {
    * @param dataFim - Data fim no formato YYYY-MM-DD
    * @returns Chave única para indexação do cache
    */
-  function gerarChaveCache(profId: number, dataInicio: string, dataFim: string): string {
-    return `${profId}_${dataInicio}_${dataFim}`
+  function gerarChaveCache(profId: number | null, dataInicio: string, dataFim: string): string {
+    const idStr = profId ? String(profId) : 'todos'
+    return `${idStr}_${dataInicio}_${dataFim}`
   }
 
   /**
@@ -191,12 +192,9 @@ export const useAgendamentoStore = defineStore('agendamento', () => {
    * @returns Promise<void>
    */
   async function carregarAgendamentos() {
-    // Validação 1: Verificar se há profissional selecionado
-    if (!profissionalId.value) {
-      console.warn('⚠️ Store: Nenhum profissional selecionado')
-      agendamentos.value = []
-      return
-    }
+    // Validação 1: O profissionalId pode ser nulo (Visão "Todos")
+    // Se for nulo, o composable buscará de todos.
+    const idParaFiltro = profissionalId.value
 
     // Validação 2: Verificar se diasSemana está disponível (computed pode não estar pronto)
     if (!diasSemana.value[0] || !diasSemana.value[6]) {
@@ -225,7 +223,7 @@ export const useAgendamentoStore = defineStore('agendamento', () => {
     // Cache miss: buscar do servidor
     console.log('🌐 Store: Cache vazio. Buscando do servidor...')
     loading.value = true
-    
+
     try {
       // Busca dados do Supabase via composable (com filtros aplicados)
       const agendamentosBanco = await buscarAgendamentosPorProfissional(
@@ -233,15 +231,15 @@ export const useAgendamentoStore = defineStore('agendamento', () => {
         dataInicio,
         dataFim
       )
-      
+
       console.log('📦 Store: Dados recebidos do composable:', agendamentosBanco)
-      
+
       if (agendamentosBanco) {
         // Armazena dados brutos do banco diretamente (sem conversão)
         // Armazena no cache para reutilização futura (key-value store em memória)
         cacheAgendamentos.value[chaveCache] = agendamentosBanco
         agendamentos.value = agendamentosBanco
-        
+
         console.log('✅ Store: Agendamentos armazenados no cache:', agendamentosBanco.length)
         console.log('💾 Store: Total de entradas no cache:', Object.keys(cacheAgendamentos.value).length)
       } else {
@@ -287,7 +285,7 @@ export const useAgendamentoStore = defineStore('agendamento', () => {
     const resultado = agendamentos.value.filter((ag: AgAgendamento) => {
       return ag.data === dataStr
     })
-    
+
     return resultado
   }
 

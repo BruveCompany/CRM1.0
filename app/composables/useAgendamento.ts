@@ -30,6 +30,7 @@ export interface InserirAgendamentoDTO {
   titulo: string
   descricao?: string | null
   cor?: string | null
+  categoria: string
 }
 
 /**
@@ -45,7 +46,7 @@ export interface EditarAgendamentoDTO {
 export function useAgendamento() {
   // Cliente Supabase com tipagem completa do banco de dados
   const supabase = useSupabaseClient<Database>()
-  
+
   // Sistema de notificações toast (vue-toastification)
   const { notifyError, notifySuccess } = useNotification()
 
@@ -76,30 +77,29 @@ export function useAgendamento() {
    * ```
    */
   async function buscarAgendamentosPorProfissional(
-    profissionalId: number,
+    profissionalId: number | null,
     dataInicio: string,
     dataFim: string
   ): Promise<AgAgendamento[] | null> {
     try {
       // Logs para debug e monitoramento
       console.log('🔍 Buscando agendamentos:')
-      console.log('  📍 Profissional:', profissionalId)
+      console.log('  📍 Profissional:', profissionalId || 'TODOS')
       console.log('  📅 Período:', dataInicio, 'até', dataFim)
-      
-      // Query Supabase:
-      // SELECT * FROM ag_agendamentos
-      // WHERE profissional_id = X
-      //   AND cancelado = false
-      //   AND data >= 'dataInicio'
-      //   AND data <= 'dataFim'
-      // ORDER BY data ASC, hora_inicio ASC
-      const { data, error } = await supabase
+
+      let query = supabase
         .from('ag_agendamentos')
         .select('*')
-        .eq('profissional_id', profissionalId)  // Filtro: profissional específico
         .eq('cancelado', false)                  // Filtro: apenas ativos
         .gte('data', dataInicio)                 // Filtro: data >= início
         .lte('data', dataFim)                    // Filtro: data <= fim
+
+      // Filtro opcional: profissional específico
+      if (profissionalId) {
+        query = query.eq('profissional_id', profissionalId)
+      }
+
+      const { data, error } = await query
         .order('data', { ascending: true })      // Ordena por data (crescente)
         .order('hora_inicio', { ascending: true }) // Depois por horário (crescente)
 
@@ -120,7 +120,7 @@ export function useAgendamento() {
       // Sucesso: retorna dados
       console.log('✅ Agendamentos encontrados:', data?.length || 0)
       console.log('📊 Dados:', data)
-      
+
       return data as AgAgendamento[]
     } catch (err) {
       // Catch para erros inesperados (ex: network, timeout)
@@ -147,16 +147,20 @@ export function useAgendamento() {
     try {
       console.log('📝 Inserindo agendamento:', dados)
 
+      const { data: { user } } = await supabase.auth.getUser()
+
       const payload = {
-          profissional_id: dados.profissional_id,
-          cliente_id: dados.cliente_id,
-          data: dados.data,
-          hora_inicio: `${dados.hora_inicio}:00-03`,
-          hora_fim: `${dados.hora_fim}:00-03`,
-          titulo: dados.titulo,
-          descricao: dados.descricao || null,
-          cor: dados.cor || null
-        }
+        profissional_id: dados.profissional_id,
+        cliente_id: dados.cliente_id,
+        user_id: user?.id || null, // Fallback explícito
+        data: dados.data,
+        hora_inicio: `${dados.hora_inicio}:00-03`,
+        hora_fim: `${dados.hora_fim}:00-03`,
+        titulo: dados.titulo,
+        descricao: dados.descricao || null,
+        cor: dados.cor || null,
+        categoria: dados.categoria
+      }
 
       const { data, error } = await supabase
         .from('ag_agendamentos')
@@ -349,7 +353,7 @@ export function useAgendamento() {
 
       console.log('✅ Relatório de agendamentos encontrado:', resultado.length)
       console.log('📊 Dados:', resultado)
-      
+
       return resultado
     } catch (err) {
       console.error('❌ Erro inesperado ao buscar relatório:', err)

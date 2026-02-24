@@ -1,128 +1,148 @@
 <template>
-  <div id="profissional-atual" class="flex flex-col items-center justify-center gap-1">
+  <div id="profissional-atual" class="w-full flex justify-center">
     <!-- Estado: Carregando dados -->
-    <div v-if="loading" class="text-neutral-500 text-sm">
-      Carregando...
+    <div v-if="loading && (!profissionais || profissionais.length === 0)" class="p-2">
+      <div class="h-10 w-48 bg-neutral-200 rounded-full animate-pulse"></div>
     </div>
 
-    <!-- Estado: Profissional encontrado -->
-    <template v-else-if="profissionalAtual">
-      <!-- Nome do profissional (clicável para abrir modal) -->
+    <!-- Botão de Seleção (Sincronizado com Padrão do Modal) -->
+    <div v-else class="py-1">
       <button
         type="button"
-        class="flex items-center gap-1.5 text-lg font-bold text-neutral-900 hover:text-primary-700 transition-colors cursor-pointer"
+        class="flex items-center gap-2.5 pl-1 pr-4 py-1 rounded-full border border-primary-100 bg-primary-50 hover:bg-primary-100/50 transition-all group min-h-[46px] cursor-pointer"
         @click="modalAberto = true"
       >
-        {{ profissionalAtual.nome }}
-        <ChevronDownIcon class="w-4 h-4" />
+        <!-- Ícone Sem Fundo -->
+        <div 
+          class="w-9 h-9 flex items-center justify-center text-primary-600 flex-shrink-0 ml-0.5"
+        >
+          <UsersIcon class="w-5 h-5" />
+        </div>
+
+        <!-- Labels e Nome -->
+        <div class="text-left flex flex-col justify-center min-w-0">
+          <p class="text-[9px] text-primary-600 font-semibold uppercase tracking-widest leading-none mb-1">PROFISSIONAL</p>
+          <div class="flex items-center gap-1.5">
+            <span class="text-[13px] font-semibold text-primary-900 leading-none truncate max-w-[140px]">
+              {{ nomeExibicao }}
+            </span>
+            <ChevronDownIcon class="w-3 h-3 text-primary-400 group-hover:text-primary-600 transition-colors shrink-0" />
+          </div>
+        </div>
       </button>
-      <!-- Especialidade -->
-      <div class="text-sm text-neutral-600">
-        {{ profissionalAtual.especialidade }}
-      </div>
-    </template>
 
-    <!-- Estado: Nenhum profissional disponível -->
-    <div v-else class="text-neutral-500 text-sm">
-      Nenhum profissional encontrado
+      <!-- Modal de Seleção -->
+      <ModalSelecionarProfissional
+        v-model="modalAberto"
+        :profissionais="profissionais"
+        :profissional-atual-id="agendamentoStore.profissionalId"
+        @selecionar="handleSelecionar"
+      />
     </div>
-
-    <!-- Modal de seleção de profissional -->
-    <ModalSelecionarProfissional
-      v-model="modalAberto"
-      :profissionais="profissionais"
-      :profissional-atual-id="profissionalAtual?.profissional_id ?? null"
-      @selecionar="handleSelecionar"
-    />
   </div>
 </template>
 
 <script setup lang="ts">
-/**
- * ================= ProfissionalAtual.vue =================
- * Componente que exibe o profissional atual e permite trocar
- * via modal de seleção.
- * 
- * Lógica:
- * 1. Busca todos os profissionais cadastrados
- * 2. Inicializa com o profissional logado (ou primeiro da lista)
- * 3. Ao clicar, abre modal com lista de profissionais
- * 4. Ao selecionar, define o profissional no store de agendamentos
- * ========================================================
- */
-
-import { useProfissionais } from '~/composables/useProfissionais'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useUserStore } from '~/stores/user'
 import { useAgendamentoStore } from '~/stores/agendamento'
-import { ChevronDownIcon } from '@heroicons/vue/24/solid'
-import ModalSelecionarProfissional from './ModalSelecionarProfissional.vue'
+import { UsersIcon, ChevronDownIcon } from '@heroicons/vue/24/outline'
 import type { AgProfissional } from '../../../shared/types/database'
+import ModalSelecionarProfissional from './ModalSelecionarProfissional.vue'
 
-// Composables
-const { fetchProfissionais } = useProfissionais()
+interface Props {
+  profissionais: AgProfissional[]
+  loading: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  profissionais: () => [],
+  loading: false
+})
+
 const userStore = useUserStore()
 const agendamentoStore = useAgendamentoStore()
-
-// Estado local do componente
-const profissionais = ref<AgProfissional[]>([])
-const loading = ref(true)
 const modalAberto = ref(false)
-const profissionalSelecionadoId = ref<number | null>(null)
 
 /**
- * Computed que retorna o profissional a ser exibido
- * Prioridade: 1) Selecionado pelo usuário, 2) Profissional logado, 3) Primeiro da lista
+ * Profissional atualmente selecionado na store
  */
 const profissionalAtual = computed(() => {
-  if (profissionais.value.length === 0) return null
-
-  // Se o usuário já selecionou um profissional via modal
-  if (profissionalSelecionadoId.value) {
-    const selecionado = profissionais.value.find(
-      (p: AgProfissional) => p.profissional_id === profissionalSelecionadoId.value
-    )
-    if (selecionado) return selecionado
-  }
-
-  // Tentar encontrar o profissional logado pelo profile_id
-  if (userStore.profile?.id) {
-    const profissionalLogado = profissionais.value.find(
-      (p: AgProfissional) => p.profile_id === userStore.profile?.id
-    )
-    if (profissionalLogado) return profissionalLogado
-  }
-
-  // Fallback: primeiro da lista
-  return profissionais.value[0]
+  const currentId = agendamentoStore.profissionalId
+  if (!currentId) return null
+  return props.profissionais.find(p => String(p.profissional_id) === String(currentId))
 })
 
 /**
- * Handler ao selecionar profissional no modal
+ * Nome para exibir no botão
  */
-function handleSelecionar(prof: AgProfissional) {
-  profissionalSelecionadoId.value = prof.profissional_id
+const nomeExibicao = computed(() => {
+  if (props.loading && (!props.profissionais || props.profissionais.length === 0)) return 'Carregando...'
+  return profissionalAtual.value?.nome || 'Todos os Profissionais'
+})
+
+/**
+ * Iniciais para o avatar circular
+ */
+const iniciais = computed(() => {
+  if (!profissionalAtual.value) return '?'
+  return (profissionalAtual.value.nome || '').charAt(0).toUpperCase()
+})
+
+/**
+ * Handler para seleção no modal
+ */
+function handleSelecionar(prof: AgProfissional | null) {
+  console.log('👤 ProfissionalAtual: Selecionado ->', prof ? prof.nome : 'TODOS')
+  agendamentoStore.profissionalId = prof?.profissional_id || null
 }
 
 /**
- * Watch: Quando o profissional atual mudar, define o ID no store
+ * Lógica de inicialização automática: Seleciona o profissional logado se disponível
+ * Para ADMINS, prioriza a visão "Todos" (null)
  */
-watch(profissionalAtual, (novoProfissional) => {
-  if (novoProfissional) {
-    console.log('ProfissionalAtual: Definindo profissional', novoProfissional.profissional_id)
-    agendamentoStore.profissionalId = novoProfissional.profissional_id
-  }
-}, { immediate: true })
+const inicializado = ref(false)
 
-/**
- * Buscar profissionais ao montar o componente
- */
-onMounted(async () => {
-  try {
-    profissionais.value = await fetchProfissionais()
-  } catch (error) {
-    console.error('Erro ao carregar profissionais:', error)
-  } finally {
-    loading.value = false
-  }
+watch(
+  [() => props.profissionais, () => userStore.profile, () => userStore.loading],
+  ([novaLista, profile, userLoading]) => {
+    // Só inicializa se tivermos a lista de profissionais e o perfil não estiver mais carregando
+    if (novaLista && novaLista.length > 0 && !userLoading && !inicializado.value) {
+      console.log('⚙️ ProfissionalAtual: Iniciando escolha padrão...')
+      console.log('👤 Cargo detectado:', userStore.userRole)
+      
+      // REGRA PARA ADMIN: Se for admin, sempre começa com "Todos os Profissionais" (null)
+      if (userStore.userRole === 'admin') {
+        console.log('👑 ProfissionalAtual: Usuário é ADMIN. Definindo visão "Todos".')
+        agendamentoStore.profissionalId = null
+        inicializado.value = true
+        return
+      }
+
+      // REGRA PARA PROFISSIONAL: Se encontrar o perfil dele na lista de profissionais, seleciona ele
+      const profileId = profile?.id
+      if (profileId) {
+        const logado = novaLista.find(p => String(p.profile_id) === String(profileId))
+        if (logado) {
+          console.log('✅ ProfissionalAtual: Selecionado profissional logado (' + logado.nome + ')')
+          agendamentoStore.profissionalId = logado.profissional_id
+          inicializado.value = true
+          return
+        }
+      }
+      
+      // FALLBACK: Seleciona o primeiro da lista
+      if (novaLista[0]) {
+        console.log('✅ ProfissionalAtual: Selecionado primeiro da lista como fallback')
+        agendamentoStore.profissionalId = novaLista[0].profissional_id
+        inicializado.value = true
+      }
+    }
+  },
+  { immediate: true }
+)
+
+onMounted(() => {
+  console.log('📍 ProfissionalAtual montado. Profissionais recebidos:', props.profissionais?.length || 0)
 })
 </script>

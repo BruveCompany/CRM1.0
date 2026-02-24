@@ -74,6 +74,22 @@
                 <span class="flex-1">Reatribuir</span>
                 <Icon name="lucide:chevron-right" class="submenu-arrow" />
               </button>
+
+              <div class="dropdown-divider"></div>
+
+              <button class="action-item" @click.stop="() => { openAppointmentModalForNew(task.id); showActionsMenu = false; }">
+                <div class="icon-circle">
+                  <Icon name="lucide:calendar-plus" class="item-icon" />
+                </div>
+                <span>Agendar Novo Contato</span>
+              </button>
+
+              <button class="action-item" @click.stop="() => { openAppointmentModalForView(task.id); showActionsMenu = false; }">
+                <div class="icon-circle">
+                  <Icon name="lucide:calendar-days" class="item-icon" />
+                </div>
+                <span>Ver Agendamentos</span>
+              </button>
             </div>
           </div>
         </div>
@@ -110,6 +126,27 @@
           <div v-if="task.unreadMessages" class="card-unread-messages">
             <span class="message-count">{{ task.unreadMessages }}</span>
           </div>
+
+          <!-- Indicador de Próximo Agendamento -->
+          <div 
+            v-if="task.nextAppointment" 
+            class="card-appointment-pill"
+            :class="appointmentClass"
+            :title="appointmentTooltip"
+            @click.stop="openAppointmentModalForView(task.id)"
+          >
+            <Icon 
+              :name="isAppointmentLate ? 'lucide:calendar-clock' : 'lucide:calendar-check'" 
+              class="pill-icon" 
+            />
+            <span v-if="task.nextAppointment" class="pill-date">
+              {{ formatAppointmentDate(task.nextAppointment.appointment_date) }}
+            </span>
+          </div>
+          <div v-else class="card-appointment-pill status-none" title="Nenhum agendamento futuro">
+            <Icon name="lucide:calendar-days" class="pill-icon" />
+          </div>
+
           <div class="card-arrow-icon">
             <Icon name="lucide:chevron-right" />
           </div>
@@ -190,6 +227,57 @@ const isCold = computed(() => {
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   return diffDays > 7;
 });
+
+// --- LÓGICA DE AGENDAMENTOS ---
+
+const isAppointmentLate = computed(() => {
+  if (!props.task.nextAppointment) return false;
+  return new Date(props.task.nextAppointment.appointment_date).getTime() < new Date().getTime();
+});
+
+const appointmentClass = computed(() => {
+  if (!props.task.nextAppointment) return 'status-none';
+  return isAppointmentLate.value ? 'status-late' : 'status-upcoming';
+});
+
+const appointmentTooltip = computed(() => {
+  if (!props.task.nextAppointment) return 'Nenhum agendamento futuro';
+  const prefix = isAppointmentLate.value ? 'Agendamento ATRASADO: ' : 'Próximo contato agendado: ';
+  return prefix + formatAppointmentDate(props.task.nextAppointment.appointment_date);
+});
+
+const formatAppointmentDate = (dateStr: string) => {
+  const date = new Date(dateStr);
+  const d = date.getDate().toString().padStart(2, '0');
+  const m = (date.getMonth() + 1).toString().padStart(2, '0');
+  const h = date.getHours().toString().padStart(2, '0');
+  const min = date.getMinutes().toString().padStart(2, '0');
+  return `${d}/${m} ${h}:${min}`;
+};
+
+/**
+ * Funções de abertura de modal (Assumindo que existem conforme solicitado)
+ * Podem ser implementadas como emissões ou chamadas globais.
+ */
+const openAppointmentModalForNew = (leadId: string) => {
+  // @ts-ignore
+  if (typeof window.openAppointmentModalForNew === 'function') {
+    // @ts-ignore
+    window.openAppointmentModalForNew(leadId);
+  } else {
+    emit('open-appointment-new', leadId);
+  }
+};
+
+const openAppointmentModalForView = (leadId: string) => {
+  // @ts-ignore
+  if (typeof window.openAppointmentModalForView === 'function') {
+    // @ts-ignore
+    window.openAppointmentModalForView(leadId);
+  } else {
+    emit('open-appointment-view', leadId);
+  }
+};
 
 const openReassignModal = () => {
   showActionsMenu.value = false;
@@ -307,7 +395,7 @@ const vClickOutside = {
   }
 };
 
-defineEmits(['dragstart']);
+const emit = defineEmits(['dragstart', 'open-appointment-new', 'open-appointment-view']);
 </script>
 
 <style scoped>
@@ -486,6 +574,12 @@ defineEmits(['dragstart']);
   width: 12px;
   height: 12px;
   opacity: 0.4;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background-color: #f1f5f9;
+  margin: 4px 0;
 }
 
 /* --- Modal de Reatribuição --- */
@@ -723,6 +817,53 @@ defineEmits(['dragstart']);
   border-radius: 50%;
   border: 1px solid transparent;
   background-color: white;
+}
+
+/* --- Estilos do Pill de Agendamento --- */
+.card-appointment-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.card-appointment-pill.status-upcoming {
+  background-color: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #dcfce7;
+}
+
+.card-appointment-pill.status-late {
+  background-color: #fff7ed;
+  color: #ea580c;
+  border: 1px solid #ffedd5;
+  animation: pulse-late 2s infinite;
+}
+
+.card-appointment-pill.status-none {
+  color: #cbd5e1;
+  background-color: #f8fafc;
+  opacity: 0.6;
+}
+
+.pill-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.pill-date {
+  white-space: nowrap;
+}
+
+@keyframes pulse-late {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
 }
 
 .status-icon {

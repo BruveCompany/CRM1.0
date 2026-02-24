@@ -4,30 +4,40 @@
     :style="{ 
       top: `${posicaoTop}px`, 
       height: `${altura}px`,
-      backgroundColor: agendamento.cor || '#B4A7F5'
+      backgroundColor: agendamento.cor || '#B4A7F5',
+      zIndex: isHovered ? 10 : 1
     }"
-    :title="`${agendamento.titulo}${profissionalNome ? '\nProfissional: ' + profissionalNome : ''}${profissionalEspecialidade ? ' (' + profissionalEspecialidade + ')' : ''}\n${horarioFormatado}${nomeCliente ? '\nCliente: ' + nomeCliente : ''}${agendamento.descricao ? '\n' + agendamento.descricao : ''}`"
-    class="absolute left-0 right-0 text-neutral-900 rounded px-2 py-1 cursor-pointer transition-colors overflow-hidden hover:opacity-85"
+    :title="`Título: ${agendamento.titulo}\nAgendado por: ${vendedorNome || (agendamento.user_id ? 'Desconhecido' : 'Sistema')}${nomeProfissionalResponsavel ? '\nResponsável: ' + nomeProfissionalResponsavel : ''}\nHorário: ${horarioFormatado}${nomeCliente ? '\nCliente: ' + nomeCliente : ''}${agendamento.descricao ? '\nDescrição: ' + agendamento.descricao : ''}`"
+    class="absolute left-0 right-0 border border-black/10 text-neutral-900 rounded px-2 py-1.5 cursor-pointer transition-all duration-200 overflow-hidden hover:shadow-lg flex flex-col"
     @click="emit('click', agendamento)"
+    @mouseenter="isHovered = true"
+    @mouseleave="isHovered = false"
   >
-    <!-- Título do agendamento -->
-    <div class="text-xs font-bold truncate">
-      {{ agendamento.titulo }}
+    <!-- 1. Cabeçalho: Categoria e Horário (Lado a lado no topo) -->
+    <div class="flex items-center justify-between gap-1 mb-1.5">
+      <div v-if="agendamento.categoria" class="flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-black/10 max-w-[70%]">
+        <component :is="iconeCategoria" class="w-2.5 h-2.5 text-black/60 shrink-0" />
+        <span class="text-[7px] font-extrabold uppercase tracking-tight text-black/70 truncate">{{ agendamento.categoria.split(' / ')[0] }}</span>
+      </div>
+      <div class="text-[8px] font-black text-black/50 tabular-nums shrink-0">
+        {{ horarioFormatado.split(' - ')[0] }}
+      </div>
     </div>
 
-    <!-- Nome do cliente -->
-    <div v-if="nomeCliente" class="text-xs font-medium opacity-80 truncate">
+    <!-- 2. Nome do Cliente -->
+    <div v-if="nomeCliente" class="text-[10px] font-black text-black/90 truncate leading-none uppercase">
       {{ nomeCliente }}
     </div>
     
-    <!-- Horário -->
-    <div class="text-xs font-medium truncate">
-      {{ horarioFormatado }}
+    <!-- 3. Título (Apenas se houver espaço) -->
+    <div v-if="altura > 50" class="text-[9px] font-bold text-black/60 truncate leading-tight mt-1 opacity-80">
+      {{ agendamento.titulo }}
     </div>
-    
-    <!-- Descrição (se houver espaço) -->
-    <div v-if="altura > 70" class="text-xs font-medium opacity-80 truncate mt-0.5">
-      {{ agendamento.descricao }}
+
+    <!-- 4. Rodapé: Profissional (Apenas se houver espaço) -->
+    <div v-if="altura > 80" class="mt-auto pt-1 flex items-center gap-1 border-t border-black/5">
+      <UsersIcon class="w-2.5 h-2.5 text-black/40" />
+      <span class="text-[8px] font-bold text-black/50 truncate italic">{{ nomeProfissionalResponsavel }}</span>
     </div>
   </div>
 </template>
@@ -49,23 +59,55 @@
  * ======================================================
  */
 
-import type { AgAgendamento, AgCliente } from '../../../shared/types/database'
-import { computed } from 'vue'
+import type { AgAgendamento, AgCliente, AgProfissional } from '../../../shared/types/database'
+import { computed, ref } from 'vue'
+import { 
+  UserCircleIcon,
+  BuildingStorefrontIcon,
+  WrenchScrewdriverIcon,
+  PresentationChartBarIcon,
+  CheckBadgeIcon,
+  ChatBubbleLeftRightIcon
+} from '@heroicons/vue/24/solid'
+import { UsersIcon } from '@heroicons/vue/24/outline'
 
 interface Props {
   agendamento: AgAgendamento
   clientes?: AgCliente[]
+  profissionais?: AgProfissional[]
+  vendedores?: any[]
   profissionalNome?: string
   profissionalEspecialidade?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
   clientes: () => [],
+  profissionais: () => [],
+  vendedores: () => [],
   profissionalNome: '',
   profissionalEspecialidade: ''
 })
 
 const emit = defineEmits(['click'])
+
+const isHovered = ref(false)
+
+// Busca lista de vendedores da store global como fallback se a prop não estiver preenchida
+const vendedoresGlobal = useState<any[]>('leads-vendedores', () => [])
+const effectiveVendedores = computed(() => props.vendedores?.length ? props.vendedores : vendedoresGlobal.value)
+
+/**
+ * Resolve o nome do profissional responsável pelo agendamento
+ */
+const nomeProfissionalResponsavel = computed(() => {
+  if (!props.agendamento.profissional_id) return null
+  // Tenta encontrar o profissional na lista
+  const prof = props.profissionais.find(p => 
+    String(p.profissional_id) === String(props.agendamento.profissional_id) || 
+    String((p as any).id) === String(props.agendamento.profissional_id)
+  )
+  return prof?.nome || null
+})
 
 /**
  * Resolve o nome do cliente a partir do cliente_id do agendamento
@@ -74,6 +116,34 @@ const nomeCliente = computed(() => {
   if (!props.agendamento.cliente_id) return ''
   const cliente = props.clientes.find((c) => c.id === props.agendamento.cliente_id)
   return cliente?.nome || ''
+})
+
+/**
+ * Resolve o ícone baseado na categoria (Fase 2)
+ */
+const iconeCategoria = computed(() => {
+  const cat = props.agendamento.categoria
+  if (cat?.includes('Showroom')) return BuildingStorefrontIcon
+  if (cat?.includes('Técnica')) return WrenchScrewdriverIcon
+  if (cat?.includes('Projeto')) return PresentationChartBarIcon
+  if (cat?.includes('Entrega')) return CheckBadgeIcon
+  if (cat?.includes('Pós-Venda')) return ChatBubbleLeftRightIcon
+  return null
+})
+
+/**
+ * Resolve o nome do vendedor (quem criou)
+ */
+const vendedorNome = computed(() => {
+  if (!props.agendamento.user_id) return null
+  
+  const searchId = String(props.agendamento.user_id).toLowerCase()
+  const v = effectiveVendedores.value.find(v => 
+    (v.user_id && String(v.user_id).toLowerCase() === searchId) || 
+    (v.id && String(v.id) === searchId)
+  )
+  
+  return v?.nome || null
 })
 
 // Altura de cada slot de hora em pixels (h-16 = 64px)

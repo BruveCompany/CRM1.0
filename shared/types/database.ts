@@ -140,6 +140,7 @@ export interface AgAgendamento {
   cancelado: boolean
   cancelado_as: string | null
   cor: string | null
+  categoria: string | null
 }
 
 /**
@@ -186,6 +187,7 @@ export interface AgViewAgendamentoCompleto {
   cancelado: boolean
   cancelado_as: string | null
   cor: string | null
+  categoria: string | null
   // Dados do cliente
   cliente_id: number | null
   cliente_nome: string | null

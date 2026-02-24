@@ -69,7 +69,7 @@
       </div>
 
       <!-- Profissional -->
-      <div class="flex-1 basis-0 flex items-center gap-2 h-12 min-w-0" :title="`${agendamento.profissional_nome || 'Não informado'}${agendamento.especialidade ? ' | ' + agendamento.especialidade : ''}`">
+      <div class="flex-1 basis-0 flex items-center gap-2 h-12 min-w-0" :title="`Profissional: ${agendamento.profissional_nome || 'Não informado'}${agendamento.especialidade ? ' | ' + agendamento.especialidade : ''}`">
         <div
           class="flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-semibold flex-shrink-0"
           :style="{ backgroundColor: agendamento.cor || '#4338CA' }"
@@ -77,11 +77,20 @@
           {{ agendamento.profissional_nome?.charAt(0).toUpperCase() || 'P' }}
         </div>
         <div class="flex flex-col justify-center min-w-0 h-full">
+          <span class="text-xs text-neutral-400 leading-tight">Profissional</span>
           <span class="text-sm font-medium text-neutral-900 truncate leading-tight">
             {{ agendamento.profissional_nome || 'Não informado' }}
           </span>
-          <span v-if="agendamento.especialidade" class="text-xs text-neutral-500 truncate leading-tight">
-            {{ agendamento.especialidade }}
+        </div>
+      </div>
+
+      <!-- Vendedor (Quem criou) -->
+      <div class="flex-1 basis-0 flex items-center gap-2 h-12 min-w-0" :title="`Agendado por: ${vendedorNome || 'Sistema'}`">
+        <UserCircleIcon class="w-5 h-5 text-neutral-400 flex-shrink-0" />
+        <div class="flex flex-col justify-center min-w-0 h-full">
+          <span class="text-xs text-neutral-400 leading-tight">Vendedor</span>
+          <span class="text-sm font-medium text-neutral-700 truncate leading-tight">
+            {{ vendedorNome || 'Sistema' }}
           </span>
         </div>
       </div>
@@ -115,25 +124,30 @@
  * - Título do agendamento
  * - Cliente (nome e telefone)
  * - Profissional (nome e especialidade)
+ * - Vendedor (quem criou o agendamento)
  * - Descrição (se houver)
  * - Barra lateral com cor do agendamento
- * 
- * Design:
- * - Layout horizontal (linhas)
- * - Hover com elevação
- * - Barra colorida lateral
- * - Ícones para identificação visual
  * ========================================================
  */
 
-import { CalendarIcon, UserIcon, EllipsisVerticalIcon, CheckCircleIcon, XCircleIcon, ClipboardDocumentListIcon } from '@heroicons/vue/24/outline'
+import { CalendarIcon, UserIcon, UserCircleIcon, EllipsisVerticalIcon, CheckCircleIcon, XCircleIcon, ClipboardDocumentListIcon } from '@heroicons/vue/24/outline'
 import type { AgViewAgendamentoCompleto } from '../../shared/types/database'
 
 interface Props {
   agendamento: AgViewAgendamentoCompleto
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
+
+// Busca lista de vendedores da store global (definida no useLeads.ts)
+const vendedores = useState<any[]>('leads-vendedores', () => [])
+
+// Computa o nome do vendedor que criou o agendamento
+const vendedorNome = computed(() => {
+  if (!props.agendamento.user_id) return null
+  const v = vendedores.value.find(v => String(v.user_id) === String(props.agendamento.user_id))
+  return v?.nome || null
+})
 
 /**
  * Formata data com dia da semana abreviado

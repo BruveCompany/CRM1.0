@@ -20,7 +20,11 @@
           <UserIcon class="w-4 h-4 text-neutral-400 flex-shrink-0" />
           <span class="text-sm text-neutral-600">Cliente: {{ nomeCliente }}</span>
         </div>
-        <div class="flex items-center gap-2 text-sm text-neutral-500">
+        <div v-if="vendedorNome" class="flex items-center gap-2 border-t border-neutral-200 pt-1">
+          <UserCircleIcon class="w-4 h-4 text-primary-500 flex-shrink-0" />
+          <span class="text-xs font-medium text-primary-700 italic">Agendado por: {{ vendedorNome }}</span>
+        </div>
+        <div class="flex items-center gap-2 text-sm text-neutral-500 border-t border-neutral-200 pt-1">
           <CalendarIcon class="w-4 h-4 flex-shrink-0" />
           <span>{{ dataFormatada }} &bull; {{ horarioFormatado }}</span>
         </div>
@@ -96,7 +100,7 @@ import BaseInput from '../BaseInput.vue'
 import BaseButton from '../BaseButton.vue'
 import SeletorCor from '../SeletorCor.vue'
 import ModalConfirmacao from '../ModalConfirmacao.vue'
-import { UserIcon, CalendarIcon } from '@heroicons/vue/24/outline'
+import { UserIcon, CalendarIcon, UserCircleIcon } from '@heroicons/vue/24/outline'
 import { ref, computed, watch } from 'vue'
 import type { AgAgendamento, AgCliente } from '../../../shared/types/database'
 import { useAgendamento } from '~/composables/useAgendamento'
@@ -144,6 +148,22 @@ const nomeCliente = computed(() => {
   if (!props.agendamento?.cliente_id) return ''
   const cliente = props.clientes.find((c) => c.id === props.agendamento!.cliente_id)
   return cliente?.nome || ''
+})
+
+// Busca lista de vendedores da store global
+const vendedores = useState<any[]>('leads-vendedores', () => [])
+
+/**
+ * Resolve o nome do vendedor (quem criou)
+ */
+const vendedorNome = computed(() => {
+  if (!props.agendamento?.user_id) return null
+  const searchId = String(props.agendamento.user_id).toLowerCase()
+  const v = vendedores.value.find(v => 
+    (v.user_id && String(v.user_id).toLowerCase() === searchId) || 
+    (v.id && String(v.id) === searchId)
+  )
+  return v?.nome || null
 })
 
 // Formata data para exibição "Seg, 10 Fev"

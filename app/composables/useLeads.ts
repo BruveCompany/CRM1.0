@@ -27,6 +27,10 @@ export interface LeadTask {
     temperatura?: string;
     profissional_id?: string | number | null;
     vendedor_nome_full?: string;
+    nextAppointment?: {
+        appointment_date: string;
+        status: string;
+    } | null;
 }
 
 export interface LeadStatus {
@@ -56,14 +60,14 @@ export const useLeads = () => {
 
     // Armazena IDs de leads sendo movidos para atualização otimista na interface
     const pendingStatusUpdates = ref<Record<string, string>>({})
-
+    const appointmentsMap = ref<Record<string, any>>({})
     // Estados reativos para modais e filtros
     const selectedLeadId = useState<string | null>('selected-lead-id', () => null)
     const showDetailsModal = useState<boolean>('show-details-modal', () => false)
     const vendedores = useState<any[]>('leads-vendedores', () => [])
     const selectedVendedorId = useState<string | null>('leads-selected-vendedor-id', () => null)
     const showMyLeads = useState<boolean>('leads-show-my-leads', () => false)
-    const isEditingStatuses = useState<boolean>('leads-is-editing-statuses', () => false)
+    const isEditingStatuses = ref(false)
 
     const openDetails = (id: string) => {
         selectedLeadId.value = id
@@ -128,9 +132,73 @@ export const useLeads = () => {
         }
     }
 
+    /**
+     * Busca o próximo agendamento futuro para todos os leads carregados
+     */
+    const fetchNextAppointments = async () => {
+        if (allLeads.value.length === 0) return;
+
+        const leadsWithClients = allLeads.value.filter(l => l.cliente_id).map(l => l.cliente_id);
+        if (leadsWithClients.length === 0) return;
+
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+
+        // Busca agendamentos ativos dos clientes vinculados aos leads
+        const { data, error } = await supabase
+            .from('ag_agendamentos')
+            .select('cliente_id, data, hora_inicio')
+            .in('cliente_id', leadsWithClients)
+            .eq('cancelado', false)
+            .gte('data', todayStr)
+            .order('data', { ascending: true })
+            .order('hora_inicio', { ascending: true });
+
+        if (!error && data) {
+            const newMap: Record<string, any> = {};
+
+            // Mapeia cliente_id -> Lead ID
+            const clientToLeadMap: Record<string, string> = {};
+            allLeads.value.forEach(l => {
+                if (l.cliente_id) clientToLeadMap[String(l.cliente_id)] = String(l.id);
+            });
+
+            data.forEach((app: any) => {
+                const leadId = clientToLeadMap[String(app.cliente_id)];
+                if (leadId && !newMap[leadId]) {
+                    // Combina data e hora para o campo virtual appointment_date
+                    const fullDateStr = `${app.data}T${app.hora_inicio.split(/[-+]/)[0]}`;
+                    newMap[leadId] = {
+                        appointment_date: fullDateStr,
+                        status: 'active'
+                    };
+                }
+            });
+            appointmentsMap.value = newMap;
+        }
+    }
+
+    /**
+     * Inscrição Realtime para Agendamentos
+     */
+    const subscribeToAppointmentChanges = () => {
+        return (supabase as any)
+            .channel('agendamentos-realtime')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'ag_agendamentos' },
+                () => {
+                    fetchNextAppointments();
+                }
+            )
+            .subscribe();
+    }
+
     const fetchLeads = async () => {
         // Sempre atualiza a lista de vendedores para garantir que o status online esteja fresco
         await fetchVendedores()
+        // Adiciona a busca de agendamentos após buscar leads
+        await fetchNextAppointments();
 
         // Voltamos para a busca simples para garantir que nenhum lead suma
         let query = supabase.from('view_leads_crm').select('*')
@@ -294,7 +362,8 @@ export const useLeads = () => {
                 avatarText,
                 lastActivityText: formatRelativeTime(l.ultima_mensagem_data),
                 unreadMessages: (l.mensagens_nao_lidas || 0) > 0 ? l.mensagens_nao_lidas : undefined,
-                statusIcon: getStatusIcon(l.status, l.mensagens_nao_lidas || 0)
+                statusIcon: getStatusIcon(l.status, l.mensagens_nao_lidas || 0),
+                nextAppointment: appointmentsMap.value[String(l.id)] || null
             } as LeadTask;
         });
     });
@@ -411,6 +480,8 @@ export const useLeads = () => {
         updateStatus,
         deleteStatus,
         reorderStatuses,
-        formatRelativeTime
+        formatRelativeTime,
+        subscribeToAppointmentChanges,
+        fetchNextAppointments
     }
 }

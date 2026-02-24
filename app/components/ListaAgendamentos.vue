@@ -88,6 +88,7 @@ import { ref, computed, onMounted } from 'vue'
 import { XMarkIcon } from '@heroicons/vue/24/outline'
 import { useAgendamento } from '../composables/useAgendamento'
 import { useProfissionais } from '../composables/useProfissionais'
+import { useLeads } from '../composables/useLeads'
 import { useNotification } from '../composables/useNotification'
 import type { AgViewAgendamentoCompleto } from '../../shared/types/database'
 import type { AgCliente, AgProfissional } from '../../shared/types/database'
@@ -109,6 +110,7 @@ const filtroProfissionalId = ref('')
 // Composables
 const { buscarRelatorioAgendamentos } = useAgendamento()
 const { fetchClientes, fetchProfissionais } = useProfissionais()
+const { fetchVendedores } = useLeads()
 const { notifyError } = useNotification()
 
 /**
@@ -168,7 +170,8 @@ async function carregarDadosFiltros() {
   try {
     const [clientesData, profissionaisData] = await Promise.all([
       fetchClientes(),
-      fetchProfissionais()
+      fetchProfissionais(),
+      fetchVendedores()
     ])
     clientes.value = clientesData
     profissionais.value = profissionaisData

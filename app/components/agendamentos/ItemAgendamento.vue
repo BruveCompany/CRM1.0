@@ -21,6 +21,8 @@
         :key="agendamento.id"
         :agendamento="agendamento"
         :clientes="clientes"
+        :profissionais="profissionais"
+        :vendedores="vendedores"
         :profissional-nome="profissionalNome"
         :profissional-especialidade="profissionalEspecialidade"
         @click="(ag: AgAgendamento) => emit('editar-agendamento', ag)"
@@ -46,7 +48,7 @@
  */
 
 import SlotAgendamento from './SlotAgendamento.vue'
-import type { AgAgendamento, AgCliente } from '../../../shared/types/database'
+import type { AgAgendamento, AgCliente, AgProfissional } from '../../../shared/types/database'
 import { computed } from 'vue'
 import { useAgendamentoStore } from '~/stores/agendamento'
 
@@ -54,12 +56,16 @@ import { useAgendamentoStore } from '~/stores/agendamento'
 interface Props {
   data: Date
   clientes?: AgCliente[]
+  profissionais?: AgProfissional[]
+  vendedores?: any[]
   profissionalNome?: string
   profissionalEspecialidade?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
   clientes: () => [],
+  profissionais: () => [],
+  vendedores: () => [],
   profissionalNome: '',
   profissionalEspecialidade: ''
 })

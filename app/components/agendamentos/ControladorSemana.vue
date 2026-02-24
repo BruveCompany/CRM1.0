@@ -6,31 +6,25 @@
     </div>
 
     <!-- Segunda linha: Botões de navegação entre semanas -->
-    <div class="flex gap-3">
+    <div class="flex gap-2">
       <!-- Botão: Semana anterior -->
       <button
         @click="voltarSemana"
-        @mouseenter="handleMouseEnter"
-        @mouseleave="handleMouseLeave"
-        class="px-2 py-1 text-white rounded-md transition-colors flex items-center gap-1.5"
-        style="background-color: #4338CA;"
+        class="flex items-center gap-1.5 px-3 h-[34px] rounded-md font-semibold text-[0.82rem] transition-all bg-[#eef2ff] text-[#4f46e5] hover:bg-[#e0e7ff] border-none cursor-pointer"
         title="Semana anterior"
       >
-        <span class="text-xs">←</span>
-        <span class="text-xs">Anterior</span>
+        <span>←</span>
+        <span>Anterior</span>
       </button>
 
       <!-- Botão: Próxima semana -->
       <button
         @click="avancarSemana"
-        @mouseenter="handleMouseEnter"
-        @mouseleave="handleMouseLeave"
-        class="px-2 py-1 text-white rounded-md transition-colors flex items-center gap-1.5"
-        style="background-color: #4338CA;"
+        class="flex items-center gap-1.5 px-3 h-[34px] rounded-md font-semibold text-[0.82rem] transition-all bg-[#eef2ff] text-[#4f46e5] hover:bg-[#e0e7ff] border-none cursor-pointer"
         title="Próxima semana"
       >
-        <span class="text-xs">Próxima</span>
-        <span class="text-xs">→</span>
+        <span>Próxima</span>
+        <span>→</span>
       </button>
     </div>
   </div>
@@ -91,25 +85,4 @@ function formatarData(data: Date): string {
   return `${dia}/${mes}`
 }
 
-/**
- * Handler para evento mouseenter nos botões
- * Escurece o fundo do botão ao passar o mouse
- */
-function handleMouseEnter(event: MouseEvent) {
-  const target = event.currentTarget as HTMLButtonElement
-  if (target) {
-    target.style.backgroundColor = '#3730A3' // Versão mais escura
-  }
-}
-
-/**
- * Handler para evento mouseleave nos botões
- * Restaura a cor original do botão
- */
-function handleMouseLeave(event: MouseEvent) {
-  const target = event.currentTarget as HTMLButtonElement
-  if (target) {
-    target.style.backgroundColor = '#4338CA' // Cor padrão
-  }
-}
 </script>

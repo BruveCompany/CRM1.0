@@ -77,7 +77,59 @@ USING (auth.uid() = user_id)
 WITH CHECK (auth.uid() = user_id);
 
 -- ADICIONAR COLUNAS DE DESIGN AOS STATUS
-ALTER TABLE public.ag_lead_statuses ADD COLUMN IF NOT EXISTS status_icon TEXT;
-ALTER TABLE public.ag_lead_statuses ADD COLUMN IF NOT EXISTS font_family TEXT DEFAULT 'font-sans';
-ALTER TABLE public.ag_lead_statuses ADD COLUMN IF NOT EXISTS font_size TEXT DEFAULT 'text-lg';
 ALTER TABLE public.ag_lead_statuses ADD COLUMN IF NOT EXISTS font_weight TEXT DEFAULT 'font-bold';
+
+-- TORNAR CPF OPCIONAL PARA PERMITIR AGENDAMENTOS DE LEADS SEM DOCUMENTO
+ALTER TABLE public.ag_clientes ALTER COLUMN cpf DROP NOT NULL;
+
+-- CONFIGURAR RLS PARA AGENDAMENTOS (Visibilidade Total, Edição Controlada)
+ALTER TABLE public.ag_agendamentos ENABLE ROW LEVEL SECURITY;
+
+-- 1. QUALQUER usuário pode ver toda a agenda (Visibilidade Global)
+DROP POLICY IF EXISTS "Todos podem ver agendamentos" ON public.ag_agendamentos;
+DROP POLICY IF EXISTS "Admins podem ver todos os agendamentos" ON public.ag_agendamentos;
+DROP POLICY IF EXISTS "Usuários podem ver seus próprios agendamentos" ON public.ag_agendamentos;
+
+CREATE POLICY "Visibilidade global de agendamentos" 
+ON public.ag_agendamentos 
+FOR SELECT 
+USING (auth.role() = 'authenticated');
+
+-- 2. Políticas para Inserção (Todos podem criar)
+DROP POLICY IF EXISTS "Admins e Donos podem inserir agendamentos" ON public.ag_agendamentos;
+DROP POLICY IF EXISTS "Usuários podem criar agendamentos" ON public.ag_agendamentos;
+
+CREATE POLICY "Usuários autenticados podem criar agendamentos" 
+ON public.ag_agendamentos 
+FOR INSERT 
+WITH CHECK (auth.role() = 'authenticated');
+
+-- 3. Políticas para Atualização/Cancelamento (Apenas Admin ou Dono)
+DROP POLICY IF EXISTS "Admins e Donos podem atualizar agendamentos" ON public.ag_agendamentos;
+
+CREATE POLICY "Apenas admins e donos podem editar agendamentos" 
+ON public.ag_agendamentos 
+FOR UPDATE 
+USING (public.ag_isadmin() OR auth.uid() = user_id);
+
+-- ADICIONAR COLUNA DE CATEGORIA (Fase 2: Inteligência CRM)
+ALTER TABLE public.ag_agendamentos ADD COLUMN IF NOT EXISTS categoria TEXT DEFAULT 'Visita ao Showroom';
+
+-- Atualizar a VIEW completa para incluir a categoria
+DROP VIEW IF EXISTS public.ag_view_agendamentos_completo;
+CREATE VIEW public.ag_view_agendamentos_completo AS
+SELECT 
+    ag.*,
+    c.nome as cliente_nome,
+    c.cpf as cliente_cpf,
+    c.email as cliente_email,
+    c.telefone as cliente_telefone,
+    p.profile_id,
+    pr.nome as profissional_nome,
+    e.id as especialidade_id,
+    e.especialidade
+FROM public.ag_agendamentos ag
+LEFT JOIN public.ag_clientes c ON ag.cliente_id = c.id
+LEFT JOIN public.ag_profissionais p ON ag.profissional_id = p.id
+LEFT JOIN public.ag_profiles pr ON p.profile_id = pr.id
+LEFT JOIN public.ag_especialidades e ON p.especialidade_id = e.id;
