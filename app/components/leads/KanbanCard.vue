@@ -128,7 +128,7 @@
             >
               <div class="seller-btn-info">
                 <div class="seller-avatar-small" :style="{ backgroundColor: '#eef2ff', color: '#4f46e5' }">
-                  {{ v.nome.charAt(0).toUpperCase() }}
+                  {{ getInitials(v.nome) }}
                 </div>
                 <span>{{ v.nome }}</span>
               </div>
@@ -265,6 +265,18 @@ const reassignTo = async (vendedorId: string, vendedorNome: string) => {
   }
 };
 
+const getInitials = (nome: string) => {
+  if (!nome) return '?';
+  const preposicoes = ['de', 'da', 'do', 'das', 'dos', 'e'];
+  const parts = nome.trim().split(/\s+/)
+    .filter(p => !preposicoes.includes(p.toLowerCase()));
+  
+  if (parts.length >= 2 && parts[0]?.[0] && parts[1]?.[0]) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return parts[0] ? parts[0].substring(0, 2).toUpperCase() : '?';
+};
+
 // Diretiva simples para fechar ao clicar fora
 const vClickOutside = {
   mounted(el: any, binding: any) {
@@ -392,7 +404,7 @@ defineEmits(['dragstart']);
   width: 100%;
   color: #475569;
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 500;
   border-radius: 8px;
   cursor: pointer;
   text-align: left;
