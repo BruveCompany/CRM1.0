@@ -31,6 +31,9 @@ export interface LeadTask {
         appointment_date: string;
         status: string;
         titulo?: string;
+        descricao?: string | null;
+        hora_fim?: string;
+        categoria?: string;
     } | null;
     appointmentsCount?: number;
     cliente_id?: number | null;
@@ -212,7 +215,7 @@ export const useLeads = () => {
         // 4. Buscar TODOS os agendamentos ativos dos clientes encontrados
         const { data, error } = await supabase
             .from('ag_agendamentos')
-            .select('cliente_id, data, hora_inicio, titulo')
+            .select('cliente_id, data, hora_inicio, hora_fim, titulo, descricao, categoria')
             .in('cliente_id', Array.from(allTargetClientIds))
             .eq('cancelado', false)
             .order('data', { ascending: true })
@@ -252,7 +255,10 @@ export const useLeads = () => {
                     const appObj = {
                         appointment_date: appDate,
                         status: 'active',
-                        titulo: app.titulo
+                        titulo: app.titulo,
+                        descricao: app.descricao,
+                        hora_fim: app.hora_fim,
+                        categoria: app.categoria
                     };
 
                     newMap[leadId].count++;
