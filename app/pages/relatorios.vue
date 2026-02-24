@@ -96,34 +96,34 @@
                 label="Novos Leads Gerados" 
                 :value="aggregatedStats.totalLeads" 
                 :variation="aggregatedStats.totalLeadsVariacao"
-                icon-name="heroicons:outline:users"
+                icon-name="heroicons:user-group"
                 icon-bg-color="bg-primary-600"
-                icon-color-text="text-white"
+                icon-color-text="text-primary-600"
               />
               <RelatoriosKPICard 
                 label="Taxa de Conversão" 
                 :value="aggregatedStats.avgConversion"
                 :variation="aggregatedStats.avgConversionVariacao"
                 suffix="%"
-                icon-name="heroicons:outline:presentation-chart-line"
+                icon-name="heroicons:presentation-chart-line"
                 icon-bg-color="bg-emerald-600"
-                icon-color-text="text-white"
+                icon-color-text="text-emerald-600"
               />
               <RelatoriosKPICard 
                 label="Agendamentos Realizados" 
                 :value="aggregatedStats.totalAppointments"
                 :variation="aggregatedStats.totalAppointmentsVariacao"
-                icon-name="heroicons:outline:calendar"
+                icon-name="heroicons:calendar-days"
                 icon-bg-color="bg-amber-600"
-                icon-color-text="text-white"
+                icon-color-text="text-amber-600"
               />
               <RelatoriosKPICard 
                 label="Interações / Mensagens" 
                 :value="aggregatedStats.totalMessages"
                 :variation="aggregatedStats.totalMessagesVariacao"
-                icon-name="heroicons:outline:chat-bubble-left-right"
+                icon-name="heroicons:chat-bubble-left-right"
                 icon-bg-color="bg-indigo-600"
-                icon-color-text="text-white"
+                icon-color-text="text-indigo-600"
               />
             </div>
 
@@ -239,9 +239,10 @@ const aggregatedStats = computed(() => {
     mensagens: acc.mensagens + (Number(curr.total_mensagens) || 0),
     // Totais do período anterior para cálculo de variação global
     prevLeads: acc.prevLeads + (Number((curr as any).prev_leads) || 0),
+    prevConv: acc.prevConv + (Number((curr as any).prev_leads_convertidos) || 0), // Assumindo que esta coluna existe ou é calculada
     prevAgend: acc.prevAgend + (Number((curr as any).prev_agendamentos) || 0),
     prevMsg: acc.prevMsg + (Number((curr as any).prev_mensagens) || 0)
-  }), { leads: 0, convertidos: 0, agendamentos: 0, mensagens: 0, prevLeads: 0, prevAgend: 0, prevMsg: 0 });
+  }), { leads: 0, convertidos: 0, agendamentos: 0, mensagens: 0, prevLeads: 0, prevConv: 0, prevAgend: 0, prevMsg: 0 });
 
   // Função auxiliar para variação %
   const calcVar = (curr: number, prev: number) => {
@@ -249,14 +250,17 @@ const aggregatedStats = computed(() => {
     return curr > 0 ? 100 : 0;
   };
 
+  const currConvRate = totals.leads > 0 ? (totals.convertidos / totals.leads) * 100 : 0;
+  const prevConvRate = totals.prevLeads > 0 ? (totals.prevConv / totals.prevLeads) * 100 : 0;
+
   const result = {
     totalLeads: totals.leads,
     totalLeadsConvertidos: totals.convertidos,
-    avgConversion: totals.leads > 0 ? Number(((totals.convertidos / totals.leads) * 100).toFixed(1)) : 0,
+    avgConversion: Number(currConvRate.toFixed(1)),
     totalAppointments: totals.agendamentos,
     totalMessages: totals.mensagens,
     totalLeadsVariacao: calcVar(totals.leads, totals.prevLeads),
-    avgConversionVariacao: 0,
+    avgConversionVariacao: calcVar(currConvRate, prevConvRate),
     totalAppointmentsVariacao: calcVar(totals.agendamentos, totals.prevAgend),
     totalMessagesVariacao: calcVar(totals.mensagens, totals.prevMsg)
   };
