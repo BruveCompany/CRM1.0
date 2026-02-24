@@ -1,12 +1,12 @@
 <template>
   <NuxtLayout>
-    <div class="p-6 bg-white min-h-[calc(100vh-64px)] overflow-y-auto w-full">
+    <div class="p-4 bg-white min-h-[calc(100vh-64px)] overflow-y-auto w-full">
       <div class="max-w-7xl mx-auto space-y-12">
         <ClientOnly>
           <!-- All content inside ClientOnly to ensure SSR safety for dynamic data -->
           <div class="space-y-8">
             <!-- HEADER & FILTROS AVANÇADOS -->
-            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-8 pb-8 border-b border-gray-50">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-4 border-b border-gray-50">
               <div class="space-y-1.5">
                 <h1 class="text-3xl font-semibold text-gray-900 tracking-tight">Relatórios</h1>
                 <p class="text-sm text-slate-400 font-medium">Análise de performance e métricas comerciais</p>
@@ -58,8 +58,8 @@
               </div>
             </div>
 
-            <!-- KPI CARDS GRID (COMPACTO) -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 gap-4">
+            <!-- KPI CARDS GRID (MAIS COMPACTO) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 gap-3">
               <RelatoriosKPICard label="Novos Leads Gerados" :value="aggregatedStats.totalLeads" :variation="aggregatedStats.totalLeadsVariacao" icon-name="heroicons:user-group" icon-bg-color="bg-primary-600" icon-color-text="text-primary-600" />
               <RelatoriosKPICard label="Taxa de Conversão" :value="aggregatedStats.avgConversion" :variation="aggregatedStats.avgConversionVariacao" suffix="%" icon-name="heroicons:presentation-chart-line" icon-bg-color="bg-emerald-600" icon-color-text="text-emerald-600" />
               <RelatoriosKPICard label="Tempo Resposta" :value="aggregatedStats.avgResponseTime" suffix="h" icon-name="heroicons:clock" icon-bg-color="bg-blue-600" icon-color-text="text-blue-600" />

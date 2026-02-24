@@ -1,9 +1,9 @@
 <template>
-  <div class="group bg-white p-4 rounded-lg border border-gray-100 shadow-sm hover:shadow-md hover:border-primary-100 transition-all duration-300 cursor-default">
-    <div class="flex items-start justify-between mb-3">
+  <div class="group bg-white p-3 rounded-lg border border-gray-100 shadow-sm hover:shadow-md hover:border-primary-100 transition-all duration-300 cursor-default">
+    <div class="flex items-start justify-between mb-2">
       <div class="space-y-0.5">
-        <p class="text-[11px] font-medium text-slate-400 tracking-tight">{{ label }}</p>
-        <h3 class="text-xl font-semibold text-slate-900 tracking-tight">
+        <p class="text-[10px] font-medium text-slate-400 tracking-tight">{{ label }}</p>
+        <h3 class="text-lg font-semibold text-slate-900 tracking-tight">
           {{ value }}<span v-if="suffix" class="text-xs font-normal text-slate-400 ml-0.5">{{ suffix }}</span>
         </h3>
       </div>
