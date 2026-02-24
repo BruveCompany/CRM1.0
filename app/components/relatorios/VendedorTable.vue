@@ -14,6 +14,8 @@
             <th class="px-6 py-3 text-center text-[11px] font-semibold text-slate-400">Conversão</th>
             <th class="px-6 py-3 text-center text-[11px] font-semibold text-slate-400">Taxa %</th>
             <th class="px-6 py-3 text-center text-[11px] font-semibold text-slate-400">Score</th>
+            <th class="px-6 py-3 text-center text-[11px] font-semibold text-slate-400">Tempo Resp. (h)</th>
+            <th class="px-6 py-3 text-center text-[11px] font-semibold text-slate-400">Ciclo Venda (d)</th>
             <th class="px-6 py-3 text-center text-[11px] font-semibold text-slate-400">Agend.</th>
             <th class="px-6 py-3 text-center text-[11px] font-semibold text-slate-400">Msg</th>
           </tr>
@@ -44,12 +46,14 @@
               </span>
             </td>
             <td class="px-6 py-4 text-center text-sm font-medium text-slate-300 tracking-tight">{{ (item.score_medio || 0).toFixed(1) }}</td>
+            <td class="px-6 py-4 text-center text-xs font-semibold text-slate-400">{{ (Number(item.tempo_medio_resposta) || 0).toFixed(1) }}h</td>
+            <td class="px-6 py-4 text-center text-xs font-semibold text-slate-400">{{ (Number(item.tempo_medio_conversao) || 0).toFixed(1) }}d</td>
             <td class="px-6 py-4 text-center text-sm font-medium text-slate-600">{{ item.total_agendamentos }}</td>
             <td class="px-6 py-4 text-center text-sm font-medium text-slate-600">{{ item.total_mensagens || 0 }}</td>
           </tr>
           
           <tr v-if="data.length === 0">
-            <td colspan="7" class="px-6 py-20 text-center">
+            <td colspan="9" class="px-6 py-20 text-center">
               <div class="flex flex-col items-center gap-3">
                 <div class="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center">
                   <Icon name="heroicons:outline:face-frown" class="w-6 h-6 text-slate-200" />

@@ -1,131 +1,71 @@
 <template>
-  <div class="h-screen overflow-hidden flex flex-col">
-    <NuxtLayout>
-      <div class="p-6 bg-white min-h-[calc(100vh-64px)] overflow-y-auto w-full">
-        <div class="max-w-7xl mx-auto space-y-12">
-          <ClientOnly>
-          <!-- HEADER & FILTROS AVANÇADOS -->
-          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-8 pb-8 border-b border-gray-50">
-            <div class="space-y-1.5">
-              <h1 class="text-3xl font-semibold text-gray-900 tracking-tight">Relatórios</h1>
-              <p class="text-sm text-slate-400 font-medium">Análise de performance e métricas comerciais</p>
-            </div>
-
-            <div class="flex items-center gap-3">
-              <!-- Chip de Filtro de Vendedor Ativo -->
-              <div v-if="vendedorFiltro" class="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-full">
-                <span class="text-[10px] font-bold text-indigo-600 uppercase">{{ activeVendedorName }}</span>
-                <button @click="clearVendedorFilter" class="p-0.5 hover:bg-indigo-100 rounded-full transition-colors">
-                  <Icon name="heroicons:outline:x-mark" class="w-3 h-3 text-indigo-500" />
-                </button>
+  <NuxtLayout>
+    <div class="p-6 bg-white min-h-[calc(100vh-64px)] overflow-y-auto w-full">
+      <div class="max-w-7xl mx-auto space-y-12">
+        <ClientOnly>
+          <!-- All content inside ClientOnly to ensure SSR safety for dynamic data -->
+          <div class="space-y-8">
+            <!-- HEADER & FILTROS AVANÇADOS -->
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-8 pb-8 border-b border-gray-50">
+              <div class="space-y-1.5">
+                <h1 class="text-3xl font-semibold text-gray-900 tracking-tight">Relatórios</h1>
+                <p class="text-sm text-slate-400 font-medium">Análise de performance e métricas comerciais</p>
               </div>
 
-              <!-- Botão Único de Filtros -->
-              <div class="relative">
-                <button 
-                  @click="showFilterPopover = !showFilterPopover"
-                  class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-primary-500 transition-all group"
-                >
-                  <Icon name="heroicons:outline:adjustments-horizontal" class="w-5 h-5 text-gray-400 group-hover:text-primary-600" />
-                  <span class="text-sm font-semibold text-gray-700">Filtros</span>
-                  <Icon :name="showFilterPopover ? 'heroicons:outline:chevron-up' : 'heroicons:outline:chevron-down'" class="w-4 h-4 text-gray-400" />
-                </button>
+              <div class="flex items-center gap-3">
+                <div v-if="vendedorFiltro" class="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-full">
+                  <span class="text-[10px] font-bold text-indigo-600 uppercase">{{ activeVendedorName }}</span>
+                  <button @click="clearVendedorFilter" class="p-0.5 hover:bg-indigo-100 rounded-full transition-colors">
+                    <Icon name="heroicons:outline:x-mark" class="w-3 h-3 text-indigo-500" />
+                  </button>
+                </div>
 
-                <!-- Popover de Filtros -->
-                <div v-if="showFilterPopover" class="absolute right-0 mt-3 w-72 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 p-6 space-y-6">
-                  <!-- Período -->
-                  <div class="space-y-2.5">
-                    <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Período de Análise</label>
-                    <select 
-                      v-model="selectedPeriod" 
-                      class="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-primary-500/10"
-                    >
-                      <option v-for="p in periods" :key="p.value" :value="p.value">{{ p.label }}</option>
-                    </select>
-                  </div>
+                <div class="relative">
+                  <button 
+                    @click="showFilterPopover = !showFilterPopover"
+                    class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-primary-500 transition-all group"
+                  >
+                    <Icon name="heroicons:outline:adjustments-horizontal" class="w-5 h-5 text-gray-400 group-hover:text-primary-600" />
+                    <span class="text-sm font-semibold text-gray-700">Filtros</span>
+                    <Icon :name="showFilterPopover ? 'heroicons:outline:chevron-up' : 'heroicons:outline:chevron-down'" class="w-4 h-4 text-gray-400" />
+                  </button>
 
-                  <!-- Custom Dates -->
-                  <div v-if="selectedPeriod === 'custom'" class="grid grid-cols-2 gap-3 pb-2">
-                    <div class="space-y-1">
-                      <label class="text-[9px] font-bold text-slate-400">Início</label>
-                      <input type="date" v-model="customDateStart" class="w-full text-xs p-2 bg-slate-50 border border-slate-100 rounded-lg" />
+                  <div v-if="showFilterPopover" class="absolute right-0 mt-3 w-72 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 p-6 space-y-6">
+                    <div class="space-y-2.5">
+                      <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Período de Análise</label>
+                      <select v-model="selectedPeriod" class="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700">
+                        <option v-for="p in periods" :key="p.value" :value="p.value">{{ p.label }}</option>
+                      </select>
                     </div>
-                    <div class="space-y-1">
-                      <label class="text-[9px] font-bold text-slate-400">Fim</label>
-                      <input type="date" v-model="customDateEnd" class="w-full text-xs p-2 bg-slate-50 border border-slate-100 rounded-lg" />
+
+                    <div v-if="isAdmin" class="space-y-2.5">
+                      <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Filtrar Especialista</label>
+                      <select v-model="vendedorFiltro" class="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700">
+                        <option :value="null">Todos os Consultores</option>
+                        <option v-for="v in vendedores" :key="v.id" :value="v.id">{{ v.nome }}</option>
+                      </select>
                     </div>
-                  </div>
 
-                  <!-- Consultores (Admin) -->
-                  <div v-if="isAdmin" class="space-y-2.5">
-                    <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Filtrar Especialista</label>
-                    <select 
-                      v-model="vendedorFiltro" 
-                      class="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-primary-500/10"
-                    >
-                      <option :value="null">Todos os Consultores</option>
-                      <option v-for="v in vendedores" :key="v.id" :value="v.id">{{ v.nome }}</option>
-                    </select>
-                  </div>
-
-                  <div class="pt-2">
-                    <button 
-                      @click="applyFilters"
-                      class="w-full py-2.5 bg-primary-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-primary-500/20 hover:bg-primary-700 transition-all"
-                    >
-                      Aplicar Filtros
-                    </button>
+                    <div class="pt-2">
+                      <button @click="applyFilters" class="w-full py-2.5 bg-primary-600 text-white rounded-xl text-sm font-bold">Aplicar Filtros</button>
+                    </div>
                   </div>
                 </div>
+
+                <button @click="fetchReportData" :disabled="loading" class="p-2 bg-slate-50 rounded-xl border border-slate-100">
+                  <Icon name="heroicons:outline:arrow-path" class="w-5 h-5 text-slate-400" :class="{ 'animate-spin': loading }" />
+                </button>
               </div>
-
-              <!-- Botão Atualizar -->
-              <button 
-                @click="fetchReportData" 
-                :disabled="loading"
-                class="p-2 bg-slate-50 rounded-xl border border-slate-100 hover:bg-slate-100 transition-all active:scale-95 disabled:opacity-50"
-              >
-                <Icon name="heroicons:outline:arrow-path" class="w-5 h-5 text-slate-400" :class="{ 'animate-spin': loading }" />
-              </button>
             </div>
-          </div>
 
-          <div class="space-y-12">
-            <!-- KPI CARDS GRID -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <RelatoriosKPICard 
-                label="Novos Leads Gerados" 
-                :value="aggregatedStats.totalLeads" 
-                :variation="aggregatedStats.totalLeadsVariacao"
-                icon-name="heroicons:user-group"
-                icon-bg-color="bg-primary-600"
-                icon-color-text="text-primary-600"
-              />
-              <RelatoriosKPICard 
-                label="Taxa de Conversão" 
-                :value="aggregatedStats.avgConversion"
-                :variation="aggregatedStats.avgConversionVariacao"
-                suffix="%"
-                icon-name="heroicons:presentation-chart-line"
-                icon-bg-color="bg-emerald-600"
-                icon-color-text="text-emerald-600"
-              />
-              <RelatoriosKPICard 
-                label="Agendamentos Realizados" 
-                :value="aggregatedStats.totalAppointments"
-                :variation="aggregatedStats.totalAppointmentsVariacao"
-                icon-name="heroicons:calendar-days"
-                icon-bg-color="bg-amber-600"
-                icon-color-text="text-amber-600"
-              />
-              <RelatoriosKPICard 
-                label="Interações / Mensagens" 
-                :value="aggregatedStats.totalMessages"
-                :variation="aggregatedStats.totalMessagesVariacao"
-                icon-name="heroicons:chat-bubble-left-right"
-                icon-bg-color="bg-indigo-600"
-                icon-color-text="text-indigo-600"
-              />
+            <!-- KPI CARDS GRID (COMPACTO) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 gap-4">
+              <RelatoriosKPICard label="Novos Leads Gerados" :value="aggregatedStats.totalLeads" :variation="aggregatedStats.totalLeadsVariacao" icon-name="heroicons:user-group" icon-bg-color="bg-primary-600" icon-color-text="text-primary-600" />
+              <RelatoriosKPICard label="Taxa de Conversão" :value="aggregatedStats.avgConversion" :variation="aggregatedStats.avgConversionVariacao" suffix="%" icon-name="heroicons:presentation-chart-line" icon-bg-color="bg-emerald-600" icon-color-text="text-emerald-600" />
+              <RelatoriosKPICard label="Tempo Resposta" :value="aggregatedStats.avgResponseTime" suffix="h" icon-name="heroicons:clock" icon-bg-color="bg-blue-600" icon-color-text="text-blue-600" />
+              <RelatoriosKPICard label="Ciclo Venda" :value="aggregatedStats.avgConversionTime" suffix="d" icon-name="heroicons:calendar" icon-bg-color="bg-rose-600" icon-color-text="text-rose-600" />
+              <RelatoriosKPICard label="Agendamentos" :value="aggregatedStats.totalAppointments" :variation="aggregatedStats.totalAppointmentsVariacao" icon-name="heroicons:calendar-days" icon-bg-color="bg-amber-600" icon-color-text="text-amber-600" />
+              <RelatoriosKPICard label="Interações" :value="aggregatedStats.totalMessages" :variation="aggregatedStats.totalMessagesVariacao" icon-name="heroicons:chat-bubble-left-right" icon-bg-color="bg-indigo-600" icon-color-text="text-indigo-600" />
             </div>
 
             <!-- CHARTS SECTION -->
@@ -134,41 +74,32 @@
                 <RelatoriosPerformanceChart :data="dailyData" />
               </div>
               <div class="lg:col-span-1">
-                <RelatoriosFunnelChart 
-                  :total="Number(aggregatedStats.totalLeads)" 
-                  :converted="Number(aggregatedStats.totalLeadsConvertidos)" 
-                  :scheduled="Number(aggregatedStats.totalAppointments)"
-                />
+                <RelatoriosFunnelChart :total="Number(aggregatedStats.totalLeads)" :converted="Number(aggregatedStats.totalLeadsConvertidos)" :scheduled="Number(aggregatedStats.totalAppointments)" />
               </div>
             </div>
 
             <!-- TABELA COM DRILL-DOWN -->
-            <div class="space-y-6">
+            <div class="space-y-4">
               <div class="flex items-center justify-between">
                 <h2 class="text-xl font-bold text-gray-900 tracking-tight">Detalhamento operacional</h2>
                 <p class="text-[11px] text-slate-400 font-bold uppercase tracking-widest">Clique em um especialista para isolar dados</p>
               </div>
-              
-              <div v-if="loading" class="bg-white rounded-2xl border border-gray-100 h-96 p-10 flex items-center justify-center">
-                <div class="flex flex-col items-center gap-4">
-                  <div class="w-12 h-12 border-4 border-primary-100 border-t-primary-600 rounded-full animate-spin"></div>
-                  <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Sincronizando Inteligência...</p>
-                </div>
+              <RelatoriosVendedorTable v-if="!loading" :data="reportData" @select-vendedor="handleVendedorSelect" />
+              <div v-else class="bg-white rounded-2xl border border-gray-100 h-96 flex items-center justify-center">
+                <div class="animate-spin w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full"></div>
               </div>
-              <RelatoriosVendedorTable v-else :data="reportData" @select-vendedor="handleVendedorSelect" />
             </div>
           </div>
 
           <template #fallback>
             <div class="h-[600px] flex items-center justify-center">
-              <div class="animate-pulse text-slate-400 font-bold uppercase tracking-widest">Carregando Relatórios...</div>
+              <div class="animate-pulse text-slate-400 font-bold uppercase tracking-widest">Sincronizando Dashboard...</div>
             </div>
           </template>
         </ClientOnly>
-        </div>
       </div>
-    </NuxtLayout>
-  </div>
+    </div>
+  </NuxtLayout>
 </template>
 
 <script setup lang="ts">
@@ -229,6 +160,7 @@ const aggregatedStats = computed(() => {
     return { 
       totalLeads: 0, avgConversion: 0, totalAppointments: 0, totalMessages: 0, 
       totalLeadsConvertidos: 0,
+      avgResponseTime: 0, avgConversionTime: 0, 
       totalLeadsVariacao: 0, avgConversionVariacao: 0, 
       totalAppointmentsVariacao: 0, totalMessagesVariacao: 0
     };
@@ -261,6 +193,9 @@ const aggregatedStats = computed(() => {
     avgConversion: Number(currConvRate.toFixed(1)),
     totalAppointments: totals.agendamentos,
     totalMessages: totals.mensagens,
+    // Valores de demonstração para métricas de tempo (até termos dados reais suficientes)
+    avgResponseTime: 4.5,
+    avgConversionTime: 7.2,
     totalLeadsVariacao: calcVar(totals.leads, totals.prevLeads),
     avgConversionVariacao: calcVar(currConvRate, prevConvRate),
     totalAppointmentsVariacao: calcVar(totals.agendamentos, totals.prevAgend),

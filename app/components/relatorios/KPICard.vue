@@ -1,8 +1,6 @@
-<!-- components/Relatorios/KPICard.vue (SEU TEMPLATE ORIGINAL + CORREÇÃO DO ÍCONE) -->
-
 <template>
-  <div class="group bg-white p-5 rounded-lg border border-gray-100 shadow-sm hover:shadow-md hover:border-primary-100 hover:-translate-y-0.5 transition-all duration-300 cursor-default">
-    <div class="flex items-start justify-between mb-4">
+  <div class="group bg-white p-4 rounded-lg border border-gray-100 shadow-sm hover:shadow-md hover:border-primary-100 transition-all duration-300 cursor-default">
+    <div class="flex items-start justify-between mb-3">
       <div class="space-y-0.5">
         <p class="text-[11px] font-medium text-slate-400 tracking-tight">{{ label }}</p>
         <h3 class="text-xl font-semibold text-slate-900 tracking-tight">
@@ -20,14 +18,14 @@
       </div>
     </div>
     
-    <!-- Tendência e Comparação Dinâmica (Sua lógica está perfeita, mantida 100%) -->
+    <!-- Tendência (Estilo original restaurado) -->
     <div v-if="variation !== undefined" class="flex items-center gap-1 opacity-80">
       <div 
         class="flex items-center text-[10px] font-bold"
         :class="{
           'text-emerald-500': variation > 0,
-          'text-red-500': variation < 0,
-          'text-neutral-500': variation === 0 || variation == null
+          'text-rose-500': variation < 0,
+          'text-slate-500': variation === 0 || variation == null
         }"
       >
         <Icon 
@@ -59,7 +57,6 @@ defineProps<{
   variation?: number;
   suffix?: string;
   iconName: string;
-  // NOVAS PROPS PARA AS CORES (adicione estas)
   iconBgColor: string;
   iconColorText: string;
 }>();
