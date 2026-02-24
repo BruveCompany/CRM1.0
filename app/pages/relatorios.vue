@@ -1,8 +1,9 @@
 <template>
-  <NuxtLayout>
-    <div class="p-6 bg-white min-h-[calc(100vh-64px)] overflow-y-auto">
-      <div class="max-w-7xl mx-auto space-y-12">
-        <ClientOnly>
+  <div class="h-screen overflow-hidden flex flex-col">
+    <NuxtLayout>
+      <div class="p-6 bg-white min-h-[calc(100vh-64px)] overflow-y-auto w-full">
+        <div class="max-w-7xl mx-auto space-y-12">
+          <ClientOnly>
           <!-- HEADER & FILTROS AVANÇADOS -->
           <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-8 pb-8 border-b border-gray-50">
             <div class="space-y-1.5">
@@ -164,9 +165,10 @@
             </div>
           </template>
         </ClientOnly>
+        </div>
       </div>
-    </div>
-  </NuxtLayout>
+    </NuxtLayout>
+  </div>
 </template>
 
 <script setup lang="ts">

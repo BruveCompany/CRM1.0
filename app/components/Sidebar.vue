@@ -25,27 +25,25 @@
 
     <!-- Navigation -->
     <nav class="flex-1 px-3 py-4 space-y-1">
-      <ClientOnly>
-        <NuxtLink 
-          v-for="item in navItems"
-          :key="item.to"
-          :to="item.to" 
-          :class="['group flex items-center px-4 py-2.5 text-sm font-normal rounded-lg transition-all duration-200', 
-            isCollapsed ? 'justify-center' : 'gap-3'
-          ]"
-          active-class="bg-indigo-50 text-[#4338CA] font-medium"
-          class="text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-          :title="isCollapsed ? item.label : ''"
-        >
-          <div class="w-8 flex items-center justify-center flex-shrink-0">
-            <component 
-              :is="item.icon" 
-              :class="['w-5 h-5 transition-colors duration-200 stroke-[1.5]']" 
-            />
-          </div>
-          <span v-if="!isCollapsed">{{ item.label }}</span>
-        </NuxtLink>
-      </ClientOnly>
+      <NuxtLink 
+        v-for="item in navItems"
+        :key="item.to"
+        :to="item.to" 
+        :class="['group flex items-center px-4 py-2.5 text-sm font-normal rounded-lg transition-all duration-200', 
+          isCollapsed ? 'justify-center' : 'gap-3'
+        ]"
+        active-class="bg-indigo-50 text-[#4338CA] font-medium"
+        class="text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+        :title="isCollapsed ? item.label : ''"
+      >
+        <div class="w-8 flex items-center justify-center flex-shrink-0">
+          <component 
+            :is="item.icon" 
+            :class="['w-5 h-5 transition-colors duration-200 stroke-[1.5]']" 
+          />
+        </div>
+        <span v-if="!isCollapsed">{{ item.label }}</span>
+      </NuxtLink>
     </nav>
 
     <!-- Footer -->
