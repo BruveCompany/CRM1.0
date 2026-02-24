@@ -5,29 +5,13 @@
 <template>
   <div 
     class="kanban-card" 
-    :class="{ 'card-hot': isHot, 'card-cold': isCold }"
+    :class="{ 'card-hot': isHot, 'card-cold': isCold, 'is-menu-open': showActionsMenu }"
     :style="{ '--column-color': columnColor }"
     draggable="true"
     @dragstart="$emit('dragstart', $event)"
     @click="task.id ? openDetails(task.id) : null"
   >
     <!-- Indicadores de Temperatura (Quente/Frio/Score) -->
-    <div class="temperature-indicators">
-      <!-- Exibe o Score numericamento se disponível -->
-      <div v-if="task.score !== undefined && task.score !== null" 
-           class="temp-score-badge" 
-           :style="{ color: getScoreColor(task.score), backgroundColor: getScoreColor(task.score) + '15', borderColor: getScoreColor(task.score) + '30' }"
-           :title="`Score de Qualificação: ${task.score}%`"
-      >
-        <Icon :name="task.score >= 50 ? 'lucide:flame' : 'lucide:thermometer'" class="temp-icon-mini" />
-        <span class="score-text">{{ task.score }}</span>
-      </div>
-      
-      <!-- Indicador de Inatividade (Frio) -->
-      <div v-else-if="isCold" class="temp-icon cold" title="Lead Frio (Inativo > 7 dias)">
-        <Icon name="lucide:snowflake" />
-      </div>
-    </div>
 
     <!-- Conteúdo do Card -->
     <div class="card-content">
@@ -94,25 +78,55 @@
           </div>
         </div>
       </div>
-      <p class="card-phone-number">{{ task.phone }}</p>
+      <div class="card-info-row">
+        <!-- Temperatura integrada -->
+        <div v-if="task.score !== undefined && task.score !== null" 
+             class="inline-score-badge" 
+             :style="{ color: getScoreColor(task.score), backgroundColor: getScoreColor(task.score) + '10' }"
+        >
+          <Icon :name="task.score >= 50 ? 'lucide:flame' : 'lucide:thermometer'" class="temp-icon-inline" />
+          <span>{{ task.score }}</span>
+        </div>
+        <div v-else-if="isCold" class="inline-cold-icon">
+          <Icon name="lucide:snowflake" />
+        </div>
+
+        <p class="card-phone-number">{{ task.phone }}</p>
+      </div>
       
       <!-- Módulo de Agendamento Moderno -->
       <div 
         v-if="task.nextAppointment" 
         class="card-appointment-module" 
         :class="{ 'is-late': isAppointmentLate }"
+        :title="appointmentTooltip"
         @click.stop="openAppointmentModalForView(task.id)"
       >
-        <div class="appointment-accent" :style="{ backgroundColor: isAppointmentLate ? '#ef4444' : '#10b981' }"></div>
         <div class="appointment-content">
           <div class="appointment-header">
             <Icon :name="isAppointmentLate ? 'lucide:calendar-clock' : 'lucide:calendar-days'" class="module-icon" />
-            <span class="appointment-time">{{ formatAppointmentDate(task.nextAppointment.appointment_date) }}</span>
+            <span v-if="isMounted" class="appointment-time">
+              {{ formatAppointmentDate(task.nextAppointment.appointment_date).split(' ')[0] }}
+              <span class="appointment-hours">
+                {{ formatAppointmentDate(task.nextAppointment.appointment_date).split(' ')[1] }}
+                <template v-if="task.nextAppointment.hora_fim">
+                  - {{ task.nextAppointment.hora_fim.substring(0, 5) }}
+                </template>
+              </span>
+            </span>
           </div>
-          <p class="appointment-task-title" :title="task.nextAppointment.titulo">
-            {{ task.nextAppointment.titulo || 'Contatar Lead' }}
-          </p>
         </div>
+      </div>
+
+      <!-- Placeholder para manter consistência de tamanho -->
+      <div 
+        v-else 
+        class="card-appointment-module-placeholder"
+        @click.stop="openAppointmentModalForNew(task.id)"
+        title="Clique para agendar um compromisso"
+      >
+        <Icon name="lucide:calendar-plus" class="placeholder-icon" />
+        <span class="placeholder-text">Agendar contato</span>
       </div>
       
       <!-- Footer do Card Enriquecido -->
@@ -127,7 +141,7 @@
                 class="avatar-mini" 
               />
               <div v-else class="avatar-placeholder-mini">
-                <span>{{ task.leadName.charAt(0).toUpperCase() }}</span>
+                <span>{{ task.leadName?.charAt(0).toUpperCase() || '?' }}</span>
               </div>
               <div 
                 v-if="task.vendedorNome && task.vendedorNome !== 'Não Atribuído'"
@@ -138,6 +152,9 @@
             <div class="vendedor-details">
               <span class="corretor-label">{{ task.vendedorNome || 'Livre' }}</span>
               <span v-if="task.vendedorOnline" class="online-indicator-text">Online agora</span>
+              <span v-else-if="isMounted && task.vendedorNome && task.vendedorNome !== 'Não Atribuído'" class="last-seen-text">
+                {{ task.lastActivityText || task.vendedorLastSeenText || 'Sem atividade' }}
+              </span>
             </div>
           </div>
         </div>
@@ -157,10 +174,6 @@
               <Icon name="lucide:layers" class="mini-icon" />
               <span>{{ task.appointmentsCount }}</span>
             </div>
-          </div>
-
-          <div class="last-seen-text" v-if="!task.vendedorOnline">
-             {{ task.lastActivityText || task.vendedorLastSeenText || 'Sem atividade' }}
           </div>
         </div>
       </div>
@@ -253,9 +266,27 @@ const appointmentClass = computed(() => {
 });
 
 const appointmentTooltip = computed(() => {
-  if (!props.task.nextAppointment) return 'Nenhum agendamento futuro';
-  const prefix = isAppointmentLate.value ? 'Agendamento ATRASADO: ' : 'Próximo contato agendado: ';
-  return prefix + formatAppointmentDate(props.task.nextAppointment.appointment_date);
+  const app = props.task.nextAppointment;
+  if (!app) return 'Nenhum agendamento futuro';
+
+  const prefix = isAppointmentLate.value ? '🚨 ATRASADO: ' : '📅 AGENDADO: ';
+  let text = `${prefix}${app.titulo || 'Sem título'}`;
+
+  if (app.categoria) {
+    text += `\n🏷️ Categoria: ${app.categoria}`;
+  }
+
+  const date = formatAppointmentDate(app.appointment_date).split(' ')[0];
+  const start = formatAppointmentDate(app.appointment_date).split(' ')[1];
+  const end = app.hora_fim ? app.hora_fim.substring(0, 5) : null;
+  
+  text += `\n⏰ Horário: ${date} das ${start}${end ? ' às ' + end : ''}`;
+
+  if (app.descricao) {
+    text += `\n\n📝 Notas: ${app.descricao}`;
+  }
+
+  return text;
 });
 
 const formatAppointmentDate = (dateStr: string) => {
@@ -413,32 +444,59 @@ const emit = defineEmits(['dragstart', 'open-appointment-new', 'open-appointment
 <style scoped>
 .kanban-card {
   background-color: #ffffff;
-  border-radius: 12px;
+  border-radius: 10px; /* Reduzi levemente o radius para ficar mais moderno */
   padding: 0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); /* Sombra ultra leve */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   cursor: grab;
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, border-color 0.2s ease;
   position: relative;
   display: flex;
   align-items: stretch;
   border: 1px solid #f1f5f9;
-  min-height: 70px; 
-  flex-shrink: 0; 
+  min-height: 100px;
   user-select: none;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Indicadores de Temperatura - Removidas bordas laterais conforme solicitado */
-/* Indicadores de Temperatura - Estilos de agrupamento */
+.kanban-card.is-menu-open {
+  z-index: 50; 
+}
+
+/* Estágios de Temperatura */
 .kanban-card.card-hot { border-left: 0; }
 .kanban-card.card-cold { opacity: 0.9; }
 
-.temperature-indicators {
-  position: absolute;
-  top: 10px;
-  left: 10px;
+.card-info-row {
   display: flex;
-  gap: 4px;
-  z-index: 5;
+  align-items: center;
+  gap: 8px;
+  margin-top: -2px;
+  margin-bottom: 4px;
+}
+
+.inline-score-badge {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.temp-icon-inline {
+  width: 11px;
+  height: 11px;
+}
+
+.inline-cold-icon {
+  color: #3b82f6;
+  display: flex;
+  align-items: center;
+}
+
+.inline-cold-icon :deep(svg) {
+  width: 14px;
+  height: 14px;
 }
 
 .temp-icon {
@@ -483,10 +541,8 @@ const emit = defineEmits(['dragstart', 'open-appointment-new', 'open-appointment
 }
 
 .kanban-card:hover {
-  background-color: #ffffff;
-  border-color: #cbd5e1;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
-  transform: translateY(-2px);
+  background-color: #fafafa;
+  box-shadow: 0 6px 15px -4px rgba(0, 0, 0, 0.06); /* Sombra apenas para profundidade, sem cor */
 }
 
 .quick-actions-trigger {
@@ -516,7 +572,7 @@ const emit = defineEmits(['dragstart', 'open-appointment-new', 'open-appointment
 /* --- Popover de Ações --- */
 .actions-popover {
   position: absolute;
-  top: calc(100% + 5px);
+  top: 100%;
   right: 0;
   background: white;
   border: 1px solid #e2e8f0;
@@ -524,7 +580,7 @@ const emit = defineEmits(['dragstart', 'open-appointment-new', 'open-appointment
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   padding: 0.4rem;
   min-width: 180px;
-  z-index: 100;
+  z-index: 100; /* Prioridade máxima dentro do card */
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -675,7 +731,6 @@ const emit = defineEmits(['dragstart', 'open-appointment-new', 'open-appointment
   align-items: flex-start; 
   gap: 0.4rem;
   margin-bottom: 0.1rem;
-  padding-left: 42px; 
   position: relative;
   min-width: 0;
   width: 100%;
@@ -701,40 +756,38 @@ const emit = defineEmits(['dragstart', 'open-appointment-new', 'open-appointment
 }
 
 .card-phone-number {
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   color: #64748b;
-  margin: -2px 0 0 0;
-  padding-left: 42px;
-  opacity: 0.7;
+  margin: 0;
+  font-weight: 500;
 }
 
 /* MÓDULO DE AGENDAMENTO PREMIUM */
 .card-appointment-module {
-  margin: 0.4rem 0.25rem 0.25rem 0.25rem;
-  background-color: #f8fafc;
-  border-radius: 6px;
+  margin: 2px 6px; 
+  background-color: #f0fdf4; 
+  border-radius: 6px; /* Restaurado como solicitado */
   display: flex;
+  width: auto;
   position: relative;
   overflow: hidden;
   cursor: pointer;
-  transition: background-color 0.2s;
-  border: 1px solid #f1f5f9;
+  transition: all 0.2s;
+  border: 1px solid #dcfce7;
+  height: 16px; /* Ainda mais estrito na vertical */
 }
 
 .card-appointment-module:hover {
-  background-color: #f1f5f9;
-}
-
-.appointment-accent {
-  width: 3px;
-  height: 100%;
-  flex-shrink: 0;
+  filter: brightness(0.98);
 }
 
 .appointment-content {
-  padding: 0.3rem 0.5rem;
+  padding: 0 6px; 
+  display: flex;
+  align-items: center;
   flex-grow: 1;
   min-width: 0;
+  height: 100%;
 }
 
 .appointment-header {
@@ -745,37 +798,70 @@ const emit = defineEmits(['dragstart', 'open-appointment-new', 'open-appointment
 }
 
 .module-icon {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   color: #64748b;
 }
 
 .appointment-time {
-  font-size: 0.65rem;
-  font-weight: 700;
-  color: #475569;
+  font-size: 0.62rem;
+  font-weight: 500;
+  color: #166534;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.appointment-task-title {
-  font-size: 0.75rem;
+.appointment-hours {
   font-weight: 500;
-  color: #334155;
-  margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .card-appointment-module.is-late {
-  background-color: #fff1f2;
-  border-color: #ffe4e6;
+  background-color: #fef2f2;
+  border-color: #fee2e2;
 }
 
 .card-appointment-module.is-late .appointment-time,
 .card-appointment-module.is-late .module-icon {
   color: #e11d48;
+}
+
+/* PLACEHOLDER DE AGENDAMENTO */
+.card-appointment-module-placeholder {
+  margin: 2px 6px;
+  background-color: transparent;
+  border: 1px dashed #e2e8f0;
+  border-radius: 6px; /* Restaurado como solicitado */
+  display: flex;
+  width: auto;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  padding: 0 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  height: 16px; /* Ainda mais estrito na vertical */
+}
+
+.card-appointment-module-placeholder:hover {
+  border-color: #cbd5e1;
+  background-color: #f8fafc;
+}
+
+.placeholder-icon {
+  width: 10px;
+  height: 10px;
+  color: #94a3b8;
+}
+
+.placeholder-text {
+  font-size: 0.62rem;
+  color: #94a3b8;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
 }
 
 /* FOOTER MODERNO */
@@ -793,12 +879,19 @@ const emit = defineEmits(['dragstart', 'open-appointment-new', 'open-appointment
   flex-direction: column;
 }
 
+.online-indicator-text, .last-seen-text {
+  font-size: 0.65rem;
+  line-height: 1.2;
+}
+
 .online-indicator-text {
-  font-size: 0.6rem;
   color: #10b981;
-  font-weight: 400; /* Suavizado de 500 para 400 */
-  line-height: 1;
-  margin-top: 1px;
+  font-weight: 600;
+}
+
+.last-seen-text {
+  color: #94a3b8;
+  font-weight: 400;
 }
 
 .vendedor-compact {
