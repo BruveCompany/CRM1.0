@@ -24,13 +24,14 @@
                 <button 
                   @click="openSettingsModal(column)"
                   class="settings-trigger-btn"
+                  title="Editar Status"
                   :style="{ color: column.color_bg }"
                 >
-                  <Icon name="lucide:settings-2" />
+                  <Icon name="lucide:pencil" />
                 </button>
 
                 <div class="drag-handle-mini" title="Arraste para reordenar" @mousedown="startColumnDrag(index)">
-                  <Icon name="lucide:grip-vertical" />
+                  <Icon name="lucide:menu" />
                 </div>
               </div>
 

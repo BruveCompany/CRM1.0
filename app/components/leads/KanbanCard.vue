@@ -11,12 +11,20 @@
     @dragstart="$emit('dragstart', $event)"
     @click="task.id ? openDetails(task.id) : null"
   >
-    <!-- Indicadores de Temperatura (Quente/Frio) -->
+    <!-- Indicadores de Temperatura (Quente/Frio/Score) -->
     <div class="temperature-indicators">
-      <div v-if="isHot" class="temp-icon hot" title="Lead Quente (Score > 50)">
-        <Icon name="lucide:flame" />
+      <!-- Exibe o Score numericamento se disponível -->
+      <div v-if="task.score !== undefined && task.score !== null" 
+           class="temp-score-badge" 
+           :style="{ color: getScoreColor(task.score), backgroundColor: getScoreColor(task.score) + '15', borderColor: getScoreColor(task.score) + '30' }"
+           :title="`Score de Qualificação: ${task.score}%`"
+      >
+        <Icon :name="task.score >= 50 ? 'lucide:flame' : 'lucide:thermometer'" class="temp-icon-mini" />
+        <span class="score-text">{{ task.score }}</span>
       </div>
-      <div v-if="isCold" class="temp-icon cold" title="Lead Frio (Inativo > 7 dias)">
+      
+      <!-- Indicador de Inatividade (Frio) -->
+      <div v-else-if="isCold" class="temp-icon cold" title="Lead Frio (Inativo > 7 dias)">
         <Icon name="lucide:snowflake" />
       </div>
     </div>
@@ -188,6 +196,13 @@ const openReassignModal = () => {
   showReassignModal.value = true;
 };
 
+// Cores baseadas no score (seguindo o padrão do modal de detalhes)
+const getScoreColor = (score: number) => {
+  if (score >= 80) return '#10B981'; // Verde (Quente/Excelente)
+  if (score >= 50) return '#F59E0B'; // Amarelo (Morno/Bom)
+  return '#EF4444'; // Vermelho (Frio/Baixo)
+};
+
 /**
  * ATRIBUIR A MIM
  * Associa o lead ao corretor/vendedor atualmente logado.
@@ -335,6 +350,27 @@ defineEmits(['dragstart']);
   justify-content: center;
   border-radius: 4px;
   font-size: 0.7rem;
+}
+
+.temp-score-badge {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 4px;
+  border-radius: 6px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+}
+
+.temp-icon-mini {
+  width: 10px;
+  height: 10px;
+}
+
+.score-text {
+  line-height: 1;
 }
 
 .temp-icon.hot {
@@ -531,7 +567,7 @@ defineEmits(['dragstart']);
   align-items: center; 
   gap: 0.4rem;
   margin-bottom: 0.1rem;
-  padding-left: 28px; 
+  padding-left: 48px; /* Aumentado de 28px para não encavalar com o score */
   position: relative;
   min-width: 0; /* Permite que o flex child encolha */
   width: 100%;
@@ -560,7 +596,7 @@ defineEmits(['dragstart']);
   font-size: 0.8rem;
   color: #64748b;
   margin: 0;
-  padding-left: 28px; /* Alinhado com o título */
+  padding-left: 48px; /* Alinhado com o título (Aumentado de 28px) */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
