@@ -78,15 +78,23 @@
               </div>
             </div>
 
-            <!-- TABELA COM DRILL-DOWN -->
-            <div class="space-y-4">
-              <div class="flex items-center justify-between">
-                <h2 class="text-xl font-bold text-gray-900 tracking-tight">Detalhamento operacional</h2>
-                <p class="text-[11px] text-slate-400 font-bold uppercase tracking-widest">Clique em um especialista para isolar dados</p>
+            <!-- DETALHAMENTO E RANKING -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+              <!-- TABELA COM DRILL-DOWN (Col 2) -->
+              <div class="lg:col-span-2 space-y-4">
+                <div class="flex items-center justify-between">
+                  <h2 class="text-lg font-bold text-gray-900 tracking-tight">Detalhamento operacional</h2>
+                  <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Clique para filtrar especialista</p>
+                </div>
+                <RelatoriosVendedorTable v-if="!loading" :data="reportData" @select-vendedor="handleVendedorSelect" />
+                <div v-else class="bg-white rounded-2xl border border-gray-100 h-96 flex items-center justify-center">
+                  <div class="animate-spin w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full"></div>
+                </div>
               </div>
-              <RelatoriosVendedorTable v-if="!loading" :data="reportData" @select-vendedor="handleVendedorSelect" />
-              <div v-else class="bg-white rounded-2xl border border-gray-100 h-96 flex items-center justify-center">
-                <div class="animate-spin w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full"></div>
+
+              <!-- RANKING VISUAL (Col 1) -->
+              <div class="lg:col-span-1 space-y-4">
+                <RelatoriosBarrasVendedorChart v-if="!loading && reportData.length > 0" :data="reportData" />
               </div>
             </div>
           </div>
@@ -230,7 +238,13 @@ const fetchReportData = async () => {
       console.error('❌ Erro Supabase RPC:', error);
       reportData.value = [];
     } else {
-      reportData.value = data || [];
+      // Calcular as taxas de conversão individualmente no frontend para garantir precisão
+      reportData.value = (data || []).map((item: any) => ({
+        ...item,
+        taxa_conversao: item.total_leads > 0 
+          ? (Number(item.leads_convertidos) / Number(item.total_leads)) * 100 
+          : 0
+      }));
     }
   } catch (err: any) {
     console.error('⚠️ Falha crítica ao buscar dados do dashboard:', err.message || err);

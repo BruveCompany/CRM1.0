@@ -1,23 +1,21 @@
 <template>
   <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden transition-all">
     <div class="px-6 py-4 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
-      <h3 class="text-[12px] font-semibold text-slate-400">Desempenho por especialista</h3>
-      <span class="text-[10px] font-medium text-slate-300">{{ data.length }} profissionais ativos</span>
+      <h3 class="text-[12px] font-semibold text-slate-400 uppercase tracking-wider">Desempenho por especialista</h3>
+      <span class="text-[10px] font-bold text-slate-300">{{ data.length }} profissionais ativos</span>
     </div>
     
     <div class="overflow-x-auto">
       <table class="w-full border-collapse">
         <thead>
-          <tr class="border-b border-slate-50">
-            <th class="px-6 py-4 text-left text-[11px] font-semibold text-slate-400">Consultor</th>
-            <th class="px-6 py-3 text-center text-[11px] font-semibold text-slate-400">Leads</th>
-            <th class="px-6 py-3 text-center text-[11px] font-semibold text-slate-400">Conversão</th>
-            <th class="px-6 py-3 text-center text-[11px] font-semibold text-slate-400">Taxa %</th>
-            <th class="px-6 py-3 text-center text-[11px] font-semibold text-slate-400">Score</th>
-            <th class="px-6 py-3 text-center text-[11px] font-semibold text-slate-400">Tempo Resp. (h)</th>
-            <th class="px-6 py-3 text-center text-[11px] font-semibold text-slate-400">Ciclo Venda (d)</th>
-            <th class="px-6 py-3 text-center text-[11px] font-semibold text-slate-400">Agend.</th>
-            <th class="px-6 py-3 text-center text-[11px] font-semibold text-slate-400">Msg</th>
+          <tr class="border-b border-slate-100 bg-slate-50/50">
+            <th class="px-3 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Consultor</th>
+            <th class="px-2 py-3 text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">Leads</th>
+            <th class="px-2 py-3 text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">Conv.</th>
+            <th class="px-3 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider w-32">Taxa %</th>
+            <th class="px-2 py-3 text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">Score</th>
+            <th class="px-2 py-3 text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">T. Resp.</th>
+            <th class="px-2 py-3 text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">Agend.</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-50">
@@ -25,35 +23,51 @@
             v-for="item in data" 
             :key="item.vendedor_id" 
             @click="$emit('select-vendedor', item)"
-            class="group hover:bg-primary-50/30 cursor-pointer transition-colors"
+            class="group hover:bg-indigo-50/30 cursor-pointer transition-colors"
           >
-            <td class="px-6 py-4 whitespace-nowrap">
-              <div class="flex items-center gap-3">
-                <div class="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 text-[10px] font-bold">
-                  {{ item.vendedor_nome ? item.vendedor_nome.substring(0,2).toUpperCase() : '??' }}
+            <!-- Coluna Consultor com Avatar -->
+            <td class="px-3 py-3 whitespace-nowrap">
+              <div class="flex items-center gap-2">
+                <div class="relative flex-shrink-0">
+                  <img 
+                    v-if="item.vendedor_avatar" 
+                    :src="item.vendedor_avatar" 
+                    class="w-7 h-7 rounded-full object-cover border border-slate-100 shadow-sm"
+                  />
+                  <div v-else class="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 text-[9px] font-bold border border-slate-100">
+                    {{ item.vendedor_nome ? item.vendedor_nome.substring(0,2).toUpperCase() : '??' }}
+                  </div>
                 </div>
-                <span class="text-sm font-medium text-slate-700 group-hover:text-primary-600 transition-colors">{{ item.vendedor_nome }}</span>
+                <span class="text-xs font-semibold text-slate-700 group-hover:text-primary-600 transition-colors truncate max-w-[100px]">{{ item.vendedor_nome }}</span>
               </div>
             </td>
-            <td class="px-6 py-4 text-center text-sm font-medium text-slate-600">{{ item.total_leads }}</td>
-            <td class="px-6 py-4 text-center text-sm font-medium text-slate-600">{{ item.leads_convertidos }}</td>
-            <td class="px-6 py-4 text-center">
-              <span 
-                class="inline-flex items-center justify-center px-2 py-0.5 rounded text-[11px] font-semibold"
-                :class="getTaxaClass(item.taxa_conversao || 0)"
-              >
-                {{ (item.taxa_conversao || 0).toFixed(1) }}%
-              </span>
+
+            <td class="px-2 py-3 text-center text-xs font-bold text-slate-600">{{ item.total_leads }}</td>
+            <td class="px-2 py-3 text-center text-xs font-bold text-slate-600">{{ item.leads_convertidos }}</td>
+
+            <!-- Coluna Taxa % com Barra de Progresso Inteligente -->
+            <td class="px-3 py-3">
+              <div class="flex flex-col gap-1 min-w-[80px]">
+                <div class="w-full h-1 bg-slate-100 rounded-full overflow-hidden relative">
+                  <div 
+                    class="h-full rounded-full transition-all duration-700 ease-out" 
+                    :class="getBarColor(item.taxa_conversao || 0)"
+                    :style="{ width: `${Math.min(item.taxa_conversao || 0, 100)}%` }"
+                  ></div>
+                </div>
+                <span class="text-[9px] font-extrabold" :class="getTextColor(item.taxa_conversao || 0)">
+                  {{ (item.taxa_conversao || 0).toFixed(1) }}%
+                </span>
+              </div>
             </td>
-            <td class="px-6 py-4 text-center text-sm font-medium text-slate-300 tracking-tight">{{ (item.score_medio || 0).toFixed(1) }}</td>
-            <td class="px-6 py-4 text-center text-xs font-semibold text-slate-400">{{ (Number(item.tempo_medio_resposta) || 0).toFixed(1) }}h</td>
-            <td class="px-6 py-4 text-center text-xs font-semibold text-slate-400">{{ (Number(item.tempo_medio_conversao) || 0).toFixed(1) }}d</td>
-            <td class="px-6 py-4 text-center text-sm font-medium text-slate-600">{{ item.total_agendamentos }}</td>
-            <td class="px-6 py-4 text-center text-sm font-medium text-slate-600">{{ item.total_mensagens || 0 }}</td>
+
+            <td class="px-2 py-3 text-center text-xs font-bold text-slate-400">{{ (item.score_medio || 0).toFixed(1) }}</td>
+            <td class="px-2 py-3 text-center text-[10px] font-bold text-slate-400">{{ (Number(item.tempo_medio_resposta) || 0).toFixed(1) }}h</td>
+            <td class="px-2 py-3 text-center text-xs font-bold text-slate-600">{{ item.total_agendamentos }}</td>
           </tr>
           
           <tr v-if="data.length === 0">
-            <td colspan="9" class="px-6 py-20 text-center">
+            <td colspan="7" class="px-6 py-20 text-center">
               <div class="flex flex-col items-center gap-3">
                 <div class="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center">
                   <Icon name="heroicons:outline:face-frown" class="w-6 h-6 text-slate-200" />
@@ -75,9 +89,16 @@ defineProps<{
 
 defineEmits(['select-vendedor']);
 
-const getTaxaClass = (taxa: number) => {
-  if (taxa >= 25) return 'bg-success-50 text-success-700 border-success-100';
-  if (taxa >= 10) return 'bg-warning-50 text-warning-700 border-warning-100';
-  return 'bg-error-50 text-error-700 border-error-100';
+// Lógica de Cores Condicionais (Inteligente)
+const getBarColor = (taxa: number) => {
+  if (taxa >= 25) return 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.2)]';
+  if (taxa >= 10) return 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.2)]';
+  return 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.2)]';
+};
+
+const getTextColor = (taxa: number) => {
+  if (taxa >= 25) return 'text-emerald-600';
+  if (taxa >= 10) return 'text-amber-600';
+  return 'text-rose-600';
 };
 </script>
