@@ -1,153 +1,123 @@
-<!--
-  Página Principal de Leads
-  Gerencia a visualização em Kanban ou Tabela, além de centralizar as notificações locais.
--->
 <template>
-  <NuxtLayout>
-    <div class="page-container">
+  <NuxtLayout name="default">
+    <div class="leads-page-container">
+      <!-- Cabeçalho de Navegação e Filtros -->
       <LeadsHeader />
 
-      <main class="main-content">
-        <ClientOnly>
-          <LeadsKanban v-if="showKanbanView" />
-          <LeadsTable v-else />
-          <LeadsLeadDetailsModal />
-        </ClientOnly>
+      <main class="leads-content">
+        <!-- Dashboard / Título Local (Aparece apenas na Lista) -->
+        <div v-if="!showKanbanView" class="px-6 pt-6 flex items-center justify-between">
+          <div class="space-y-1.5">
+            <h1 class="text-2xl font-semibold text-gray-900 tracking-tight">Lista de Leads</h1>
+            <p class="text-sm text-slate-400 font-medium">Análise de performance e métricas comerciais</p>
+          </div>
+        </div>
+
+        <!-- Renderização Condicional: Kanban vs Tabela -->
+        <div class="view-wrapper">
+          <ClientOnly>
+            <Transition name="fade" mode="out-in">
+              <LeadsKanban v-if="showKanbanView" />
+              <LeadsTable v-else />
+            </Transition>
+            
+            <template #placeholder>
+              <div class="flex flex-col items-center justify-center py-32 opacity-20">
+                <Icon name="svg-spinners:18-dots-indicator" class="w-12 h-12 mb-4" />
+                <p class="text-sm font-bold uppercase tracking-widest">Sincronizando Leads...</p>
+              </div>
+            </template>
+          </ClientOnly>
+        </div>
       </main>
 
-      <!-- Notificação Flutuante (Toast) integrada ao sistema global ou local -->
-      <Transition name="toast">
-        <div v-if="toast.show" class="toast-notification" :class="toast.type">
-          <div class="toast-content">
-            <Icon 
-              :name="toast.type === 'success' ? 'lucide:check-circle-2' : 'lucide:alert-circle'" 
-              class="toast-icon" 
-            />
-            <span>{{ toast.message }}</span>
-          </div>
-          <div class="toast-progress" :class="toast.type"></div>
-        </div>
-      </Transition>
+      <!-- Detalhes do Lead (Modal Lateral ou Central) -->
+      <LeadsLeadDetailsModal />
     </div>
   </NuxtLayout>
 </template>
 
 <script setup lang="ts">
-/**
- * Importações e Configurações da Página
- */
+import { onMounted, onUnmounted } from 'vue';
 import { useLeads } from '~/composables/useLeads';
+import LeadsHeader from '~/components/leads/LeadsHeader.vue';
+import LeadsKanban from '~/components/leads/LeadsKanban.vue';
+import LeadsTable from '~/components/leads/LeadsTable.vue';
+import LeadsLeadDetailsModal from '~/components/leads/LeadsLeadDetailsModal.vue';
 
-definePageMeta({
-  layout: 'default'
+const { 
+  fetchLeads, 
+  fetchStatuses, 
+  showKanbanView, 
+  filteredLeadsList,
+  subscribeToStatusChanges,
+  subscribeToAppointmentChanges
+} = useLeads();
+
+let statusSub: any = null;
+let appointSub: any = null;
+
+onMounted(async () => {
+  // Carregamento inicial de dados
+  await Promise.all([
+    fetchStatuses(),
+    fetchLeads()
+  ]);
+
+  // Inscricões Realtime
+  statusSub = subscribeToStatusChanges();
+  appointSub = subscribeToAppointmentChanges();
 });
 
-const { showKanbanView, fetchLeads } = useLeads();
+onUnmounted(() => {
+  if (statusSub) statusSub.unsubscribe();
+  if (appointSub) appointSub.unsubscribe();
+});
 
-/**
- * ESTADO DO TOAST LOCAL
- * Utilizado para notificações rápidas dentro desta página (ex: ao mover leads no Kanban).
- * Definido como useState para ser acessível por componentes filhos via chave string.
- */
-const toast = useState('leads-local-toast', () => ({
-  show: false,
-  message: '',
-  type: 'success' as 'success' | 'error'
-}));
-
-onMounted(() => {
-  fetchLeads();
+// SEO
+useHead({
+  title: 'Gestão de Leads | Painel de Atendimento',
+  meta: [
+    { name: 'description', content: 'Gerencie seu pipeline de vendas de forma inteligente e visual.' }
+  ]
 });
 </script>
 
 <style scoped>
-.page-container {
+.leads-page-container {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  max-height: calc(100vh - 0px); /* Garante que não ultrapasse a tela */
+  height: 100vh;
   background-color: #f8fafc;
   overflow: hidden;
 }
 
-.main-content {
-  flex-grow: 1;
+.leads-content {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  min-height: 0;
 }
 
-/* --- ESTILOS DO TOAST (NOTIFICAÇÃO) --- */
-.toast-notification {
-  position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  z-index: 9999;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
-  min-width: 320px;
-  border: 1px solid #f1f5f9;
-}
-
-.toast-notification.success { border-left: 3px solid #10b981; }
-.toast-notification.error { border-left: 3px solid #ef4444; }
-
-.toast-content {
-  padding: 14px 18px;
+.view-wrapper {
+  flex: 1;
+  min-height: 0;
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  color: #1e293b;
-  font-weight: 600;
-  font-size: 0.9rem;
+  flex-direction: column;
 }
 
-.toast-icon {
-  width: 1.25rem;
-  height: 1.25rem;
-  flex-shrink: 0;
+/* Transições */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
 }
 
-.toast-notification.success .toast-icon { color: #10b981; }
-.toast-notification.error .toast-icon { color: #ef4444; }
-
-.toast-progress {
-  height: 2px;
-  width: 100%;
-  background: #f1f5f9;
-  position: relative;
-}
-
-.toast-progress::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: 100%;
-  transform-origin: left;
-  animation: toast-progress 4s linear forwards;
-}
-
-.toast-progress.success::after { background: #10b981; }
-.toast-progress.error::after { background: #ef4444; }
-
-@keyframes toast-progress {
-  from { transform: scaleX(1); }
-  to { transform: scaleX(0); }
-}
-
-.toast-enter-active, .toast-leave-active {
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-.toast-enter-from {
+.fade-enter-from,
+.fade-leave-to {
   opacity: 0;
-  transform: translateY(100px) scale(0.9);
 }
-.toast-leave-to {
-  opacity: 0;
-  transform: translateX(100px);
+
+:deep(.content-wrapper) {
+  padding-top: 1rem !important;
 }
 </style>

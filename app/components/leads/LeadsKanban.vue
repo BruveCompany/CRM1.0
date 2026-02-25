@@ -170,6 +170,7 @@ import LeadsStatusDeleteModal from './LeadsStatusDeleteModal.vue';
 import LeadsStatusSettingsModal from './LeadsStatusSettingsModal.vue';
 import LeadsStatusCreateModal from './LeadsStatusCreateModal.vue';
 import LeadsColorPickerModal from './LeadsColorPickerModal.vue';
+import { useNotification } from '~/composables/useNotification';
 import ModalNovoAgendamento from '~/components/agendamentos/ModalNovoAgendamento.vue';
 import ModalEditarAgendamento from '~/components/agendamentos/ModalEditarAgendamento.vue';
 import ModalListaAgendamentosLead from '~/components/agendamentos/ModalListaAgendamentosLead.vue';
@@ -194,6 +195,7 @@ const {
 } = useLeads();
 
 const { fetchClientes, fetchProfissionais } = useProfissionais();
+const { notifySuccess, notifyError } = useNotification();
 const agendamentoStore = useAgendamentoStore();
 const { profile } = useAuth();
 const supabase = useSupabaseClient();
@@ -289,15 +291,9 @@ onUnmounted(() => {
   if (appointmentSubscription) appointmentSubscription.unsubscribe();
 });
 
-const toast = useState('leads-local-toast', () => ({
-  show: false,
-  message: '',
-  type: 'success' as 'success' | 'error'
-}));
-
 const showLocalToast = (message: string, type: 'success' | 'error' = 'success') => {
-  toast.value = { show: true, message, type };
-  setTimeout(() => { toast.value.show = false; }, 4000);
+  if (type === 'success') notifySuccess(message);
+  else notifyError(message);
 };
 
 const onDragStartCard = (event: DragEvent, taskId: string) => {

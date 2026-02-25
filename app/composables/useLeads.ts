@@ -37,6 +37,8 @@ export interface LeadTask {
     } | null;
     appointmentsCount?: number;
     cliente_id?: number | null;
+    email?: string;
+    origem?: string;
 }
 
 export interface LeadStatus {

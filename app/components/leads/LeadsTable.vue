@@ -1,74 +1,108 @@
 <template>
   <div class="lead-list-view content-wrapper">
-    <div class="list-header">
-      <h2>Lista de Leads</h2>
-    </div>
     <div class="table-container">
       <table>
         <thead>
-            <th style="width: 15%;">Nome</th>
-            <th style="width: 120px;">Telefone</th>
-            <th style="width: 150px;">Status</th>
-            <th style="width: 60px; text-align: center;">Score</th>
-            <th style="width: 100px; text-align: center;">Temp.</th>
-            <th style="width: 15%;">Vendedor</th>
-            <th style="width: 110px;">Atividade</th>
-            <th style="width: 100px; text-align: center;">Mensagens</th>
-            <th v-if="isAdmin" class="actions-column">Ações</th>
-        </thead>
-        <tbody>
-          <tr v-if="filteredLeadsList.length === 0">
-            <td :colspan="isAdmin ? 9 : 8" class="empty-table-message">Nenhum lead encontrado.</td>
+          <tr class="bg-gray-50">
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Nome do Lead
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Contato
+            </th>
+            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Status
+            </th>
+            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Score
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Vendedor
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Atividade
+            </th>
+            <th v-if="isAdmin" scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Ações
+            </th>
           </tr>
-          <tr v-for="lead in filteredLeadsList" :key="lead.id" @click="openDetails(lead.id)" class="cursor-pointer">
-            <td :title="lead.nome">{{ lead.nome }}</td>
-            <td :title="lead.telefone">{{ lead.telefone }}</td>
-            <td :title="lead.status.replace(/_/g, ' ')">
-              <span class="status-badge" :style="{ '--status-color': getStatusColor(lead.status) }">
-                {{ lead.status.replace(/_/g, ' ') }}
-              </span>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <tr v-if="filteredLeadsList.length === 0">
+            <td :colspan="isAdmin ? 7 : 6" class="px-6 py-12 text-center text-sm text-gray-500 font-medium">
+              Nenhum lead encontrado estrategicamente.
             </td>
-            <td style="width: 60px; text-align: center;" :title="String(lead.score || '-')">{{ lead.score || '-' }}</td>
-            <td style="width: 100px; text-align: center;" :title="lead.temperatura || '-'">
-              <span v-if="lead.temperatura" class="temp-badge" :class="lead.temperatura.toLowerCase()">
-                {{ lead.temperatura }}
-              </span>
-              <span v-else>-</span>
+          </tr>
+          <tr 
+            v-for="lead in filteredLeadsList" 
+            :key="lead.id" 
+            class="hover:bg-neutral-50 transition-colors group"
+          >
+            <td class="px-6 py-4 whitespace-nowrap">
+              <NuxtLink :to="`/leads/${lead.id}`" class="block group">
+                <span class="text-sm font-medium text-gray-900 group-hover:text-primary-600 transition-colors">{{ lead.nome }}</span>
+                <span v-if="lead.origem" class="block text-[10px] text-gray-400 font-medium uppercase tracking-tight mt-0.5">{{ lead.origem }}</span>
+              </NuxtLink>
             </td>
-            <td :title="lead.vendedor_nome || 'Não Atribuído'">
-              <div class="flex items-center gap-2">
-                <span class="status-dot-mini" :class="{ 'is-online': lead.vendedorOnline }"></span>
-                {{ lead.vendedor_nome || 'Não Atribuído' }}
+            <td class="px-6 py-4">
+              <div class="flex flex-col">
+                <span class="text-sm text-gray-500 truncate max-w-[180px]">{{ lead.email || '-' }}</span>
+                <span class="text-xs text-gray-400 font-medium">{{ lead.telefone || '-' }}</span>
               </div>
             </td>
-            <td style="width: 110px;" :title="lead.ultima_mensagem_data ? formatRelativeTime(lead.ultima_mensagem_data) : 'N/A'">
-              <ClientOnly>
+            <td class="px-6 py-4 text-center">
+              <UiStatusPill :status="lead.status" dot />
+            </td>
+            <td class="px-6 py-4 text-center">
+              <div 
+                v-if="lead.score"
+                class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold"
+                :class="lead.score >= 50 ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-50 text-gray-600'"
+              >
+                {{ lead.score }}
+              </div>
+              <span v-else class="text-gray-300">-</span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="flex items-center gap-2">
+                <div 
+                  class="w-2 h-2 rounded-full" 
+                  :class="lead.vendedorOnline ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-gray-300'"
+                ></div>
+                <span class="text-sm text-gray-600">{{ lead.vendedor_nome || 'Não Atribuído' }}</span>
+              </div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="text-xs font-medium text-gray-400 uppercase">
                 {{ lead.ultima_mensagem_data ? formatRelativeTime(lead.ultima_mensagem_data) : 'N/A' }}
-                <template #placeholder>---</template>
-              </ClientOnly>
-            </td>
-            <td style="width: 100px; text-align: center;" :title="String(lead.mensagens_nao_lidas || '0')">
-              <span v-if="(lead.mensagens_nao_lidas || 0) > 0" class="unread-count-table">
-                {{ lead.mensagens_nao_lidas }}
               </span>
-              <span v-else>-</span>
             </td>
-            <td v-if="isAdmin" class="actions-column">
-              <button 
-                class="icon-btn edit-btn" 
-                @click.stop="openDetails(lead.id)"
-                title="Editar Lead"
-              >
-                <Icon name="lucide:edit" />
-              </button>
+            <td v-if="isAdmin" class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+              <div class="flex items-center justify-end gap-2">
+                <NuxtLink 
+                  :to="`/leads/${lead.id}`" 
+                  class="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
+                  title="Ver Perfil 360°"
+                >
+                  <Icon name="heroicons:eye" class="w-5 h-5 stroke-[1.5]" />
+                </NuxtLink>
+                
+                <button 
+                  class="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 transition-colors"
+                  @click.stop="openDetails(lead.id)"
+                  title="Editar Lead"
+                >
+                  <Icon name="heroicons:pencil-square" class="w-5 h-5 stroke-[1.5]" />
+                </button>
 
-              <button 
-                class="icon-btn delete-btn" 
-                @click.stop="confirmDeleteLead(lead)"
-                title="Excluir Lead"
-              >
-                <Icon name="lucide:trash-2" />
-              </button>
+                <button 
+                  class="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+                  @click.stop="confirmDeleteLead(lead)"
+                  title="Arquivar Lead"
+                >
+                  <Icon name="heroicons:trash" class="w-5 h-5 stroke-[1.5]" />
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -207,8 +241,8 @@ const handleExecuteDelete = async () => {
 
 .list-header h2 {
   font-size: 1.1rem;
-  font-weight: 700;
-  color: #1e293b;
+  font-weight: 600;
+  color: #111827;
   margin: 0;
 }
 

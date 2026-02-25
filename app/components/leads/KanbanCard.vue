@@ -136,12 +136,12 @@
             <div class="avatar-mini-wrapper">
               <img 
                 v-if="task.vendedorNome && task.vendedorNome !== 'Não Atribuído'"
-                :src="`https://api.dicebear.com/7.x/initials/svg?seed=${task.vendedorNome}&backgroundColor=818cf8`" 
+                :src="`https://api.dicebear.com/7.x/initials/svg?seed=${task.vendedorNome.split(' ')[0]?.substring(0, 2) || 'VN'}&backgroundColor=818cf8`" 
                 alt="Avatar" 
                 class="avatar-mini" 
               />
-              <div v-else class="avatar-placeholder-mini">
-                <span>{{ task.leadName?.charAt(0).toUpperCase() || '?' }}</span>
+              <div v-else class="avatar-placeholder-mini" style="background-color: #818CF8">
+                <span>{{ task.leadName?.split(' ')[0]?.substring(0, 2).toUpperCase() || '?' }}</span>
               </div>
               <div 
                 v-if="task.vendedorNome && task.vendedorNome !== 'Não Atribuído'"
