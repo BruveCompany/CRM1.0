@@ -31,8 +31,18 @@
         </div>
       </main>
 
-      <!-- Detalhes do Lead (Modal Lateral ou Central) -->
-      <LeadsLeadDetailsModal />
+      <ClientOnly>
+        <LeadsLeadDetailsModal />
+        
+        <!-- Modal Unificado de Criação/Edição de Lead -->
+        <LeadEditModal 
+          v-if="isCreateLeadModalOpen"
+          v-model="isCreateLeadModalOpen" 
+          :lead="leadToEdit" 
+          :is-editing="!!leadToEdit?.id"
+          @save="handleSave"
+        />
+      </ClientOnly>
     </div>
   </NuxtLayout>
 </template>
@@ -44,6 +54,7 @@ import LeadsHeader from '~/components/leads/LeadsHeader.vue';
 import LeadsKanban from '~/components/leads/LeadsKanban.vue';
 import LeadsTable from '~/components/leads/LeadsTable.vue';
 import LeadsLeadDetailsModal from '~/components/leads/LeadsLeadDetailsModal.vue';
+import LeadEditModal from '~/components/lead/EditModal.vue';
 
 const { 
   fetchLeads, 
@@ -51,8 +62,96 @@ const {
   showKanbanView, 
   filteredLeadsList,
   subscribeToStatusChanges,
-  subscribeToAppointmentChanges
+  subscribeToAppointmentChanges,
+  isEditingStatuses,
+  isCreateLeadModalOpen
 } = useLeads();
+
+const supabase = useSupabaseClient();
+const { notifySuccess, notifyError } = useNotification();
+const { profile } = useAuth();
+
+// Estado para controlar se estamos editando ou criando
+const leadToEdit = ref<any>({});
+
+// Sempre que o modal for aberto, se não houver lead definido, ele começa vazio
+watch(isCreateLeadModalOpen, (val) => {
+  if (!val) leadToEdit.value = {};
+});
+
+const handleSave = async (formData: any) => {
+  try {
+    // 1. Prepara o payload (limpa campos virtuais do modal como _slug)
+    const payload = {
+      nome:               formData.nome,
+      email:              formData.email,
+      telefone:           formData.telefone,
+      temperatura:        formData.temperatura,
+      empresa:            formData.empresa,
+      cargo:              formData.cargo,
+      origem:             formData.origem,
+      score:              formData.score,
+      notas:              formData.notas,
+      interesse:          formData.interesse,
+      valor_estimado:     formData.valor_estimado,
+      setor_atuacao:      formData.setor_atuacao,
+      principal_desafio:  formData.principal_desafio,
+      produtos_interesse: formData.produtos_interesse,
+      tags:               formData.tags,
+      proximo_contato_em: formData.proximo_contato_em,
+      linkedin_url:       formData.linkedin_url,
+      facebook_url:       formData.facebook_url,
+      instagram_url:      formData.instagram_url,
+      website_url:        formData.website_url,
+      notas_perfil:       formData.notas_perfil,
+    };
+
+    if (formData.id) {
+      // ── Lógica de UPDATE ──
+      const { error } = await (supabase
+        .from('ag_leads') as any)
+        .update(payload)
+        .eq('id', formData.id);
+
+      if (error) throw error;
+      notifySuccess('Lead atualizado com sucesso!');
+    } else {
+      // ── Lógica de INSERT ──
+      const { data: newLead, error } = await (supabase
+        .from('ag_leads') as any)
+        .insert([payload])
+        .select('id')
+        .single();
+
+      if (error) throw error;
+
+      // Se informou data, cria o agendamento correspondente
+      if (formData.proximo_contato_em) {
+        await (supabase.from('ag_agendamentos') as any).insert({
+          lead_id: newLead.id,
+          profissional_id: profile.value?.id,
+          appointment_date: formData.proximo_contato_em,
+          titulo: `Primeiro contato: ${payload.nome}`,
+          descricao: `Agendamento automático via criação de lead. Interesse: ${payload.interesse || 'Não informado'}`,
+          status: 'pendente',
+          categoria: 'contato'
+        });
+      }
+
+      notifySuccess('Lead criado com sucesso!');
+    }
+
+    isCreateLeadModalOpen.value = false;
+    await fetchLeads();
+  } catch (err: any) {
+    console.error('[ERRO AO SALVAR LEAD]', err.message);
+    if (err.message?.includes('duplicate key') || err.message?.includes('unique')) {
+      notifyError('Este telefone ou e-mail já pertence a outro lead.');
+    } else {
+      notifyError(`Erro ao salvar lead: ${err.message}`);
+    }
+  }
+};
 
 let statusSub: any = null;
 let appointSub: any = null;

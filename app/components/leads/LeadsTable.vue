@@ -161,7 +161,7 @@ const { notifySuccess, notifyError } = useNotification();
 const { checkIsAdmin } = useAuth();
 const supabase = useSupabaseClient();
 
-const isAdmin = ref(true);
+const isAdmin = ref(false);
 const showConfirmDeleteModal = ref(false);
 const leadToDelete = ref<LeadTask | null>(null);
 

@@ -168,7 +168,7 @@ const isOpen = computed({
   set: (val: boolean) => showDetailsModal.value = val
 });
 
-const isAdmin = ref(true); // Default to true to avoid flashing, then verify
+const isAdmin = ref(false); // Inicia como false para evitar mismatch de hidratação e verifica no onMounted
 
 onMounted(async () => {
   isAdmin.value = await checkIsAdmin();

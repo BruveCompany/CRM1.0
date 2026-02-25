@@ -54,7 +54,7 @@
           <LeadDetailHeader 
             :lead="lead" 
             @whatsapp="openWhatsApp"
-            @edit="handleEdit"
+            @edit="isEditModalOpen = true"
             @schedule="handleSchedule"
           />
 
@@ -99,10 +99,61 @@
             <div class="lg:col-span-3 space-y-8">
               <UiCard title="Ações Rápidas" icon="heroicons:bolt" padding>
                 <div class="grid grid-cols-1 gap-3">
-                  <UiActionButton variant="outline" class="justify-between" @click="handleEdit">
-                    Mudar Estágio
-                    <Icon name="heroicons:chevron-right" />
-                  </UiActionButton>
+
+                  <!-- Mudar Estágio: Dropdown com Teleport (escapa do overflow-hidden do Card) -->
+                  <div ref="stageMenuRef">
+                    <UiActionButton
+                      ref="stageBtnRef"
+                      variant="outline"
+                      class="justify-between w-full"
+                      @click="toggleStageMenu"
+                    >
+                      Mudar Estágio
+                      <Icon
+                        name="heroicons:chevron-down"
+                        class="transition-transform duration-200"
+                        :class="{ 'rotate-180': showStageMenu }"
+                      />
+                    </UiActionButton>
+                  </div>
+
+                  <!-- Dropdown renderizado no body via Teleport -->
+                  <Teleport to="body">
+                    <Transition
+                      enter-active-class="transition ease-out duration-150"
+                      enter-from-class="opacity-0 -translate-y-2"
+                      enter-to-class="opacity-100 translate-y-0"
+                      leave-active-class="transition ease-in duration-100"
+                      leave-from-class="opacity-100 translate-y-0"
+                      leave-to-class="opacity-0 -translate-y-2"
+                    >
+                      <div
+                        v-if="showStageMenu"
+                        :style="dropdownStyle"
+                        class="fixed bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-[9999] max-h-[480px]"
+                      >
+                        <button
+                          v-for="status in leadStatuses"
+                          :key="status.id"
+                          @click="updateLeadStatus(status.id)"
+                          class="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-normal text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 transition-colors duration-150"
+                          :class="{ 'bg-indigo-50 text-indigo-700 font-semibold': isCurrentStatus(status.id) }"
+                        >
+                          <span
+                            class="w-2 h-2 rounded-full flex-shrink-0"
+                            :style="{ backgroundColor: status.color_bg || '#94a3b8' }"
+                          />
+                          {{ status.display_name }}
+                          <Icon
+                            v-if="isCurrentStatus(status.id)"
+                            name="heroicons:check"
+                            class="ml-auto w-4 h-4 text-indigo-600"
+                          />
+                        </button>
+                      </div>
+                    </Transition>
+                  </Teleport>
+
                   <UiActionButton variant="outline" class="justify-between" @click="handleSchedule">
                     Agendar Reunião
                     <Icon name="heroicons:calendar" />
@@ -129,17 +180,66 @@
           </div>
         </div>
       </div>
-    </ClientOnly>
+    <!-- Modal de Edição do Lead -->
+    <LeadEditModal
+      v-model="isEditModalOpen"
+      :lead="lead"
+      :is-editing="true"
+      @save="handleSave"
+    />
+  </ClientOnly>
   </NuxtLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useLeads } from '~/composables/useLeads';
 
 // --- SETUP ---
 const route = useRoute();
 const id = route.params.id as string;
 const supabase = useSupabaseClient();
+const { notifySuccess, notifyError } = useNotification();
+const { profile } = useAuth();
+
+// --- STATUS DO KANBAN (dinâmicos, vindos do banco via ag_lead_statuses) ---
+const { leadStatuses, fetchStatuses } = useLeads();
+
+// Normaliza o status do lead para comparação com status.id
+// Ex: 'Leads Novos' → 'leads_novos' para bater com o id cadastrado
+const isCurrentStatus = (statusId: string): boolean => {
+  if (!lead.value?.status) return false;
+  const current = String(lead.value.status).toLowerCase().trim();
+  const normalized = current.replace(/\s+/g, '_');
+  return normalized === statusId.toLowerCase() || current === statusId.toLowerCase();
+};
+
+// --- STAGE MENU STATE ---
+const showStageMenu = ref(false);
+const stageMenuRef = ref<HTMLElement | null>(null);
+const dropdownStyle = ref({ top: '0px', left: '0px', width: '0px' });
+
+// Calcula a posição do dropdown com base no botão (escapa de qualquer overflow-hidden)
+const toggleStageMenu = () => {
+  if (stageMenuRef.value) {
+    const rect = stageMenuRef.value.getBoundingClientRect();
+    dropdownStyle.value = {
+      top: `${rect.bottom + 8}px`,
+      left: `${rect.left}px`,
+      width: `${rect.width}px`,
+    };
+  }
+  showStageMenu.value = !showStageMenu.value;
+};
+
+// Fechar dropdown ao clicar fora
+const handleClickOutside = (event: MouseEvent) => {
+  if (stageMenuRef.value && !stageMenuRef.value.contains(event.target as Node)) {
+    showStageMenu.value = false;
+  }
+};
+onMounted(() => document.addEventListener('mousedown', handleClickOutside));
+onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside));
 
 // --- STATE ---
 const lead = ref<any>(null);
@@ -209,7 +309,11 @@ const fetchData = async () => {
 };
 
 // --- LIFECYCLE HOOKS ---
-onMounted(() => {
+onMounted(async () => {
+  // Carrega os status do Kanban se ainda não estiverem disponíveis
+  if (leadStatuses.value.length === 0) {
+    await fetchStatuses();
+  }
   fetchData();
 });
 
@@ -246,7 +350,182 @@ const openWhatsApp = () => {
   }
 };
 
-const handleEdit = () => alert('Ação de editar acionada');
+const handleEdit = () => { isEditModalOpen.value = true; };
 const handleSchedule = () => alert('Ação de agendar acionada');
 
+// --- EDIT MODAL ---
+const isEditModalOpen = ref(false);
+
+const handleSave = async (formData: Record<string, any>) => {
+  try {
+    // ── 1. Campos base — sempre existem na tabela ──
+    const basePayload = {
+      nome:              formData.nome,
+      email:             formData.email,
+      telefone:          formData.telefone,
+      temperatura:       formData.temperatura,
+      empresa:           formData.empresa,
+      origem:            formData.origem,
+      score:             formData.score,
+      notas:             formData.notas              || null,
+      interesse:         formData.interesse,
+      valor_estimado:    formData.valor_estimado     ?? null,
+      setor_atuacao:     formData.setor_atuacao      || null,
+      principal_desafio: formData.principal_desafio  || null,
+      produtos_interesse: Array.isArray(formData.produtos_interesse)
+        ? formData.produtos_interesse
+        : (formData.produtos_interesse || '').split(',').map((t: string) => t.trim()).filter(Boolean),
+    };
+
+    const { error: baseError } = await (supabase
+      .from('ag_leads') as any)
+      .update(basePayload)
+      .eq('id', id);
+
+    if (baseError) throw baseError;
+
+    // ── 2. Campos novos — tenta salvar, ignora se coluna ainda não existe ──
+    const newPayload = {
+      cargo:           formData.cargo           || null,
+      tags:            Array.isArray(formData.tags)
+        ? formData.tags
+        : (formData.tags || '').split(',').map((t: string) => t.trim()).filter(Boolean),
+      proximo_contato_em: formData.proximo_contato_em  || null,
+      linkedin_url:        formData.linkedin_url         || null,
+      facebook_url:        formData.facebook_url         || null,
+      instagram_url:       formData.instagram_url        || null,
+      website_url:         formData.website_url          || null,
+      notas_perfil:        formData.notas_perfil         || null,
+    };
+
+    const { error: newError } = await (supabase
+      .from('ag_leads') as any)
+      .update(newPayload)
+      .eq('id', id);
+
+    if (newError) {
+      // Coluna ainda não existe no banco — avisa no console mas não bloqueia
+      console.warn('[EDIT] Alguns campos extras não foram salvos (execute o SQL de migração):', newError.message);
+    }
+
+    isEditModalOpen.value = false;
+    
+    // ── 3. Sincroniza Agendamento ──
+    await syncSchedule(id, formData.proximo_contato_em);
+
+    await fetchData();
+    notifySuccess('Lead atualizado com sucesso!');
+    console.log('[EDIT] Lead atualizado com sucesso.');
+  } catch (err: any) {
+    console.error('[ERRO AO SALVAR LEAD]', err.message);
+    if (err.message?.includes('unique') || err.message?.includes('duplicate key')) {
+      notifyError('Telefone ou e-mail já pertence a outro lead.');
+    } else {
+      notifyError(`Erro ao salvar: ${err.message}`);
+    }
+  }
+};
+
+/**
+ * Sincroniza a data do próximo contato com a tabela de agendamentos.
+ * Garante que exista apenas um agendamento futuro (pendente) por lead.
+ */
+const syncSchedule = async (leadId: string, newDate: string | null) => {
+  try {
+    // 1. Busca agendamento pendente futuro para este lead
+    const { data: existing, error: fetchError } = await (supabase
+      .from('ag_agendamentos') as any)
+      .select('id, appointment_date')
+      .eq('lead_id', leadId)
+      .eq('status', 'pendente')
+      .gte('appointment_date', new Date().toISOString())
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+
+    if (newDate) {
+      // CENÁRIO A/B: Tem nova data
+      if (existing) {
+        // UPDATE se a data mudou
+        if (existing.appointment_date !== newDate) {
+          await (supabase.from('ag_agendamentos') as any)
+            .update({ appointment_date: newDate })
+            .eq('id', existing.id);
+        }
+      } else {
+        // INSERT se não havia agendamento
+        await (supabase.from('ag_agendamentos') as any).insert({
+          lead_id: leadId,
+          profissional_id: profile.value?.id,
+          appointment_date: newDate,
+          titulo: `Contato: ${lead.value?.nome || 'Lead'}`,
+          descricao: `Agendamento sincronizado via edição de perfil.`,
+          status: 'pendente',
+          categoria: 'contato'
+        });
+      }
+    } else if (existing) {
+      // CENÁRIO C: Data foi removida, deleta o agendamento futuro
+      await (supabase.from('ag_agendamentos') as any)
+        .delete()
+        .eq('id', existing.id);
+    }
+  } catch (err: any) {
+    console.warn('[SYNC SCHEDULE] Erro ao sincronizar agendamento:', err.message);
+  }
+};
+
+
+
+
+// --- UPDATE STATUS ---
+// Salva o status.id (ex: 'leads_novos') no banco — consistente com o Kanban
+const updateLeadStatus = async (statusId: string) => {
+  try {
+    const { error } = await (supabase
+      .from('ag_leads') as any)
+      .update({ status: statusId })
+      .eq('id', id);
+
+    if (error) throw error;
+
+    // Atualiza o estado local instantaneamente (sem reload)
+    if (lead.value) lead.value.status = statusId;
+
+    const label = leadStatuses.value.find(s => s.id === statusId)?.display_name || statusId;
+    console.log(`[STATUS] Lead atualizado para: "${label}" (id: ${statusId})`);
+  } catch (err: any) {
+    console.error('[ERRO AO ATUALIZAR STATUS]', err.message);
+    alert(`Não foi possível atualizar o estágio: ${err.message}`);
+  } finally {
+    showStageMenu.value = false;
+  }
+};
+
 </script>
+
+<style>
+/* Scrollbar fina e discreta para o dropdown de estágios */
+.stage-dropdown {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.3s;
+}
+.stage-dropdown:hover {
+  scrollbar-color: #c7d2fe transparent;
+}
+.stage-dropdown::-webkit-scrollbar {
+  width: 3px;
+}
+.stage-dropdown::-webkit-scrollbar-track {
+  background: transparent;
+}
+.stage-dropdown::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 99px;
+  transition: background-color 0.3s;
+}
+.stage-dropdown:hover::-webkit-scrollbar-thumb {
+  background-color: #c7d2fe;
+}
+</style>

@@ -76,6 +76,7 @@ export const useLeads = () => {
     const selectedVendedorId = useState<string | null>('leads-selected-vendedor-id', () => null)
     const showMyLeads = useState<boolean>('leads-show-my-leads', () => false)
     const isEditingStatuses = useState<boolean>('leads-is-editing-statuses', () => false)
+    const isCreateLeadModalOpen = useState<boolean>('leads-create-modal-open', () => false)
 
     const openDetails = (id: string) => {
         selectedLeadId.value = id
@@ -109,7 +110,8 @@ export const useLeads = () => {
 
     // Helpers de Formatação
     const formatRelativeTime = (dateString: string) => {
-        if (!dateString || import.meta.server) return undefined;
+        if (!dateString) return '';
+        if (import.meta.server) return '...';
         const date = new Date(dateString);
         const now = new Date();
         const diffMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
@@ -598,6 +600,7 @@ export const useLeads = () => {
         reorderStatuses,
         formatRelativeTime,
         subscribeToAppointmentChanges,
-        fetchNextAppointments
+        fetchNextAppointments,
+        isCreateLeadModalOpen
     }
 }

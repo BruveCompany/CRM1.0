@@ -34,7 +34,7 @@
         <span>Novo Status</span>
       </button>
 
-      <button class="btn-add-lead" @click="showAddLeadModal = true">+ Criar Lead</button>
+      <button class="btn-add-lead" @click="isCreateLeadModalOpen = true">+ Criar Lead</button>
     </div>
 
     <!-- Centro: Filtros e Barra de Pesquisa -->
@@ -86,7 +86,7 @@
     </div>
 
     <!-- Modal de Criação de Lead -->
-    <LeadFormModal v-model="showAddLeadModal" />
+    <!-- O modal agora é gerenciado pelo index.vue usando o estado global isCreateLeadModalOpen -->
 
     <!-- NOVO: Modal de Criação de Status -->
     <LeadsStatusCreateModal 
@@ -112,12 +112,12 @@ const {
   fetchStatuses,
   fetchVendedores,
   isEditingStatuses,
-  addStatus
+  addStatus,
+  isCreateLeadModalOpen
 } = useLeads();
 
 const { profile, checkIsAdmin } = useAuth();
 const isAdmin = ref(false);
-const showAddLeadModal = ref(false);
 const showCreateStatusModal = ref(false);
 
 const toast = useState('leads-local-toast', () => ({

@@ -7,7 +7,7 @@
       @click.self="$emit('update:modelValue', false)"
     >
       <div 
-        :class="['bg-white rounded-lg shadow-2xl w-full mx-4 transform transition-all flex flex-col max-h-[calc(100vh-2rem)]', maxWidthClass]"
+        :class="['bg-white rounded-lg shadow-2xl w-full mx-4 transform transition-all flex flex-col', maxWidthClass, noBodyScroll ? '' : 'max-h-[calc(100vh-2rem)]']"
         :style="$attrs.class && String($attrs.class).includes('delete-modal-high-z') ? 'z-index: 100' : ''"
       >
         <!-- Header -->
@@ -28,7 +28,7 @@
         </div>
         
         <!-- Body -->
-        <div class="px-5 py-3 overflow-y-auto flex-1 min-h-0" style="-ms-overflow-style: none; scrollbar-width: none;">
+        <div :class="['px-5 py-3 flex-1 min-h-0', noBodyScroll ? 'overflow-hidden' : 'overflow-y-auto']" style="-ms-overflow-style: none; scrollbar-width: none;">
           <slot />
         </div>
         
@@ -46,9 +46,11 @@ const props = withDefaults(defineProps<{
   modelValue: boolean
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl'
   hideHeader?: boolean
+  noBodyScroll?: boolean
 }>(), {
   size: 'md',
-  hideHeader: false
+  hideHeader: false,
+  noBodyScroll: false,
 })
 
 defineEmits(['update:modelValue', 'confirmar', 'cancelar'])
