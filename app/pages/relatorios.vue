@@ -116,6 +116,17 @@
                       </div>
                     </div>
                   </div>
+
+                  <!-- BOTÃO DEFINIR METAS (ADMIN ONLY) (Tarefa 2.1) -->
+                  <div v-if="isAdmin" class="hidden sm:block">
+                    <button 
+                      @click="showMetasModal = true"
+                      class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all group scale-[0.95] hover:scale-100"
+                    >
+                      <Icon name="heroicons:outline:adjustments-horizontal" class="w-5 h-5 text-indigo-100 group-hover:rotate-12 transition-transform" />
+                      <span class="text-sm font-bold">Definir Metas</span>
+                    </button>
+                  </div>
                 </div>
 
                 <button @click="fetchReportData" :disabled="loading" class="p-2 bg-slate-50 rounded-xl border border-slate-100">
@@ -251,6 +262,13 @@
       </div>
     </div>
   </NuxtLayout>
+
+  <!-- MODAL DE METAS (Tarefa 2.1) -->
+  <RelatoriosMetasModal 
+    :show="showMetasModal" 
+    @close="showMetasModal = false" 
+    @saved="fetchReportData" 
+  />
 </template>
 
 <script setup lang="ts">
@@ -268,6 +286,7 @@ const { vendedores, fetchVendedores } = useLeads();
 
 const loading = ref(false);
 const isAdmin = ref(false);
+const showMetasModal = ref(false);
 const reportData = ref<any[]>([]);
 const showFilterPopover = ref(false);
 const showExportModal = ref(false);

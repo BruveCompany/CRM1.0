@@ -55,21 +55,29 @@
             </td>
 
             <td class="px-2 py-3 text-center text-xs font-bold text-slate-600">{{ item.total_leads }}</td>
-            <td class="px-2 py-3 text-center text-xs font-bold text-slate-600">{{ item.leads_convertidos }}</td>
+            <td class="px-2 py-3 text-center text-xs font-bold text-slate-600">
+              <div class="flex flex-col">
+                <span>{{ item.leads_convertidos }}</span>
+                <span class="text-[9px] text-slate-300 font-medium">Meta: {{ item.meta_conversoes || 0 }}</span>
+              </div>
+            </td>
 
-            <!-- Coluna Taxa % com Barra de Progresso Inteligente -->
+            <!-- Coluna Taxa % com Barra de Progresso de Meta (Tarefa 3.1) -->
             <td class="px-3 py-3">
               <div class="flex flex-col gap-1 min-w-[80px]">
                 <div class="w-full h-1 bg-slate-100 rounded-full overflow-hidden relative">
                   <div 
                     class="h-full rounded-full transition-all duration-700 ease-out" 
-                    :class="getBarColor(item.taxa_conversao || 0)"
-                    :style="{ width: `${Math.min(item.taxa_conversao || 0, 100)}%` }"
+                    :class="getMetaBarColor(item.progresso_meta_percentual || 0)"
+                    :style="{ width: `${Math.min(item.progresso_meta_percentual || 0, 100)}%` }"
                   ></div>
                 </div>
-                <span class="text-[9px] font-extrabold" :class="getTextColor(item.taxa_conversao || 0)">
-                  {{ (item.taxa_conversao || 0).toFixed(1) }}%
-                </span>
+                <div class="flex justify-between items-center">
+                  <span class="text-[9px] font-extrabold" :class="getMetaTextColor(item.progresso_meta_percentual || 0)">
+                    {{ (item.progresso_meta_percentual || 0).toFixed(0) }}% da meta
+                  </span>
+                  <span class="text-[8px] font-bold text-slate-400">({{ (item.taxa_conversao || 0).toFixed(1) }}%)</span>
+                </div>
               </div>
             </td>
 
@@ -108,9 +116,16 @@ const getBarColor = (taxa: number) => {
   return 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.2)]';
 };
 
-const getTextColor = (taxa: number) => {
-  if (taxa >= 25) return 'text-emerald-600';
-  if (taxa >= 10) return 'text-amber-600';
+// Lógica de Cores para Metas (Tarefa 3.1)
+const getMetaBarColor = (progresso: number) => {
+  if (progresso >= 100) return 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.2)]';
+  if (progresso >= 50) return 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.2)]';
+  return 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.2)]';
+};
+
+const getMetaTextColor = (progresso: number) => {
+  if (progresso >= 100) return 'text-emerald-600';
+  if (progresso >= 50) return 'text-amber-600';
   return 'text-rose-600';
 };
 </script>
