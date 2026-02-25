@@ -22,6 +22,14 @@
           <div v-if="task.statusIcon" class="card-status-icon-wrapper" :style="{ 'border-color': columnColor }">
             <Icon :name="`lucide:${task.statusIcon}`" :class="`status-icon status-${task.statusIcon}`" :style="{ 'color': columnColor }" />
           </div>
+          <!-- Botão Visão 360º (Olho FS) -->
+          <button 
+            class="view-360-btn" 
+            title="Visão 360º do Lead"
+            @click.stop="navigateTo(`/leads/${task.id}`)"
+          >
+            <Icon name="lucide:eye" />
+          </button>
 
           <!-- Menu de Ações Rápidas -->
           <div class="quick-actions-trigger" @click.stop="showActionsMenu = !showActionsMenu">
@@ -567,6 +575,35 @@ const emit = defineEmits(['dragstart', 'open-appointment-new', 'open-appointment
 .action-icon {
   width: 14px;
   height: 14px;
+}
+
+/* --- Botão Visão 360º Premium --- */
+.view-360-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8fafc;
+  color: #94a3b8;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  margin-right: 2px;
+}
+
+.view-360-btn:hover {
+  background-color: #eef2ff;
+  color: #4f46e5;
+  border-color: #c7d2fe;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+}
+
+.view-360-btn :deep(svg) {
+  width: 13px;
+  height: 13px;
 }
 
 /* --- Popover de Ações --- */

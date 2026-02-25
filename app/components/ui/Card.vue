@@ -1,5 +1,5 @@
 <template>
-  <div :class="['bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden relative group', padding ? 'p-8' : '']">
+  <div :class="['rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden relative group', padding ? 'p-8' : '', !($attrs.class as string)?.includes('bg-') ? 'bg-white' : '']">
     <!-- Efeito de hover sutil -->
     <div v-if="hoverEffect" class="absolute inset-0 bg-primary-50/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
     

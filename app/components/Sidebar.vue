@@ -85,7 +85,6 @@ const navItems = computed(() => {
     { label: 'Dashboard', to: '/', icon: HomeIcon },
     { label: 'Mensagens', to: '/mensagens', icon: ChatBubbleLeftRightIcon },
     { label: 'Leads', to: '/leads', icon: IdentificationIcon },
-    { label: 'Perfil do Lead', to: '/leads/00000000-0000-0000-0000-000000000000', icon: UserIcon },
     { label: 'Relatórios', to: '/relatorios', icon: ChartBarIcon },
     { label: 'Agenda', to: '/agenda', icon: CalendarIcon },
     { label: 'Agendamentos', to: '/agendamentos', icon: CalendarIcon },

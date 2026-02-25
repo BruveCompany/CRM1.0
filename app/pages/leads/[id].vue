@@ -2,12 +2,32 @@
   <NuxtLayout name="default">
     <ClientOnly>
       <div class="min-h-screen bg-[#f8fafc] p-6 lg:p-8">
-        <!-- Back Link -->
-        <div class="mb-6">
-          <NuxtLink to="/leads" class="group inline-flex items-center text-sm font-medium text-slate-500 hover:text-primary-600 transition-colors">
-            <Icon name="heroicons:arrow-left" class="w-4 h-4 mr-2 transition-transform group-hover:-translate-x-1" />
-            Voltar para Leads
+        <!-- Page Title & Back Link -->
+        <div class="mb-6 relative flex items-center justify-center pb-2 pt-2">
+          <!-- Back Link (Compacto) -->
+          <NuxtLink to="/leads" class="absolute left-0 group inline-flex items-center text-[8px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-primary-600 transition-all bg-white/70 backdrop-blur-md px-3.5 py-2 rounded-xl border border-slate-100 shadow-sm hover:shadow-indigo-500/5">
+            <Icon name="heroicons:arrow-left" class="w-3 h-3 mr-2 transition-transform group-hover:-translate-x-1" />
+            Voltar
           </NuxtLink>
+
+          <!-- Centered Title (Compact Premium) -->
+          <div class="text-center group cursor-default select-none">
+            <div class="inline-flex flex-col items-center">
+              <h1 class="text-2xl font-black text-slate-900 tracking-tightest leading-none mb-1.5">
+                Visão <span class="relative inline-block">
+                  <span class="bg-clip-text text-transparent bg-gradient-to-br from-indigo-600 via-primary-600 to-violet-600">360º do Lead</span>
+                  <span class="absolute -bottom-0.5 left-0 w-full h-[2px] bg-gradient-to-r from-indigo-600/0 via-indigo-600/40 to-indigo-600/0 rounded-full"></span>
+                </span>
+              </h1>
+              <div class="flex items-center gap-3">
+                <div class="h-[1px] w-5 bg-gradient-to-r from-transparent to-slate-200"></div>
+                <p class="text-[9px] text-slate-400 font-bold uppercase tracking-[0.3em] mb-0">
+                  Cockpit de <span class="text-indigo-500/80">Inteligência</span> Comercial
+                </p>
+                <div class="h-[1px] w-5 bg-gradient-to-l from-transparent to-slate-200"></div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Loading State -->
@@ -23,12 +43,12 @@
           <div class="text-center">
             <Icon name="heroicons:exclamation-triangle" class="w-16 h-16 text-gray-200 mx-auto mb-4" />
             <h2 class="text-lg font-semibold text-gray-900 uppercase tracking-wider">Lead não encontrado</h2>
-            <p class="text-gray-500 font-medium">A inteligência comercial não localizou este registro.</p>
+            <p class="text-gray-500 font-medium text-xs">A inteligência comercial não localizou este registro.</p>
           </div>
         </div>
 
         <!-- Main Content (The Orchestration) -->
-        <div v-else class="max-w-[1600px] mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div v-if="!loading && lead" class="max-w-[1600px] mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
           
           <!-- 1. Header Component -->
           <LeadDetailHeader 
@@ -55,7 +75,7 @@
                   </div>
                   <div>
                     <p class="text-[10px] font-medium text-white/50 mb-1 uppercase tracking-wider">Interações</p>
-                    <p class="text-2xl font-bold">{{ timelineItems.length }}</p>
+                    <p class="text-2xl font-bold">{{ timelineActivities.length }}</p>
                   </div>
                   <div class="col-span-2">
                     <p class="text-[10px] font-semibold text-white/50 mb-1 uppercase tracking-wider">Confiança no Fechamento</p>
@@ -70,7 +90,7 @@
             <!-- 3. Center Column: Timeline (5 slots) -->
             <div class="lg:col-span-5">
               <LeadTimeline 
-                :activities="timelineItems" 
+                :activities="timelineActivities" 
                 @add-note="saveQuickNote" 
               />
             </div>
@@ -118,99 +138,105 @@ import { ref, computed, onMounted } from 'vue';
 
 // --- SETUP ---
 const route = useRoute();
-const id = route.params.id; // ID da URL (ex: "1")
+const id = route.params.id as string;
 const supabase = useSupabaseClient();
 
 // --- STATE ---
 const lead = ref<any>(null);
 const loading = ref(true);
-const timelineItems = ref<any[]>([]);
+const timelineActivities = ref<any[]>([]);
 
 // --- COMPUTED PROPERTIES ---
 const diasAberto = computed(() => {
   if (!lead.value?.criado_em) return 0;
-  // Garante que a data é um objeto Date válido antes de calcular
   const dataCriacao = new Date(lead.value.criado_em);
-  if (isNaN(dataCriacao.getTime())) return 0; // Retorna 0 se a data for inválida
+  if (isNaN(dataCriacao.getTime())) return 0;
   return Math.floor((Date.now() - dataCriacao.getTime()) / (1000 * 3600 * 24));
 });
 
-// --- LIFECYCLE HOOKS ---
-onMounted(async () => {
-  // Inicializa a timeline apenas no cliente para evitar erros de hidratação
-  timelineItems.value = [
-    { date: new Date(), content: 'Perfil acessado pela inteligência comercial.', author: 'Sistema', type: 'activity' },
-    { date: new Date(Date.now() - 3600000), content: 'Lead movido para estágio de negociação.', author: 'Gerente Comercial', type: 'status', metadata: 'em_negociacao' },
-    { date: new Date(Date.now() - 86400000), content: 'Cliente solicitou orçamento via WhatsApp.', author: 'Lead', type: 'message' }
-  ];
-  await fetchData();
-});
-
-// --- DATA FETCHING (VERSÃO CORRIGIDA E COM DIAGNÓSTICO) ---
+// --- FETCH DATA ---
 const fetchData = async () => {
   loading.value = true;
+  console.log(`[DIAGNÓSTICO] Iniciando busca unificada para o Lead ID: ${id}`);
+
   try {
-    // Verificação de UUID vs Inteiro para evitar erro 400 do Supabase
-    // A tabela ag_leads usa UUID como chave primária. Se o ID não for um UUID, não fazemos a busca.
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id as string);
-    
+    // 1. Validação de UUID
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
     if (!isUuid) {
-      console.warn(`[ETAPA 1.2] ID "${id}" não é um UUID válido. Pulando busca para evitar erro de sintaxe no banco.`);
+      console.warn('[AVISO] O ID fornecido não é um UUID válido.');
       loading.value = false;
       return;
     }
 
-    console.log(`[ETAPA 1.5] Iniciando busca Supabase com UUID: "${id}"`);
-    
-    const { data, error } = await supabase
+    // 2. Busca Dados Principais do Lead
+    const { data: leadData, error: leadError } = await supabase
       .from('ag_leads')
       .select('*, ag_profiles(nome)')
-      .eq('id', id as any) 
+      .eq('id', id)
       .maybeSingle();
 
-    // LOG CRÍTICO PARA DIAGNÓSTICO
-    console.log('[ETAPA 2] Resposta do Supabase:', {
-      dadosRecebidos: data,
-      erroDaBusca: error
-    });
-
-    if (error) {
-      // Se houver um erro, o registramos no console para análise
-      console.error('ERRO DETALHADO DO SUPABASE:', error.message);
-    }
-
-    if (data) {
-      console.log('[ETAPA 3] Dados encontrados! Atualizando o estado do lead.');
-      // Atribuímos os dados ao estado reativo
+    if (leadError) throw leadError;
+    
+    if (leadData) {
       lead.value = {
-        ...(data as object),
-        vendedor_nome: (data as any).ag_profiles?.nome
+        ...(leadData as any),
+        vendedor_nome: (leadData as any).ag_profiles?.nome
       };
-    } else {
-      // Se não vieram dados, avisamos no console
-      console.warn('[ETAPA 3] Nenhum dado retornado para este ID. A variável "lead" permanecerá nula, exibindo a tela "Não encontrado".');
     }
 
-  } catch (err) {
-    // Captura qualquer outro erro inesperado durante o processo
-    console.error('Falha crítica na função fetchData:', err);
+    // 3. Busca Timeline via RPC (Envolvida em try-catch isolado para não travar a página)
+    try {
+      console.log(`[RPC] Chamando get_lead_timeline com parâmetro lead_id_param: ${id}`);
+      const { data: timelineData, error: timelineError } = await (supabase as any)
+        .rpc('get_lead_timeline', { lead_id_param: id });
+
+      if (timelineError) {
+        console.error('[RPC ERRO] Falha ao carregar timeline:', timelineError.message);
+      } else {
+        console.log('[RPC SUCESSO] Dados da timeline recebidos:', (timelineData as any[])?.length || 0, 'itens');
+        timelineActivities.value = (timelineData as any[]) || [];
+      }
+    } catch (rpcErr: any) {
+      console.error('[RPC FALHA CRÍTICA] Erro ao tentar acessar a função da timeline:', rpcErr.message);
+    }
+
+  } catch (error: any) {
+    console.error('[FALHA CRÍTICA] Erro durante o carregamento dos dados:', error.message);
   } finally {
-    // Garante que o estado de carregamento seja desativado, mesmo se houver erro
-    // Um pequeno delay melhora a percepção visual do carregamento
-    setTimeout(() => { loading.value = false; }, 600);
+    // Pequeno atraso para suavizar a transição visual
+    setTimeout(() => { loading.value = false; }, 500);
   }
 };
 
+// --- LIFECYCLE HOOKS ---
+onMounted(() => {
+  fetchData();
+});
+
 // --- MÉTODOS DE AÇÃO ---
-const saveQuickNote = (content: string) => {
-  // Lógica para salvar a nota no banco de dados viria aqui
-  // Por enquanto, apenas adicionamos localmente para feedback visual
-  timelineItems.value.unshift({
-    date: new Date(),
-    content: content,
-    author: 'Vendedor logado', // Substituir pelo nome do usuário real
-    type: 'note'
-  });
+const saveQuickNote = async (content: string) => {
+  try {
+    const { profile } = useAuth();
+    if (!profile.value?.id) {
+      alert('Sessão expirada ou profissional não identificado.');
+      return;
+    }
+
+    const { error } = await (supabase.from('ag_notas_internas') as any)
+      .insert({
+        lead_id: id,
+        profissional_id: profile.value.id,
+        conteudo: content
+      });
+
+    if (error) throw error;
+    
+    // Recarrega os dados para mostrar a nova nota na timeline
+    await fetchData();
+  } catch (error: any) {
+    console.error('[ERRO AO SALVAR NOTA]', error.message);
+    alert('Não foi possível salvar a nota no banco de dados.');
+  }
 };
 
 const openWhatsApp = () => {
