@@ -89,7 +89,7 @@ import BaseButton from '~/components/BaseButton.vue'
 import { useAgendamentoStore } from '~/stores/agendamento'
 import { useProfissionais } from '~/composables/useProfissionais'
 import { useLeads } from '~/composables/useLeads'
-import type { AgCliente, AgProfissional, AgAgendamento } from '../../../shared/types/database'
+import type { AgCliente, AgProfissional, AgViewAgendamentoCompleto } from '../../../shared/types/database'
 
 const agendamentoStore = useAgendamentoStore()
 const { fetchClientes, fetchProfissionais } = useProfissionais()
@@ -100,7 +100,7 @@ const profissionais = ref<AgProfissional[]>([])
 const loadingProfissionais = ref(true)
 const modalNovoAgendamentoAberto = ref(false)
 const modalEditarAgendamentoAberto = ref(false)
-const agendamentoSelecionado = ref<AgAgendamento | null>(null)
+const agendamentoSelecionado = ref<AgViewAgendamentoCompleto | null>(null)
 
 // Lista de vendedores (quem cria agendamentos) vindo do estado global
 const { vendedores: vendedoresGlobal } = useLeads()
@@ -170,7 +170,7 @@ function handleSalvarAgendamento() {
   agendamentoStore.carregarAgendamentos()
 }
 
-function handleAbrirEdicao(ag: AgAgendamento) {
+function handleAbrirEdicao(ag: AgViewAgendamentoCompleto) {
   agendamentoSelecionado.value = ag
   modalEditarAgendamentoAberto.value = true
 }

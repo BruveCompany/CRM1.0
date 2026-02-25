@@ -7,7 +7,7 @@
       backgroundColor: agendamento.cor || '#B4A7F5',
       zIndex: isHovered ? 10 : 1
     }"
-    :title="`Título: ${agendamento.titulo}\nAgendado por: ${vendedorNome || (agendamento.user_id ? 'Desconhecido' : 'Sistema')}${nomeProfissionalResponsavel ? '\nResponsável: ' + nomeProfissionalResponsavel : ''}\nHorário: ${horarioFormatado}${nomeCliente ? '\nCliente: ' + nomeCliente : ''}${agendamento.descricao ? '\nDescrição: ' + agendamento.descricao : ''}`"
+    :title="`Título: ${agendamento.titulo}\nContato: ${agendamento.nome_contato || 'N/A'}\nResponsável: ${agendamento.profissional_nome || 'N/A'}\nAgendado por: ${agendamento.responsavel_agendamento || 'Sistema'}\nHorário: ${horarioFormatado}\nCategoria: ${agendamento.categoria || 'N/A'}${agendamento.descricao ? '\nDescrição: ' + agendamento.descricao : ''}`"
     class="absolute left-0 right-0 border border-black/10 text-neutral-900 rounded px-2 py-1.5 cursor-pointer transition-all duration-200 overflow-hidden hover:shadow-lg flex flex-col"
     @click="emit('click', agendamento)"
     @mouseenter="isHovered = true"
@@ -24,9 +24,9 @@
       </div>
     </div>
 
-    <!-- 2. Nome do Cliente -->
-    <div v-if="nomeCliente" class="text-[10px] font-black text-black/90 truncate leading-none uppercase">
-      {{ nomeCliente }}
+    <!-- 2. Nome do Contato -->
+    <div v-if="agendamento.nome_contato" class="text-[10px] font-black text-black/90 truncate leading-none uppercase">
+      {{ agendamento.nome_contato }}
     </div>
     
     <!-- 3. Título (Apenas se houver espaço) -->
@@ -34,10 +34,10 @@
       {{ agendamento.titulo }}
     </div>
 
-    <!-- 4. Rodapé: Profissional (Apenas se houver espaço) -->
-    <div v-if="altura > 80" class="mt-auto pt-1 flex items-center gap-1 border-t border-black/5">
-      <UsersIcon class="w-2.5 h-2.5 text-black/40" />
-      <span class="text-[8px] font-bold text-black/50 truncate italic">{{ nomeProfissionalResponsavel }}</span>
+    <!-- 4. Rodapé: Profissional -->
+    <div v-if="altura > 80 && agendamento.profissional_nome" class="mt-auto pt-1 flex items-center gap-1 border-t border-black/5">
+      <UserCircleIcon class="w-2.5 h-2.5 text-black/40" />
+      <span class="text-[8px] font-bold text-black/50 truncate italic">{{ agendamento.profissional_nome }}</span>
     </div>
   </div>
 </template>
@@ -59,20 +59,19 @@
  * ======================================================
  */
 
-import type { AgAgendamento, AgCliente, AgProfissional } from '../../../shared/types/database'
+import type { AgViewAgendamentoCompleto, AgCliente, AgProfissional } from '../../../shared/types/database'
 import { computed, ref } from 'vue'
-import { 
-  UserCircleIcon,
+import { UserCircleIcon } from '@heroicons/vue/24/solid'
+import {
   BuildingStorefrontIcon,
   WrenchScrewdriverIcon,
   PresentationChartBarIcon,
   CheckBadgeIcon,
   ChatBubbleLeftRightIcon
 } from '@heroicons/vue/24/solid'
-import { UsersIcon } from '@heroicons/vue/24/outline'
 
 interface Props {
-  agendamento: AgAgendamento
+  agendamento: AgViewAgendamentoCompleto
   clientes?: AgCliente[]
   profissionais?: AgProfissional[]
   vendedores?: any[]
@@ -96,18 +95,7 @@ const isHovered = ref(false)
 const vendedoresGlobal = useState<any[]>('leads-vendedores', () => [])
 const effectiveVendedores = computed(() => props.vendedores?.length ? props.vendedores : vendedoresGlobal.value)
 
-/**
- * Resolve o nome do profissional responsável pelo agendamento
- */
-const nomeProfissionalResponsavel = computed(() => {
-  if (!props.agendamento.profissional_id) return null
-  // Tenta encontrar o profissional na lista
-  const prof = props.profissionais.find(p => 
-    String(p.profissional_id) === String(props.agendamento.profissional_id) || 
-    String((p as any).id) === String(props.agendamento.profissional_id)
-  )
-  return prof?.nome || null
-})
+
 
 /**
  * Resolve o nome do cliente a partir do cliente_id do agendamento

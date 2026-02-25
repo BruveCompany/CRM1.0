@@ -200,6 +200,8 @@ export interface AgViewAgendamentoCompleto {
   profissional_nome: string | null
   especialidade_id: number | null
   especialidade: string | null
+  nome_contato: string | null
+  responsavel_agendamento: string | null
 }
 
 // Estado do store de usuário

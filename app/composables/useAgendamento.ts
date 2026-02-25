@@ -23,7 +23,8 @@ import type { AgAgendamento, AgViewAgendamentoCompleto, Database } from '../../s
  */
 export interface InserirAgendamentoDTO {
   profissional_id: number
-  cliente_id: number
+  cliente_id?: number | null
+  lead_id?: string | null
   data: string
   hora_inicio: string
   hora_fim: string
@@ -80,7 +81,7 @@ export function useAgendamento() {
     profissionalId: number | null,
     dataInicio: string,
     dataFim: string
-  ): Promise<AgAgendamento[] | null> {
+  ): Promise<AgViewAgendamentoCompleto[] | null> {
     try {
       // Logs para debug e monitoramento
       console.log('🔍 Buscando agendamentos:')
@@ -88,7 +89,7 @@ export function useAgendamento() {
       console.log('  📅 Período:', dataInicio, 'até', dataFim)
 
       let query = supabase
-        .from('ag_agendamentos')
+        .from('ag_view_agendamentos_completo')
         .select('*')
         .eq('cancelado', false)                  // Filtro: apenas ativos
         .gte('data', dataInicio)                 // Filtro: data >= início
@@ -102,6 +103,8 @@ export function useAgendamento() {
       const { data, error } = await query
         .order('data', { ascending: true })      // Ordena por data (crescente)
         .order('hora_inicio', { ascending: true }) // Depois por horário (crescente)
+
+      console.log('Dados recebidos da view de agendamentos:', data);
 
       // Tratamento de erro do Supabase
       if (error) {
@@ -121,7 +124,7 @@ export function useAgendamento() {
       console.log('✅ Agendamentos encontrados:', data?.length || 0)
       console.log('📊 Dados:', data)
 
-      return data as AgAgendamento[]
+      return data as AgViewAgendamentoCompleto[]
     } catch (err) {
       // Catch para erros inesperados (ex: network, timeout)
       console.error('❌ Erro inesperado ao buscar agendamentos:', err)
@@ -151,7 +154,8 @@ export function useAgendamento() {
 
       const payload = {
         profissional_id: dados.profissional_id,
-        cliente_id: dados.cliente_id,
+        cliente_id: dados.cliente_id || null,
+        lead_id: dados.lead_id || null,
         user_id: user?.id || null, // Fallback explícito
         data: dados.data,
         hora_inicio: `${dados.hora_inicio}:00-03`,

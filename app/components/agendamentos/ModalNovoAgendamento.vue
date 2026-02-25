@@ -35,13 +35,20 @@
           </div>
         </div>
 
-        <!-- Cliente (componente extraído) -->
+        <!-- Cliente (componente extraído) - OCULTO se for agendamento de Lead -->
         <SeletorCliente
+          v-if="!leadId"
           ref="seletorClienteRef"
           v-model="formData.clienteId"
           :clientes="clientes"
           @cadastrar="irParaCadastroCliente"
         />
+        <div v-else class="pb-1">
+          <label class="block text-sm font-semibold text-neutral-700 mb-1">Lead</label>
+          <div class="px-3 py-2 bg-neutral-50 rounded-lg border border-neutral-200 text-sm text-neutral-600 font-medium">
+            {{ clienteNome || 'Lead Selecionado' }}
+          </div>
+        </div>
 
         <!-- Blocos de Data e Hora -->
         <div class="grid grid-cols-1 gap-3 pt-1">
@@ -76,7 +83,7 @@
                   class="w-full px-3 py-1.5 border border-neutral-300 rounded-lg text-sm hover:border-primary-700 focus:outline-none focus:ring-1 focus:ring-primary-700 focus:border-primary-700 transition-all disabled:bg-neutral-50 disabled:text-neutral-400 bg-white"
                 >
                   <option value="">--:--</option>
-                  <option v-for="hora in horariosInicioDisponiveis" :key="hora" :value="hora">{{ hora }}</option>
+                  <option v-for="hora in availableSlots" :key="hora" :value="hora">{{ hora }}</option>
                 </select>
               </div>
             </div>
@@ -202,6 +209,7 @@ interface Props {
   agendamentos?: AgAgendamento[]
   clienteId?: number | null
   clienteNome?: string
+  leadId?: string | null
   initialDescription?: string
 }
 
@@ -216,6 +224,7 @@ const props = withDefaults(defineProps<Props>(), {
   agendamentos: () => [],
   clienteId: null,
   clienteNome: '',
+  leadId: null,
   initialDescription: ''
 })
 
@@ -260,11 +269,106 @@ const formData = ref({
 // Estado de salvamento (para desabilitar botão e mostrar loading)
 const salvando = ref(false)
 
-// Composable de validação de horários (lógica de sobreposição extraída)
-const { horariosInicioDisponiveis, horariosFimDisponiveis } = useValidacaoHorario(
+// --- Lógica de Disponibilidade em Tempo Real ---
+const bookedSlots = ref<string[]>([])
+const fetchedAgendamentos = ref<AgAgendamento[]>([])
+const supabaseClient = useSupabaseClient()
+
+// Computed para todos os horários possíveis (08:00 às 22:00)
+const allPossibleSlots = computed(() => {
+  const slots: string[] = []
+  for (let h = 8; h <= 21; h++) {
+    const hh = String(h).padStart(2, '0')
+    slots.push(`${hh}:00`)
+    slots.push(`${hh}:30`)
+  }
+  slots.push('22:00')
+  return slots
+})
+
+// Helper para converter hora para minutos (para comparação)
+function horaParaMinutos(hora: string): number {
+  if (!hora) return 0
+  const partes = hora.split(':')
+  return parseInt(partes[0] || '0', 10) * 60 + parseInt(partes[1] || '0', 10)
+}
+
+// Busca horários ocupados do Supabase
+async function fetchBookedSlots() {
+  if (!formData.value.profissionalId || !formData.value.data) {
+    bookedSlots.value = []
+    fetchedAgendamentos.value = []
+    return
+  }
+
+  try {
+    const { data, error } = await supabaseClient
+      .from('ag_agendamentos')
+      .select('hora_inicio, hora_fim, data, profissional_id')
+      .eq('profissional_id', formData.value.profissionalId)
+      .eq('data', formData.value.data)
+      .eq('cancelado', false)
+
+    if (error) throw error
+
+    if (data) {
+      const rows = data as AgAgendamento[]
+      fetchedAgendamentos.value = rows
+      
+      // Identifica todos os slots de 30min ocupados
+      const ocupados: string[] = []
+      rows.forEach(ag => {
+        const inicio = horaParaMinutos(ag.hora_inicio!)
+        const fim = horaParaMinutos(ag.hora_fim!)
+        
+        allPossibleSlots.value.forEach(slot => {
+          const slotMin = horaParaMinutos(slot)
+          if (slotMin >= inicio && slotMin < fim) {
+            ocupados.push(slot)
+          }
+        })
+      })
+      bookedSlots.value = ocupados
+    }
+  } catch (err) {
+    console.error('Erro ao buscar disponibilidade:', err)
+    bookedSlots.value = []
+    fetchedAgendamentos.value = []
+  }
+}
+
+// Watchers para disparar a busca
+watch(
+  [() => formData.value.profissionalId, () => formData.value.data],
+  async () => {
+    await fetchBookedSlots()
+  }
+)
+
+// Computed para horários de início livres (levando em conta bookings e horário atual)
+const availableSlots = computed(() => {
+  const agora = new Date()
+  const hojeStr = formatarDataISO(agora)
+  const horaAtualMinutos = agora.getHours() * 60 + agora.getMinutes()
+
+  return allPossibleSlots.value.filter((slot) => {
+    // 1. Verifica se está ocupado
+    if (bookedSlots.value.includes(slot)) return false
+
+    // 2. Se for hoje, remove horários que já passaram
+    if (formData.value.data === hojeStr) {
+      if (horaParaMinutos(slot) < horaAtualMinutos) return false
+    }
+
+    return true
+  })
+})
+
+// Composable de validação de horários (mantendo para o cálculo do horário de FIM)
+const { horariosFimDisponiveis } = useValidacaoHorario(
   toRef(() => formData.value.data),
   toRef(() => formData.value.horaInicio),
-  toRef(() => props.agendamentos)
+  fetchedAgendamentos
 )
 
 // ===== Formatação de datas =====
@@ -295,8 +399,8 @@ async function handleSalvar() {
     notifyWarning('Selecione um profissional')
     return
   }
-  if (!formData.value.clienteId) {
-    notifyWarning('Selecione um cliente')
+  if (!formData.value.clienteId && !props.leadId) {
+    notifyWarning('Selecione um cliente ou lead')
     return
   }
   if (!formData.value.titulo.trim()) {
@@ -320,7 +424,8 @@ async function handleSalvar() {
 
   const resultado = await inserirAgendamento({
     profissional_id: formData.value.profissionalId,
-    cliente_id: Number(formData.value.clienteId),
+    cliente_id: props.leadId ? null : Number(formData.value.clienteId),
+    lead_id: props.leadId || null,
     data: formData.value.data,
     hora_inicio: formData.value.horaInicio,
     hora_fim: formData.value.horaFim,

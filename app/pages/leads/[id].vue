@@ -178,29 +178,49 @@
             </div>
 
           </div>
+          <!-- Modais -->
+          <LeadEditModal
+            v-model="isEditModalOpen"
+            :lead="lead"
+            :is-editing="true"
+            @save="handleSave"
+            @open-schedule-modal="handleOpenSchedule"
+          />
+
+          <ModalNovoAgendamento
+            v-model="isScheduleModalOpen"
+            :lead-id="id"
+            :cliente-nome="lead.nome"
+            :profissional-id="profile?.id"
+            :profissionais="globalProfissionais"
+            :dias-semana="globalDiasSemana"
+            @salvar="handleScheduleSave"
+          />
         </div>
       </div>
-    <!-- Modal de Edição do Lead -->
-    <LeadEditModal
-      v-model="isEditModalOpen"
-      :lead="lead"
-      :is-editing="true"
-      @save="handleSave"
-    />
-  </ClientOnly>
+    </ClientOnly>
   </NuxtLayout>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useLeads } from '~/composables/useLeads';
+import ModalNovoAgendamento from '~/components/agendamentos/ModalNovoAgendamento.vue';
+import { useAgendamentoStore } from '~/stores/agendamento';
+import { useProfissionais } from '~/composables/useProfissionais';
 
 // --- SETUP ---
 const route = useRoute();
 const id = route.params.id as string;
+const { profile } = useAuth();
+const agendamentoStore = useAgendamentoStore();
+const { fetchProfissionais } = useProfissionais();
+
+const globalProfissionais = ref<any[]>([]);
+const globalDiasSemana = computed(() => agendamentoStore.diasSemana);
 const supabase = useSupabaseClient();
 const { notifySuccess, notifyError } = useNotification();
-const { profile } = useAuth();
+
 
 // --- STATUS DO KANBAN (dinâmicos, vindos do banco via ag_lead_statuses) ---
 const { leadStatuses, fetchStatuses } = useLeads();
@@ -310,11 +330,21 @@ const fetchData = async () => {
 
 // --- LIFECYCLE HOOKS ---
 onMounted(async () => {
+  await fetchData();
+  
+  // Busca lista de profissionais para o modal de agendamento
+  const profs = await fetchProfissionais();
+  if (profs) globalProfissionais.value = profs;
+  
+  // Garante que os dias da semana estejam carregados na store
+  if (agendamentoStore.diasSemana.length === 0) {
+    await agendamentoStore.carregarAgendamentos(); 
+  }
+
   // Carrega os status do Kanban se ainda não estiverem disponíveis
   if (leadStatuses.value.length === 0) {
     await fetchStatuses();
   }
-  fetchData();
 });
 
 // --- MÉTODOS DE AÇÃO ---
@@ -353,8 +383,33 @@ const openWhatsApp = () => {
 const handleEdit = () => { isEditModalOpen.value = true; };
 const handleSchedule = () => alert('Ação de agendar acionada');
 
-// --- EDIT MODAL ---
+// --- EDIT & SCHEDULE MODALS ---
 const isEditModalOpen = ref(false);
+const isScheduleModalOpen = ref(false);
+
+const handleOpenSchedule = () => {
+  isEditModalOpen.value = false;
+  isScheduleModalOpen.value = true;
+};
+
+const handleScheduleSave = async (resultado: any) => {
+  if (resultado) {
+    // Sincroniza o campo proximo_contato_em no lead se for um agendamento futuro
+    if (resultado.data && resultado.hora_inicio) {
+      const fullDateStr = `${resultado.data}T${resultado.hora_inicio.substring(0, 5)}`;
+      
+      // Atualiza o campo no lead para manter consistência visual
+      const { error } = await (supabase.from('ag_leads') as any)
+        .update({ proximo_contato_em: fullDateStr })
+        .eq('id', id);
+        
+      if (!error && lead.value) {
+        lead.value.proximo_contato_em = fullDateStr;
+      }
+    }
+    await fetchData();
+  }
+};
 
 const handleSave = async (formData: Record<string, any>) => {
   try {
@@ -432,32 +487,50 @@ const handleSave = async (formData: Record<string, any>) => {
  */
 const syncSchedule = async (leadId: string, newDate: string | null) => {
   try {
+    const today = new Date().toISOString().split('T')[0];
+
     // 1. Busca agendamento pendente futuro para este lead
     const { data: existing, error: fetchError } = await (supabase
       .from('ag_agendamentos') as any)
-      .select('id, appointment_date')
+      .select('id, data, hora_inicio')
       .eq('lead_id', leadId)
       .eq('status', 'pendente')
-      .gte('appointment_date', new Date().toISOString())
+      .gte('data', today)
       .maybeSingle();
 
     if (fetchError) throw fetchError;
 
     if (newDate) {
+      const dateObj = new Date(newDate);
+      const yyyy = dateObj.getFullYear();
+      const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const dd = String(dateObj.getDate()).padStart(2, '0');
+      const dateStr = `${yyyy}-${mm}-${dd}`;
+      
+      const hh = String(dateObj.getHours()).padStart(2, '0');
+      const min = String(dateObj.getMinutes()).padStart(2, '0');
+      const ss = String(dateObj.getSeconds()).padStart(2, '0');
+      const timeStr = `${hh}:${min}:${ss}`;
+
       // CENÁRIO A/B: Tem nova data
       if (existing) {
-        // UPDATE se a data mudou
-        if (existing.appointment_date !== newDate) {
+        // UPDATE se a data ou hora mudou
+        if (existing.data !== dateStr || existing.hora_inicio !== timeStr) {
           await (supabase.from('ag_agendamentos') as any)
-            .update({ appointment_date: newDate })
+            .update({ 
+              data: dateStr,
+              hora_inicio: timeStr
+            })
             .eq('id', existing.id);
         }
       } else {
         // INSERT se não havia agendamento
         await (supabase.from('ag_agendamentos') as any).insert({
           lead_id: leadId,
+          cliente_id: null,
           profissional_id: profile.value?.id,
-          appointment_date: newDate,
+          data: dateStr,
+          hora_inicio: timeStr,
           titulo: `Contato: ${lead.value?.nome || 'Lead'}`,
           descricao: `Agendamento sincronizado via edição de perfil.`,
           status: 'pendente',

@@ -16,9 +16,9 @@
             <span v-if="profissionalEspecialidade" class="block text-xs text-neutral-400">{{ profissionalEspecialidade }}</span>
           </div>
         </div>
-        <div v-if="nomeCliente" class="flex items-center gap-2 border-t border-neutral-200 pt-1">
+        <div v-if="agendamento?.nome_contato" class="flex items-center gap-2 border-t border-neutral-200 pt-1">
           <UserIcon class="w-4 h-4 text-neutral-400 flex-shrink-0" />
-          <span class="text-sm text-neutral-600">Cliente: {{ nomeCliente }}</span>
+          <span class="text-sm text-neutral-600">Contato: {{ agendamento.nome_contato }}</span>
         </div>
         <div v-if="vendedorNome" class="flex items-center gap-2 border-t border-neutral-200 pt-1">
           <UserCircleIcon class="w-4 h-4 text-primary-500 flex-shrink-0" />
@@ -102,14 +102,14 @@ import SeletorCor from '../SeletorCor.vue'
 import ModalConfirmacao from '../ModalConfirmacao.vue'
 import { UserIcon, CalendarIcon, UserCircleIcon } from '@heroicons/vue/24/outline'
 import { ref, computed, watch } from 'vue'
-import type { AgAgendamento, AgCliente } from '../../../shared/types/database'
+import type { AgViewAgendamentoCompleto, AgCliente } from '../../../shared/types/database'
 import { useAgendamento } from '~/composables/useAgendamento'
 import { useNotification } from '~/composables/useNotification'
 import { useAgendamentoStore } from '~/stores/agendamento'
 
 interface Props {
   modelValue: boolean
-  agendamento: AgAgendamento | null
+  agendamento: AgViewAgendamentoCompleto | null
   profissionalNome?: string
   profissionalEspecialidade?: string
   clientes?: AgCliente[]
@@ -143,12 +143,8 @@ const formData = ref({
 const processando = ref(false)
 const confirmarCancelamento = ref(false)
 
-// Resolve nome do cliente
-const nomeCliente = computed(() => {
-  if (!props.agendamento?.cliente_id) return ''
-  const cliente = props.clientes.find((c) => c.id === props.agendamento!.cliente_id)
-  return cliente?.nome || ''
-})
+// Resolve nome do contato via agendamento (VIEW)
+const nomeCliente = computed(() => props.agendamento?.nome_contato || '')
 
 // Busca lista de vendedores da store global
 const vendedores = useState<any[]>('leads-vendedores', () => [])

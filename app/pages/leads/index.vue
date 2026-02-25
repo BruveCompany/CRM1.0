@@ -116,7 +116,7 @@ const handleSave = async (formData: any) => {
       if (error) throw error;
       notifySuccess('Lead atualizado com sucesso!');
     } else {
-      // ── Lógica de INSERT ──
+      // ── Lógica de INSERT (Duas Etapas) ──
       const { data: newLead, error } = await (supabase
         .from('ag_leads') as any)
         .insert([payload])
@@ -125,13 +125,28 @@ const handleSave = async (formData: any) => {
 
       if (error) throw error;
 
-      // Se informou data, cria o agendamento correspondente
+      // Se informou data, cria o agendamento correspondente na estrutura correta
       if (formData.proximo_contato_em) {
+        const dateObj = new Date(formData.proximo_contato_em);
+        
+        // Extrai Data (YYYY-MM-DD) e Hora (HH:MM:SS) em formato local
+        const yyyy = dateObj.getFullYear();
+        const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const dd = String(dateObj.getDate()).padStart(2, '0');
+        const dateStr = `${yyyy}-${mm}-${dd}`;
+        
+        const hh = String(dateObj.getHours()).padStart(2, '0');
+        const min = String(dateObj.getMinutes()).padStart(2, '0');
+        const ss = String(dateObj.getSeconds()).padStart(2, '0');
+        const timeStr = `${hh}:${min}:${ss}`;
+
         await (supabase.from('ag_agendamentos') as any).insert({
           lead_id: newLead.id,
+          cliente_id: null,
           profissional_id: profile.value?.id,
-          appointment_date: formData.proximo_contato_em,
-          titulo: `Primeiro contato: ${payload.nome}`,
+          data: dateStr,
+          hora_inicio: timeStr,
+          titulo: `Contato inicial com ${payload.nome}`,
           descricao: `Agendamento automático via criação de lead. Interesse: ${payload.interesse || 'Não informado'}`,
           status: 'pendente',
           categoria: 'contato'
@@ -139,6 +154,12 @@ const handleSave = async (formData: any) => {
       }
 
       notifySuccess('Lead criado com sucesso!');
+      isCreateLeadModalOpen.value = false;
+      await fetchLeads();
+      
+      // Redireciona para a página do novo lead
+      await navigateTo(`/leads/${newLead.id}`);
+      return;
     }
 
     isCreateLeadModalOpen.value = false;

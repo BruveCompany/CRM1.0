@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { AgAgendamento } from '../../shared/types/database'
+import type { AgViewAgendamentoCompleto } from '../../shared/types/database'
 import { useAgendamento } from '~/composables/useAgendamento'
 
 /**
@@ -64,7 +64,7 @@ export const useAgendamentoStore = defineStore('agendamento', () => {
   /**
    * Estado: Lista de agendamentos carregados do banco (formato bruto AgAgendamento)
    */
-  const agendamentos = ref<AgAgendamento[]>([])
+  const agendamentos = ref<AgViewAgendamentoCompleto[]>([])
 
   /**
    * Estado: Controle de carregamento
@@ -76,7 +76,7 @@ export const useAgendamentoStore = defineStore('agendamento', () => {
    * Chave: "profissionalId_dataInicio_dataFim" (ex: "2_2026-02-15_2026-02-21")
    * Valor: Array de agendamentos (formato bruto AgAgendamento)
    */
-  const cacheAgendamentos = ref<Record<string, AgAgendamento[]>>({})
+  const cacheAgendamentos = ref<Record<string, AgViewAgendamentoCompleto[]>>({})
 
   /**
    * Getter: Calcula os 7 dias da semana com base na data de referência
@@ -280,9 +280,9 @@ export const useAgendamentoStore = defineStore('agendamento', () => {
    * @param data - Data para filtrar agendamentos
    * @returns Array de agendamentos que ocorrem nesta data específica
    */
-  function getAgendamentosDoDia(data: Date): AgAgendamento[] {
+  function getAgendamentosDoDia(data: Date): AgViewAgendamentoCompleto[] {
     const dataStr = formatarDataISO(data)
-    const resultado = agendamentos.value.filter((ag: AgAgendamento) => {
+    const resultado = agendamentos.value.filter((ag: AgViewAgendamentoCompleto) => {
       return ag.data === dataStr
     })
 

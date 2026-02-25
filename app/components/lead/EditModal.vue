@@ -211,9 +211,27 @@
             <!-- Próximo Contato -->
             <div class="form-field col-2">
               <label>Próximo Contato Agendado</label>
-              <div class="input-container">
+              
+              <!-- Na criação, mantém o input simples -->
+              <div v-if="!isEditing" class="input-container">
                 <Icon name="lucide:calendar-clock" class="field-icon" />
                 <input v-model="form.proximo_contato_em" type="datetime-local" class="field-input" />
+              </div>
+
+              <!-- Na edição, usa o botão para abrir o modal dedicado -->
+              <div v-else class="schedule-action-wrapper">
+                <button 
+                  type="button" 
+                  class="btn-manage-schedule"
+                  @click="$emit('open-schedule-modal')"
+                >
+                  <Icon name="lucide:calendar-plus" class="w-5 h-5 mr-2" />
+                  Gerenciar Agendamento
+                </button>
+                <div v-if="form.proximo_contato_em" class="current-schedule-info">
+                  <Icon name="lucide:info" class="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Agendado: {{ formatDate(form.proximo_contato_em) }}</span>
+                </div>
               </div>
             </div>
 
@@ -287,7 +305,7 @@ const props = defineProps<{
   isEditing?: boolean;
 }>();
 
-const emit = defineEmits(['update:modelValue', 'save', 'close']);
+const emit = defineEmits(['update:modelValue', 'save', 'close', 'open-schedule-modal']);
 const loading = ref(false);
 
 const showModal = computed({
@@ -356,6 +374,12 @@ const getSlug = (url: string | null | undefined, prefix: string) => {
   
   // 3. Para website ou se o prefixo não foi encontrado, retorna o que sobrou
   return clean.replace(/\/$/, '');
+};
+
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 };
 
 watch(
@@ -681,5 +705,42 @@ async function handleSubmit() {
 @media (max-width: 768px) {
   .form-grid { grid-template-columns: 1fr; }
   .form-field.col-3, .form-field.col-2 { grid-column: span 1; }
+}
+
+.schedule-action-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.btn-manage-schedule {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.65rem;
+  background: white;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  color: #4f46e5;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-manage-schedule:hover {
+  background: #f5f3ff;
+  border-color: #6366f1;
+  border-style: solid;
+}
+
+.current-schedule-info {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  color: #64748b;
+  font-weight: 600;
 }
 </style>
