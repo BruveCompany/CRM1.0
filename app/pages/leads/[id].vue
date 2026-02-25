@@ -22,7 +22,7 @@
               <div class="flex items-center gap-3">
                 <div class="h-[1px] w-5 bg-gradient-to-r from-transparent to-slate-200"></div>
                 <p class="text-[9px] text-slate-400 font-bold uppercase tracking-[0.3em] mb-0">
-                  Cockpit de <span class="text-indigo-500/80">Inteligência</span> Comercial
+                  Painel de <span class="text-indigo-500/80">Inteligência</span> Comercial
                 </p>
                 <div class="h-[1px] w-5 bg-gradient-to-l from-transparent to-slate-200"></div>
               </div>
