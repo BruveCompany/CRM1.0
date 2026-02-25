@@ -8,16 +8,22 @@
     </div>
 
     <div class="space-y-4">
-      <div v-for="vendedor in sortedData" :key="vendedor.vendedor_id" class="group space-y-1.5">
+      <div v-for="(vendedor, index) in sortedData" :key="vendedor.vendedor_id" class="group space-y-1.5">
         <div class="flex items-center justify-between text-[11px] font-bold">
-          <div class="flex items-center gap-2">
-            <img 
-              v-if="vendedor.vendedor_avatar" 
-              :src="vendedor.vendedor_avatar" 
-              class="w-5 h-5 rounded-full object-cover grayscale group-hover:grayscale-0 transition-all"
-            />
-            <span class="text-slate-600 group-hover:text-slate-900 transition-colors">{{ vendedor.vendedor_nome }}</span>
-          </div>
+            <div class="flex items-center gap-1.5 leading-none">
+              <div v-if="index < 3" class="shrink-0 transition-all duration-300 group-hover:scale-125 group-hover:-translate-y-0.5">
+                <img src="https://img.icons8.com/color/96/trophy.png" 
+                  alt="Rank" 
+                  class="w-6 h-7 object-contain scale-y-110"
+                  :class="{
+                    'brightness-110 contrast-110': index === 0,
+                    'grayscale brightness-110 contrast-[1.5]': index === 1,
+                    'sepia saturate-[1.8] hue-rotate-[-15deg] brightness-[0.8]': index === 2
+                  }"
+                />
+              </div>
+              <span class="text-slate-600 group-hover:text-slate-900 transition-colors uppercase tracking-tight">{{ vendedor.vendedor_nome }}</span>
+            </div>
           <span :class="getTextColor(vendedor.taxa_conversao)">{{ (vendedor.taxa_conversao || 0).toFixed(1) }}%</span>
         </div>
         <div class="w-full h-2 bg-slate-50 rounded-full overflow-hidden border border-slate-50/50">

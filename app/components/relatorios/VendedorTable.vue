@@ -20,15 +20,27 @@
         </thead>
         <tbody class="divide-y divide-slate-50">
           <tr 
-            v-for="item in data" 
+            v-for="(item, index) in data" 
             :key="item.vendedor_id" 
             @click="$emit('select-vendedor', item)"
             class="group hover:bg-indigo-50/30 cursor-pointer transition-colors"
           >
             <!-- Coluna Consultor com Avatar -->
             <td class="px-3 py-3 whitespace-nowrap">
-              <div class="flex items-center gap-2">
-                <div class="relative flex-shrink-0">
+              <div class="flex items-center gap-1.5 leading-none">
+                <!-- Troféus Modernos e Longos (Parecido com a imagem) -->
+                <div v-if="index < 3" class="shrink-0 transition-transform group-hover:scale-125 group-hover:-translate-y-1">
+                  <img src="https://img.icons8.com/color/96/trophy.png" 
+                    :alt="index === 0 ? 'Ouro' : index === 1 ? 'Prata' : 'Bronze'" 
+                    class="w-7 h-8 object-contain scale-y-110"
+                    :class="{
+                      'brightness-110 contrast-110': index === 0,
+                      'grayscale brightness-110 contrast-[1.5]': index === 1,
+                      'sepia saturate-[1.8] hue-rotate-[-15deg] brightness-[0.8]': index === 2
+                    }" 
+                  />
+                </div>
+              <div class="relative flex-shrink-0">
                   <img 
                     v-if="item.vendedor_avatar" 
                     :src="item.vendedor_avatar" 
@@ -38,8 +50,8 @@
                     {{ item.vendedor_nome ? item.vendedor_nome.substring(0,2).toUpperCase() : '??' }}
                   </div>
                 </div>
-                <span class="text-xs font-semibold text-slate-700 group-hover:text-primary-600 transition-colors truncate max-w-[100px]">{{ item.vendedor_nome }}</span>
-              </div>
+              <span class="text-xs font-semibold text-slate-700 group-hover:text-primary-600 transition-colors truncate max-w-[100px]">{{ item.vendedor_nome }}</span>
+            </div>
             </td>
 
             <td class="px-2 py-3 text-center text-xs font-bold text-slate-600">{{ item.total_leads }}</td>

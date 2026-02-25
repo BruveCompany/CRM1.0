@@ -175,8 +175,15 @@
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-slate-100">
-                    <tr v-for="item in reportData" :key="item.vendedor_id" class="odd:bg-slate-50/50 hover:bg-slate-100/30">
-                      <td class="py-3 px-4 text-xs font-bold text-slate-700">{{ item.vendedor_nome }}</td>
+                    <tr v-for="(item, index) in rankedSellers" :key="item.vendedor_id" class="odd:bg-slate-50/50 hover:bg-slate-100/30">
+                      <td class="py-3 px-4 text-xs font-bold text-slate-700">
+                        <div class="flex items-center gap-2">
+                          <span v-if="index === 0" class="text-xs">🥇</span>
+                          <span v-else-if="index === 1" class="text-xs">🥈</span>
+                          <span v-else-if="index === 2" class="text-xs">🥉</span>
+                          {{ item.vendedor_nome }}
+                        </div>
+                      </td>
                       <td class="py-3 px-2 text-center text-xs text-slate-600">{{ item.total_leads }}</td>
                       <td class="py-3 px-2 text-center text-xs text-slate-600">{{ item.leads_convertidos }}</td>
                       <td class="py-3 px-2 text-center text-xs font-bold text-slate-800">{{ (item.taxa_conversao || 0).toFixed(1) }}%</td>
@@ -224,12 +231,12 @@
                   <div class="flex items-center justify-between px-2">
                     <h2 class="text-lg font-bold text-gray-900 tracking-tight">Detalhamento operacional</h2>
                   </div>
-                  <RelatoriosVendedorTable v-if="!loading" :data="reportData" @select-vendedor="handleVendedorSelect" />
+                  <RelatoriosVendedorTable v-if="!loading" :data="rankedSellers" @select-vendedor="handleVendedorSelect" />
                 </div>
 
                 <!-- RANKING VISUAL (Col 1) -->
                 <div class="lg:col-span-1 space-y-4">
-                  <RelatoriosBarrasVendedorChart v-if="!loading && reportData.length > 0" :data="reportData" />
+                  <RelatoriosBarrasVendedorChart v-if="!loading && rankedSellers.length > 0" :data="rankedSellers" />
                 </div>
               </div>
             </div>
@@ -264,7 +271,18 @@ const isAdmin = ref(false);
 const reportData = ref<any[]>([]);
 const showFilterPopover = ref(false);
 const showExportModal = ref(false);
-const isExporting = ref(false); // Novo estado para controle de exportação
+const isExporting = ref(false);
+
+// Lógica de Ranking no Frontend (Tarefa 1.1)
+const rankedSellers = computed(() => {
+  if (!reportData.value) return [];
+  // Ordena a lista em ordem decrescente pela taxa de conversão
+  return [...reportData.value].sort((a, b) => {
+    const taxaA = a.taxa_conversao || 0;
+    const taxaB = b.taxa_conversao || 0;
+    return taxaB - taxaA;
+  });
+});
 
 // Filtros
 const selectedPeriod = ref('30d');
