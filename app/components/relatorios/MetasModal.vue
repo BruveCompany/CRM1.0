@@ -1,134 +1,120 @@
 <template>
-  <Teleport to="body">
-    <Transition
-      enter-active-class="ease-out duration-300"
-      enter-from-class="opacity-0"
-      enter-to-class="opacity-100"
-      leave-active-class="ease-in duration-200"
-      leave-from-class="opacity-100"
-      leave-to-class="opacity-0"
-    >
-      <div v-if="show" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
-        <!-- Backdrop -->
-        <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" @click="emit('close')"></div>
+  <BaseModal 
+    :model-value="show" 
+    @update:modelValue="$emit('close')"
+    size="2xl"
+  >
+    <template #header>
+      <div class="flex items-center gap-3 py-1">
+        <div class="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center">
+          <Icon name="heroicons:outline:adjustments-horizontal" class="w-6 h-6 text-primary-600" />
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-neutral-900">Definição de Metas</h3>
+          <p class="text-[11px] text-neutral-500 font-medium">Gerencie as metas mensais da sua equipe</p>
+        </div>
+      </div>
+    </template>
 
-        <!-- Modal Panel -->
-        <Transition
-          appear
-          enter-active-class="ease-out duration-300"
-          enter-from-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-          enter-to-class="opacity-100 translate-y-0 sm:scale-100"
-          leave-active-class="ease-in duration-200"
-          leave-from-class="opacity-100 translate-y-0 sm:scale-100"
-          leave-to-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-        >
-          <div class="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden transform transition-all">
-            <!-- Header -->
-            <div class="px-6 py-4 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
-                  <Icon name="heroicons:outline:adjustments-horizontal" class="w-6 h-6 text-indigo-600" />
-                </div>
-                <div>
-                  <h3 class="text-sm font-bold text-slate-800">Definição de Metas</h3>
-                  <p class="text-[11px] text-slate-500 font-medium">Gerencie as metas mensais da sua equipe</p>
-                </div>
-              </div>
-              <button @click="emit('close')" class="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-400">
-                <Icon name="heroicons:outline:x-mark" class="w-5 h-5" />
-              </button>
-            </div>
+    <div class="space-y-6 py-2">
+      <!-- Seletor de Mês -->
+      <div class="p-4 bg-primary-50/50 rounded-xl border border-primary-100/50 flex items-center justify-between">
+        <div class="flex flex-col gap-1">
+          <label class="text-[10px] font-bold text-primary-600 uppercase tracking-wider">Período de Referência</label>
+          <input 
+            type="month" 
+            v-model="selectedMonth" 
+            @change="fetchMetas"
+            class="bg-white border-neutral-200 rounded-lg text-sm font-semibold text-neutral-700 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none p-2 shadow-sm"
+          />
+        </div>
+        <p class="text-[11px] text-neutral-500 font-medium max-w-[240px] text-right">
+          Selecione o mês desejado para atualizar as metas de conversão e faturamento.
+        </p>
+      </div>
 
-            <div class="p-6">
-              <!-- Seletor de Mês -->
-              <div class="mb-6 flex items-center gap-4 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100/50">
-                <div class="flex flex-col gap-1">
-                  <label class="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">Período de Referência</label>
+      <!-- Tabela de Vendedores -->
+      <div class="border border-neutral-100 rounded-xl overflow-hidden shadow-sm">
+        <table class="w-full text-left">
+          <thead>
+            <tr class="bg-neutral-50 border-b border-neutral-100">
+              <th class="px-4 py-3 text-[10px] font-bold text-neutral-500 uppercase">Consultor</th>
+              <th class="px-4 py-3 text-[10px] font-bold text-neutral-500 uppercase w-32 text-center">Meta Conv.</th>
+              <th class="px-4 py-3 text-[10px] font-bold text-neutral-500 uppercase w-40 text-right pr-6">Meta Valor</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-neutral-50">
+            <tr v-for="vendedor in vendedoresComMetas" :key="vendedor.id" class="hover:bg-neutral-50/50 transition-colors">
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center text-[10px] font-bold text-neutral-500 border border-neutral-200">
+                    {{ vendedor.nome.substring(0,2).toUpperCase() }}
+                  </div>
+                  <span class="text-xs font-semibold text-neutral-700">{{ vendedor.nome }}</span>
+                </div>
+              </td>
+              <td class="px-4 py-3">
+                <input 
+                  type="number" 
+                  v-model.number="vendedor.meta_conversoes"
+                  class="w-full bg-white border border-neutral-200 rounded-lg text-xs font-bold text-neutral-700 p-2 text-center focus:ring-2 focus:ring-primary-500/20 outline-none"
+                  placeholder="0"
+                />
+              </td>
+              <td class="px-4 py-3 pr-6">
+                <div class="relative">
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-neutral-400">R$</span>
                   <input 
-                    type="month" 
-                    v-model="selectedMonth" 
-                    @change="fetchMetas"
-                    class="bg-white border-slate-200 rounded-lg text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none p-2 shadow-sm"
+                    type="number" 
+                    v-model.number="vendedor.meta_valor"
+                    class="w-full bg-white border border-neutral-200 rounded-lg text-xs font-bold text-neutral-700 p-2 pl-8 text-right focus:ring-2 focus:ring-primary-500/20 outline-none"
+                    placeholder="0,00"
                   />
                 </div>
-                <p class="text-[11px] text-slate-500 font-medium max-w-[300px]">
-                  Selecione o mês para visualizar ou editar as metas dos consultores.
-                </p>
-              </div>
-
-              <!-- Tabela de Vendedores -->
-              <div class="border border-slate-100 rounded-xl overflow-hidden shadow-sm max-h-[400px] overflow-y-auto">
-                <table class="w-full text-left">
-                  <thead class="sticky top-0 z-10">
-                    <tr class="bg-slate-50 border-b border-slate-100">
-                      <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase">Consultor</th>
-                      <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase w-32">Meta Conversões</th>
-                      <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase w-40 text-right">Meta Valor</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-slate-50">
-                    <tr v-for="vendedor in vendedoresComMetas" :key="vendedor.id" class="hover:bg-slate-50/50 transition-colors">
-                      <td class="px-4 py-3">
-                        <div class="flex items-center gap-2">
-                          <div class="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500 border border-slate-200">
-                            {{ vendedor.nome.substring(0,2).toUpperCase() }}
-                          </div>
-                          <span class="text-xs font-semibold text-slate-700">{{ vendedor.nome }}</span>
-                        </div>
-                      </td>
-                      <td class="px-4 py-3">
-                        <input 
-                          type="number" 
-                          v-model.number="vendedor.meta_conversoes"
-                          class="w-full bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 p-2 focus:ring-2 focus:ring-indigo-500/20 outline-none"
-                          placeholder="0"
-                        />
-                      </td>
-                      <td class="px-4 py-3">
-                        <div class="relative">
-                          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">R$</span>
-                          <input 
-                            type="number" 
-                            v-model.number="vendedor.meta_valor"
-                            class="w-full bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 p-2 pl-8 text-right focus:ring-2 focus:ring-indigo-500/20 outline-none"
-                            placeholder="0,00"
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- Footer -->
-            <div class="px-6 py-4 border-t border-slate-50 bg-slate-50/30 flex items-center justify-end gap-3">
-              <button 
-                @click="emit('close')"
-                class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition-colors"
-                :disabled="loading"
-              >
-                Cancelar
-              </button>
-              <button 
-                @click="saveMetas"
-                :disabled="loading"
-                class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-200 flex items-center gap-2 transition-all transform active:scale-95"
-              >
-                <Icon v-if="loading" name="svg-spinners:18-dots-indicator" class="w-4 h-4 text-white" />
-                <Icon v-else name="heroicons:outline:check" class="w-4 h-4 text-white" />
-                {{ loading ? 'Salvando...' : 'Salvar Metas' }}
-              </button>
-            </div>
-          </div>
-        </Transition>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-    </Transition>
-  </Teleport>
+    </div>
+
+    <template #footer>
+      <BaseButton 
+        variant="ghost" 
+        @click="emit('close')"
+        :disabled="loading"
+        class="text-neutral-500 hover:text-neutral-700"
+      >
+        Cancelar
+      </BaseButton>
+      <BaseButton 
+        variant="primary" 
+        @click="saveMetas"
+        :loading="loading"
+        class="px-8"
+      >
+        Salvar Metas
+      </BaseButton>
+    </template>
+  </BaseModal>
 </template>
+
+<style scoped>
+/* Remove a barra de rolagem visualmente mas mantém a funcionalidade caso o conteúdo exceda a tela */
+:deep(.overflow-y-auto) {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+:deep(.overflow-y-auto::-webkit-scrollbar) {
+  display: none; /* Chrome, Safari, Opera */
+}
+</style>
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import BaseModal from '../BaseModal.vue';
+import BaseButton from '../BaseButton.vue';
 
 interface VendedorMeta {
   id: number;
