@@ -1,5 +1,5 @@
 <template>
-  <div id="profissional-atual" class="w-full flex justify-center">
+  <div id="profissional-atual" class="w-full flex">
     <!-- Estado: Carregando dados -->
     <div v-if="loading && (!profissionais || profissionais.length === 0)" class="p-2">
       <div class="h-10 w-48 bg-neutral-200 rounded-full animate-pulse"></div>
@@ -9,7 +9,7 @@
     <div v-else class="py-1">
       <button
         type="button"
-        class="flex items-center gap-2.5 pl-1 pr-4 py-1 rounded-full border border-primary-100 bg-primary-50 hover:bg-primary-100/50 transition-all group min-h-[46px] cursor-pointer"
+        class="flex items-center gap-2.5 pl-1 pr-4 py-1 rounded-full border border-primary-100 bg-primary-50 hover:bg-primary-100/50 transition-all group min-h-[40px] cursor-pointer"
         @click="modalAberto = true"
       >
         <!-- Ícone Sem Fundo -->

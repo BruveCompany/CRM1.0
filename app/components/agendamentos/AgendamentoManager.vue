@@ -1,32 +1,7 @@
 <template>
   <div class="flex flex-col h-full bg-white">
-    <!-- Cabeçalho da Agenda -->
-    <div class="px-4 pt-4 flex flex-col gap-4 border-b border-neutral-100 pb-2">
-      <!-- Linha Superior: Navegação, Profissional e Ação -->
-      <div class="flex justify-between items-end gap-4">
-        <!-- Esquerda: Seletor de Semana -->
-        <ControladorSemana class="flex-shrink-0" />
-        
-        <!-- Centro: Seletor de Profissional (Subido para alinhar com os botões) -->
-        <div class="flex-1 flex justify-center pb-0.5">
-          <ProfissionalAtual 
-            :profissionais="profissionais" 
-            :loading="loadingProfissionais" 
-          />
-        </div>
-
-        <!-- Direita: Novo Agendamento -->
-        <div class="flex-shrink-0 pb-0.5">
-          <button 
-            @click="handleNovoAgendamento"
-            class="flex items-center gap-2 px-4 h-[34px] rounded-md font-semibold text-[0.85rem] transition-all bg-[#eef2ff] text-[#4f46e5] hover:bg-[#e0e7ff] whitespace-nowrap border-none cursor-pointer"
-          >
-            + Novo Agendamento
-          </button>
-        </div>
-      </div>
-      
-      <!-- Cabeçalho dos Dias -->
+    <!-- Cabeçalho dos Dias (Fixado no topo da grade) -->
+    <div class="px-4 pt-2 border-b border-neutral-100 pb-2 bg-white sticky top-0 z-10">
       <ListaDias :dias="agendamentoStore.diasSemana" />
     </div>
 
@@ -76,6 +51,11 @@
 </template>
 
 <script setup lang="ts">
+const props = withDefaults(defineProps<{
+  hideInternalHeader?: boolean
+}>(), {
+  hideInternalHeader: false
+})
 import { ref, computed, watch, onMounted } from 'vue'
 import ControladorSemana from './ControladorSemana.vue'
 import ProfissionalAtual from './ProfissionalAtual.vue'
@@ -180,4 +160,9 @@ function handleAgendamentoAtualizado() {
   agendamentoSelecionado.value = null
   agendamentoStore.carregarAgendamentos()
 }
+
+// Expõe funções para componentes pais
+defineExpose({
+  handleNovoAgendamento
+})
 </script>

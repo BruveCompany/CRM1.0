@@ -1,32 +1,27 @@
 <template>
-  <div class="flex flex-col gap-2">
-    <!-- Primeira linha: Período da semana atual -->
-    <div v-if="primeiroDia && ultimoDia" class="text-base font-semibold text-neutral-800">
-      De {{ formatarData(primeiroDia) }} até {{ formatarData(ultimoDia) }}
+  <div class="flex items-center gap-4">
+    <!-- Botão: Semana anterior -->
+    <button
+      @click="voltarSemana"
+      class="flex items-center justify-center w-8 h-8 rounded-full transition-all bg-[#eef2ff] text-[#4f46e5] hover:bg-[#e0e7ff] border-none cursor-pointer"
+      title="Semana anterior"
+    >
+      <Icon name="lucide:chevron-left" class="w-5 h-5" />
+    </button>
+
+    <!-- Período da semana atual -->
+    <div v-if="primeiroDia && ultimoDia" class="text-sm font-semibold text-neutral-600 whitespace-nowrap px-2">
+      {{ formatarData(primeiroDia) }} — {{ formatarData(ultimoDia) }}
     </div>
 
-    <!-- Segunda linha: Botões de navegação entre semanas -->
-    <div class="flex gap-2">
-      <!-- Botão: Semana anterior -->
-      <button
-        @click="voltarSemana"
-        class="flex items-center gap-1.5 px-3 h-[34px] rounded-md font-semibold text-[0.82rem] transition-all bg-[#eef2ff] text-[#4f46e5] hover:bg-[#e0e7ff] border-none cursor-pointer"
-        title="Semana anterior"
-      >
-        <span>←</span>
-        <span>Anterior</span>
-      </button>
-
-      <!-- Botão: Próxima semana -->
-      <button
-        @click="avancarSemana"
-        class="flex items-center gap-1.5 px-3 h-[34px] rounded-md font-semibold text-[0.82rem] transition-all bg-[#eef2ff] text-[#4f46e5] hover:bg-[#e0e7ff] border-none cursor-pointer"
-        title="Próxima semana"
-      >
-        <span>Próxima</span>
-        <span>→</span>
-      </button>
-    </div>
+    <!-- Botão: Próxima semana -->
+    <button
+      @click="avancarSemana"
+      class="flex items-center justify-center w-8 h-8 rounded-full transition-all bg-[#eef2ff] text-[#4f46e5] hover:bg-[#e0e7ff] border-none cursor-pointer"
+      title="Próxima semana"
+    >
+      <Icon name="lucide:chevron-right" class="w-5 h-5" />
+    </button>
   </div>
 </template>
 

@@ -1,47 +1,110 @@
 <template>
   <NuxtLayout>
-    <div class="flex flex-col h-full bg-white p-4">
-      <div class="flex-1 min-h-0">
+    <div class="agenda-page-container flex flex-col h-full bg-slate-50">
+      <!-- Sistema de Navegação/Ações Estilo Leads -->
+      <AgendaHeader 
+        v-model:activeView="activeView"
+        :profissionais="profissionais"
+        :loading="loadingProfissionais"
+        @novo-agendamento="handleManualNovoAgendamento"
+        @search="searchQuery = $event"
+      />
+
+      <!-- Conteúdo Dinâmico -->
+      <main class="flex-1 min-h-0 overflow-hidden">
         <ClientOnly>
-          <AgendamentoManager />
+          <div v-if="activeView === 'agenda'" class="h-full bg-white border-t border-neutral-200">
+            <AgendamentoManager ref="managerRef" hide-internal-header />
+          </div>
+          <div v-else class="h-full overflow-auto">
+            <ListaAgendamentos 
+              :search-query="searchQuery"
+              :filtro-cliente-id="filtroClienteId"
+              :filtro-profissional-id="filtroProfissionalId"
+            />
+          </div>
+          
           <template #fallback>
-            <div class="flex items-center justify-center h-full">
-              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            <div class="flex flex-col items-center justify-center py-32 opacity-20">
+              <Icon name="svg-spinners:18-dots-indicator" class="w-12 h-12 mb-4" />
+              <p class="text-sm font-bold uppercase tracking-widest">Sincronizando Agenda...</p>
             </div>
           </template>
         </ClientOnly>
-      </div>
+      </main>
     </div>
   </NuxtLayout>
 </template>
 
 <script setup lang="ts">
 /**
- * ================= Página: Agenda =================
- * Gerenciamento de agendamentos (Antiga Dashboard)
- * 
- * Funcionalidades:
- * - Visualização de agenda
- * - Criação de novos agendamentos
- * - Edição de agendamentos existentes
- * - Cancelamento de agendamentos
- * =================================================
+ * ================= Página: Agenda Unificada =================
+ * Unifica a visualização de calendário e lista de agendamentos.
+ * Estilo visual sincronizado com a página de Leads.
+ * ============================================================
  */
 
-// Importa o componente gerenciador de agendamentos
+import AgendaHeader from '~/components/agendamentos/AgendaHeader.vue'
 import AgendamentoManager from '~/components/agendamentos/AgendamentoManager.vue'
+import ListaAgendamentos from '~/components/ListaAgendamentos.vue'
+import { useProfissionais } from '~/composables/useProfissionais'
 import { useAgendamentoStore } from '~/stores/agendamento'
 
-// Inicializa a store de agendamento 
-// (Mantendo a lógica original, mesmo que a store possa não ser estritamente necessária aqui se o componente for autosuficiente)
-const agendamentoStore = useAgendamentoStore()
+// Controle de visualização ativa e dados
+const activeView = ref<'agenda' | 'lista'>('agenda')
+const searchQuery = ref('')
+const filtroClienteId = ref('')
+const filtroProfissionalId = ref('')
+const managerRef = ref<any>(null)
 
-// Lifecycle hooks
+// Sincroniza o filtro com o store apenas no cliente (evita mismatch SSR/CSR)
 onMounted(() => {
-  console.log('Página de Agenda carregada')
+  const agendamentoStore = useAgendamentoStore()
+  
+  // Atualiza imediatamente com o valor atual
+  filtroProfissionalId.value = agendamentoStore.profissionalId
+    ? String(agendamentoStore.profissionalId)
+    : ''
+
+  // Continua sincronizando quando o profissional mudar
+  watch(
+    () => agendamentoStore.profissionalId,
+    (id) => { filtroProfissionalId.value = id ? String(id) : '' }
+  )
+})
+
+const { fetchProfissionais } = useProfissionais()
+const profissionais = ref<any[]>([])
+const loadingProfissionais = ref(true)
+
+// Aciona a função de novo agendamento que está dentro do componente AgendamentoManager
+function handleManualNovoAgendamento() {
+  if (managerRef.value && managerRef.value.handleNovoAgendamento) {
+    managerRef.value.handleNovoAgendamento()
+  }
+}
+
+onMounted(async () => {
+  try {
+    loadingProfissionais.value = true
+    const data = await fetchProfissionais()
+    profissionais.value = data || []
+  } catch (err) {
+    console.error('Erro ao carregar profissionais na Agenda:', err)
+  } finally {
+    loadingProfissionais.value = false
+  }
 })
 
 useHead({
   title: 'Agenda'
 })
 </script>
+
+<style scoped>
+.agenda-page-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+</style>

@@ -87,7 +87,6 @@ const navItems = computed(() => {
     { label: 'Leads', to: '/leads', icon: IdentificationIcon },
     { label: 'Relatórios', to: '/relatorios', icon: ChartBarIcon },
     { label: 'Agenda', to: '/agenda', icon: CalendarIcon },
-    { label: 'Agendamentos', to: '/agendamentos', icon: CalendarIcon },
     { label: 'Clientes', to: '/clientes', icon: UserIcon },
     { label: 'Especialidades', to: '/especialidades', icon: BookOpenIcon },
     { label: 'Profissionais', to: '/profissionais', icon: UserGroupIcon },

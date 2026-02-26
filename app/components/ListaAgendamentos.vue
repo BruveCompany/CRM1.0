@@ -1,37 +1,6 @@
 <template>
-  <div id="lista-agendamentos" class="w-full space-y-6">
-    <!-- Seção Filtros -->
-    <div class="bg-white rounded-lg shadow overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-100">
-        <h2 class="text-base font-semibold text-gray-900">Filtros de Busca</h2>
-      </div>
-      <div class="px-6 py-4">
-        <!-- Filtros -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-          <SeletorCliente
-            v-model="filtroClienteId"
-            :clientes="clientes"
-          />
-          <SeletorProfissional 
-            v-model="filtroProfissionalId"
-            :profissionais="profissionais"
-          />
-        </div>
-
-        <!-- Botão limpar filtros -->
-        <div class="flex justify-end mt-4">
-          <BaseButton
-            variant="secondary"
-            size="sm"
-            @click="limparFiltros"
-          >
-            Limpar Filtros
-          </BaseButton>
-        </div>
-      </div>
-    </div>
-
-    <!-- Seção Agendamentos -->
+  <div id="lista-agendamentos" class="w-full">
+    <!-- Lista de Agendamentos direto sem filtros -->
     <div class="bg-white rounded-lg shadow overflow-hidden">
       <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
         <h2 class="text-base font-semibold text-gray-900">
@@ -68,24 +37,12 @@
 
 <script setup lang="ts">
 /**
- * ================= ListaAgendamentos.vue =================
- * Componente para listar todos os agendamentos em formato de cards
- * 
- * Responsabilidades:
- * - Buscar agendamentos completos (com dados de cliente e profissional)
- * - Filtrar por cliente e profissional no frontend
- * - Exibir em lista de cards elegantes
- * - Mostrar estados de loading e vazio
- * 
- * Busca:
- * - Usa RPC ag_get_agendamentos_completo
- * - Traz dados completos de cliente e profissional
- * - Ordenados por data e hora
- * ==========================================================
+ * ListaAgendamentos.vue
+ * Lista todos os agendamentos em formato de cards.
+ * Filtra por cliente, profissional e busca textual (via props).
  */
 
 import { ref, computed, onMounted } from 'vue'
-import { XMarkIcon } from '@heroicons/vue/24/outline'
 import { useAgendamento } from '../composables/useAgendamento'
 import { useProfissionais } from '../composables/useProfissionais'
 import { useLeads } from '../composables/useLeads'
@@ -93,9 +50,6 @@ import { useNotification } from '../composables/useNotification'
 import type { AgViewAgendamentoCompleto } from '../../shared/types/database'
 import type { AgCliente, AgProfissional } from '../../shared/types/database'
 import CardAgendamento from './CardAgendamento.vue'
-import SeletorCliente from './SeletorCliente.vue'
-import SeletorProfissional from './SeletorProfissional.vue'
-import BaseButton from './BaseButton.vue'
 
 // Estado
 const agendamentos = ref<AgViewAgendamentoCompleto[]>([])
@@ -103,44 +57,50 @@ const clientes = ref<AgCliente[]>([])
 const profissionais = ref<AgProfissional[]>([])
 const loading = ref(true)
 
-// Filtros
-const filtroClienteId = ref('')
-const filtroProfissionalId = ref('')
-
 // Composables
 const { buscarRelatorioAgendamentos } = useAgendamento()
 const { fetchClientes, fetchProfissionais } = useProfissionais()
 const { fetchVendedores } = useLeads()
 const { notifyError } = useNotification()
 
+const props = defineProps<{
+  searchQuery?: string
+  filtroClienteId?: string
+  filtroProfissionalId?: string
+}>()
+
 /**
- * Filtra os agendamentos no frontend por cliente e/ou profissional
+ * Filtra os agendamentos no frontend por cliente, profissional e busca textual
  */
 const agendamentosFiltrados = computed(() => {
   let resultado = agendamentos.value
 
-  if (filtroClienteId.value) {
-    resultado = resultado.filter(
-      (a) => String(a.cliente_id) === filtroClienteId.value
+  // Filtro de Busca Textual
+  if (props.searchQuery) {
+    const q = props.searchQuery.toLowerCase().trim()
+    resultado = resultado.filter(a => 
+      (a.cliente_nome && a.cliente_nome.toLowerCase().includes(q)) ||
+      (a.profissional_nome && a.profissional_nome.toLowerCase().includes(q)) ||
+      (a.titulo && a.titulo.toLowerCase().includes(q))
     )
   }
 
-  if (filtroProfissionalId.value) {
+  if (props.filtroClienteId) {
     resultado = resultado.filter(
-      (a) => String(a.profissional_id) === filtroProfissionalId.value
+      (a) => String(a.cliente_id) === props.filtroClienteId
+    )
+  }
+
+  if (props.filtroProfissionalId) {
+    resultado = resultado.filter(
+      (a) => String(a.profissional_id) === props.filtroProfissionalId
     )
   }
 
   return resultado
 })
 
-/**
- * Limpa todos os filtros
- */
-function limparFiltros() {
-  filtroClienteId.value = ''
-  filtroProfissionalId.value = ''
-}
+
 
 /**
  * Carrega todos os agendamentos do sistema
