@@ -1,39 +1,37 @@
 <template>
-  <NuxtLayout name="default">
-    <div class="p-6">
-      <h1 class="text-2xl font-bold mb-4">Profissionais</h1>
-      <p class="text-gray-600 mb-6">Gerencie os profissionais e suas especialidades.</p>
-      <TabelaProfissionais 
-        :profissionais="profissionais"
-        @add-profissional="abrirModalAdicionar"
-        @editar-profissional="abrirModalEditar"
-        @deletar-profissional="abrirModalDeletar"
-      />
-      
-      <!-- Modal Adicionar/Editar Profissional -->
-      <ModalProfissional
-        v-model="modalProfissionalAberto"
-        :perfis="perfis"
-        :especialidades="especialidades"
-        :is-edicao="isEdicao"
-        :profissional-inicial="profissionalSelecionado"
-        :loading="loadingModal"
-        @confirmar="salvarProfissional"
-        @cancelar="fecharModal"
-      />
-      
-      <!-- Modal de confirmação de exclusão -->
-      <ModalConfirmacao
-        :model-value="modalDeleteAberto"
-        @update:modelValue="modalDeleteAberto = $event"
-        titulo="Confirmar Exclusão"
-        :mensagem="`Tem certeza que deseja excluir o profissional &quot;${profissionalDelete?.nome}&quot;?`"
-        :loading="loadingDelete"
-        @confirmar="handleConfirmarDelete"
-        @cancelar="modalDeleteAberto = false"
-      />
-    </div>
-  </NuxtLayout>
+  <div class="p-6">
+    <h1 class="text-2xl font-bold mb-4">Profissionais</h1>
+    <p class="text-gray-600 mb-6">Gerencie os profissionais e suas especialidades.</p>
+    <TabelaProfissionais 
+      :profissionais="profissionais"
+      @add-profissional="abrirModalAdicionar"
+      @editar-profissional="abrirModalEditar"
+      @deletar-profissional="abrirModalDeletar"
+    />
+    
+    <!-- Modal Adicionar/Editar Profissional -->
+    <ModalProfissional
+      v-model="modalProfissionalAberto"
+      :perfis="perfis"
+      :especialidades="especialidades"
+      :is-edicao="isEdicao"
+      :profissional-inicial="profissionalSelecionado"
+      :loading="loadingModal"
+      @confirmar="salvarProfissional"
+      @cancelar="fecharModal"
+    />
+    
+    <!-- Modal de confirmação de exclusão -->
+    <ModalConfirmacao
+      :model-value="modalDeleteAberto"
+      @update:modelValue="modalDeleteAberto = $event"
+      titulo="Confirmar Exclusão"
+      :mensagem="`Tem certeza que deseja excluir o profissional &quot;${profissionalDelete?.nome}&quot;?`"
+      :loading="loadingDelete"
+      @confirmar="handleConfirmarDelete"
+      @cancelar="modalDeleteAberto = false"
+    />
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -198,6 +196,10 @@ async function salvarProfissional(dados: { profile_id: number; especialidade_id:
     loadingModal.value = false
   }
 }
+
+definePageMeta({
+  layout: 'default'
+})
 
 useHead({
   title: 'Profissionais'

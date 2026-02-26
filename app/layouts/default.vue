@@ -1,11 +1,14 @@
 <template>
-  <div class="flex h-screen overflow-hidden">
-    <!-- Sidebar -->
+  <div class="flex h-screen w-full overflow-hidden bg-neutral-50">
+    <!-- Sidebar fixa à esquerda -->
     <Sidebar />
 
-    <!-- Main Content -->
-    <main class="flex-1 overflow-y-auto bg-neutral-50 hover-scrollbar">
-      <slot />
+    <!-- Conteúdo Principal -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <!-- Scroll independente para o conteúdo da página -->
+      <div class="flex-1 overflow-y-auto hover-scrollbar">
+        <slot />
+      </div>
     </main>
   </div>
 </template>
@@ -13,12 +16,7 @@
 <script setup lang="ts">
 /**
  * ================= Layout: Default =================
- * Layout principal da aplicação.
- * 
- * Estrutura:
- * - Sidebar fixa à esquerda
- * - Conteúdo principal com scroll independente
- * - Estilização customizada de scrollbar (hover-only)
+ * Layout principal que mantém a Sidebar persistente.
  * ===============================================
  */
 </script>

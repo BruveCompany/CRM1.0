@@ -1,22 +1,30 @@
 <template>
-  <NuxtLayout>
-    <div class="flex flex-col items-center justify-center h-[calc(100vh-64px)] bg-white">
-      <h1 class="text-3xl font-bold text-neutral-900 mb-4">Dashboard</h1>
-      <div class="p-6 bg-blue-50 rounded-lg border border-blue-100 text-center">
-        <p class="text-lg text-blue-800 font-medium">Em Construção</p>
+  <div>
+    <!-- Página de redirecionamento para o Dashboard -->
+    <div class="flex items-center justify-center h-screen bg-neutral-50">
+      <div class="animate-pulse text-neutral-400 font-medium">
+        Carregando Dashboard...
       </div>
     </div>
-  </NuxtLayout>
+  </div>
 </template>
 
 <script setup lang="ts">
 /**
- * ================= Página: Dashboard =================
- * Página principal com visão geral (Em construção)
- * =================================================
+ * Rota raiz (/)
+ * Redireciona para /dashboard para manter a estrutura solicitada.
  */
-
-useHead({
-  title: 'Dashboard'
+definePageMeta({
+  layout: false // Sem layout para o redirecionamento
 })
+
+// Redirecionamento tanto no servidor quanto no cliente
+onBeforeMount(() => {
+  navigateTo('/dashboard')
+})
+
+// Redirecionamento no servidor
+if (process.server) {
+  navigateTo('/dashboard')
+}
 </script>

@@ -1,62 +1,60 @@
 <template>
-  <NuxtLayout name="default">
-    <div class="leads-page-container">
-      <!-- Cabeçalho de Navegação e Filtros -->
-      <LeadsHeader />
+  <div class="leads-page-container">
+    <!-- Cabeçalho de Navegação e Filtros -->
+    <LeadsHeader />
 
-      <main class="leads-content">
-        <!-- Dashboard / Título Local (Aparece apenas na Lista) -->
-        <div v-if="!showKanbanView" class="px-6 pt-6 flex items-center justify-between">
-          <div class="space-y-1.5">
-            <h1 class="text-2xl font-semibold text-gray-900 tracking-tight">Lista de Leads</h1>
-            <p class="text-sm text-slate-400 font-medium">Análise de performance e métricas comerciais</p>
-          </div>
+    <main class="leads-content">
+      <!-- Dashboard / Título Local (Aparece apenas na Lista) -->
+      <div v-if="!showKanbanView" class="px-6 pt-6 flex items-center justify-between">
+        <div class="space-y-1.5">
+          <h1 class="text-2xl font-semibold text-gray-900 tracking-tight">Lista de Leads</h1>
+          <p class="text-sm text-slate-400 font-medium">Análise de performance e métricas comerciais</p>
         </div>
+      </div>
 
-        <!-- Renderização Condicional: Kanban vs Tabela -->
-        <div class="view-wrapper">
-          <ClientOnly>
-            <Transition name="fade" mode="out-in">
-              <LeadsKanban v-if="showKanbanView" />
-              <LeadsTable v-else />
-            </Transition>
-            
-            <template #placeholder>
-              <div class="flex flex-col items-center justify-center py-32 opacity-20">
-                <Icon name="svg-spinners:18-dots-indicator" class="w-12 h-12 mb-4" />
-                <p class="text-sm font-bold uppercase tracking-widest">Sincronizando Leads...</p>
-              </div>
-            </template>
-          </ClientOnly>
-        </div>
-      </main>
+      <!-- Renderização Condicional: Kanban vs Tabela -->
+      <div class="view-wrapper">
+        <ClientOnly>
+          <Transition name="fade" mode="out-in">
+            <LeadsKanban v-if="showKanbanView" />
+            <LeadsTable v-else />
+          </Transition>
+          
+          <template #placeholder>
+            <div class="flex flex-col items-center justify-center py-32 opacity-20">
+              <Icon name="svg-spinners:18-dots-indicator" class="w-12 h-12 mb-4" />
+              <p class="text-sm font-bold uppercase tracking-widest">Sincronizando Leads...</p>
+            </div>
+          </template>
+        </ClientOnly>
+      </div>
+    </main>
 
-      <ClientOnly>
-        <LeadsLeadDetailsModal />
-        
-        <!-- Modal Unificado de Criação/Edição de Lead -->
-        <LeadEditModal 
-          v-if="isCreateLeadModalOpen"
-          v-model="isCreateLeadModalOpen" 
-          :lead="leadToEdit" 
-          :is-editing="!!leadToEdit?.id"
-          @save="handleSave"
-          @open-schedule-modal="handleOpenSchedule"
-        />
+    <ClientOnly>
+      <LeadsLeadDetailsModal />
+      
+      <!-- Modal Unificado de Criação/Edição de Lead -->
+      <LeadEditModal 
+        v-if="isCreateLeadModalOpen"
+        v-model="isCreateLeadModalOpen" 
+        :lead="leadToEdit" 
+        :is-editing="!!leadToEdit?.id"
+        @save="handleSave"
+        @open-schedule-modal="handleOpenSchedule"
+      />
 
-        <!-- Modal de Novo Agendamento (Secundário) -->
-        <ModalNovoAgendamento
-          v-model="isScheduleModalOpen"
-          :lead-id="leadToEdit?.id"
-          :cliente-nome="leadToEdit?.nome"
-          :profissional-id="profile?.id"
-          :profissionais="globalProfissionais"
-          :dias-semana="globalDiasSemana"
-          @salvar="handleScheduleSave"
-        />
-      </ClientOnly>
-    </div>
-  </NuxtLayout>
+      <!-- Modal de Novo Agendamento (Secundário) -->
+      <ModalNovoAgendamento
+        v-model="isScheduleModalOpen"
+        :lead-id="leadToEdit?.id"
+        :cliente-nome="leadToEdit?.nome"
+        :profissional-id="profile?.id"
+        :profissionais="globalProfissionais"
+        :dias-semana="globalDiasSemana"
+        @salvar="handleScheduleSave"
+      />
+    </ClientOnly>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -266,6 +264,10 @@ onUnmounted(() => {
   if (statusSub) statusSub.unsubscribe();
   if (appointSub) appointSub.unsubscribe();
 });
+
+definePageMeta({
+  layout: 'default'
+})
 
 // SEO
 useHead({

@@ -25,78 +25,86 @@
 
     <!-- Navigation -->
     <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto custom-scrollbar">
-      <NuxtLink 
-        v-for="item in navItems"
-        :key="item.to"
-        :to="item.to" 
-        :class="['group flex items-center px-4 py-2.5 text-sm font-normal rounded-lg transition-all duration-200', 
-          isCollapsed ? 'justify-center' : 'gap-3'
-        ]"
-        active-class="bg-indigo-50 text-[#4338CA] font-medium"
-        class="text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-        :title="isCollapsed ? item.label : ''"
-      >
-        <div class="w-8 flex items-center justify-center flex-shrink-0">
-          <component 
-            :is="item.icon" 
-            :class="['w-5 h-5 transition-colors duration-200 stroke-[1.5]']" 
-          />
-        </div>
-        <span v-if="!isCollapsed">{{ item.label }}</span>
-      </NuxtLink>
-
-      <!-- Seção Configurações (Apenas Admin) -->
-      <div v-if="userStore.userRole === 'admin'" class="pt-2">
-        <div v-if="!isCollapsed" class="px-4 mb-1">
-          <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Gestão</span>
-        </div>
-
-        <button 
-          @click="isConfigOpen = !isConfigOpen"
-          :class="['w-full group flex items-center px-4 py-2.5 text-sm font-normal rounded-lg transition-all duration-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900', 
-            isCollapsed ? 'justify-center' : 'gap-3',
-            isConfigOpen && !isCollapsed ? 'bg-gray-50/50' : ''
+      <ClientOnly>
+        <NuxtLink 
+          v-for="item in navItems"
+          :key="item.to"
+          :to="item.to" 
+          :class="['group flex items-center px-4 py-2.5 text-sm font-normal rounded-lg transition-all duration-200', 
+            isCollapsed ? 'justify-center' : 'gap-3'
           ]"
-          :title="isCollapsed ? 'Configurações' : ''"
+          active-class="bg-indigo-50 text-[#4338CA] font-medium"
+          class="text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+          :title="isCollapsed ? item.label : ''"
         >
           <div class="w-8 flex items-center justify-center flex-shrink-0">
-            <Cog6ToothIcon class="w-5 h-5 transition-colors duration-200 stroke-[1.5]" />
+            <component 
+              :is="item.icon" 
+              :class="['w-5 h-5 transition-colors duration-200 stroke-[1.5]']" 
+            />
           </div>
-          <span v-if="!isCollapsed" class="flex-1 text-left">Configurações</span>
-          <ChevronDownIcon 
-            v-if="!isCollapsed" 
-            :class="['w-4 h-4 text-gray-400 transition-transform duration-200', isConfigOpen ? 'rotate-180' : '']" 
-          />
-        </button>
+          <span v-if="!isCollapsed">{{ item.label }}</span>
+        </NuxtLink>
 
-        <!-- Submenu de Configurações -->
-        <div v-if="isConfigOpen && !isCollapsed" class="mt-1 ml-4 pl-4 border-l border-gray-100 space-y-1">
-          <NuxtLink 
-            to="/admin" 
-            class="group flex items-center gap-3 px-4 py-2 text-sm text-gray-500 hover:text-[#4338CA] hover:bg-indigo-50/50 rounded-lg transition-all"
-            active-class="text-[#4338CA] font-medium bg-indigo-50"
+        <!-- Seção Configurações (Apenas Admin) -->
+        <div v-if="userStore.userRole === 'admin'" class="pt-2">
+          <div v-if="!isCollapsed" class="px-4 mb-1">
+            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Gestão</span>
+          </div>
+
+          <button 
+            @click="isConfigOpen = !isConfigOpen"
+            :class="['w-full group flex items-center px-4 py-2.5 text-sm font-normal rounded-lg transition-all duration-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900', 
+              isCollapsed ? 'justify-center' : 'gap-3',
+              isConfigOpen && !isCollapsed ? 'bg-gray-50/50' : ''
+            ]"
+            :title="isCollapsed ? 'Configurações' : ''"
           >
-            <ShieldCheckIcon class="w-4 h-4 stroke-[1.5]" />
-            <span>Usuários</span>
-          </NuxtLink>
-          <NuxtLink 
-            to="/especialidades" 
-            class="group flex items-center gap-3 px-4 py-2 text-sm text-gray-500 hover:text-[#4338CA] hover:bg-indigo-50/50 rounded-lg transition-all"
-            active-class="text-[#4338CA] font-medium bg-indigo-50"
-          >
-            <BookOpenIcon class="w-4 h-4 stroke-[1.5]" />
-            <span>Especialidades</span>
-          </NuxtLink>
-          <NuxtLink 
-            to="/profissionais" 
-            class="group flex items-center gap-3 px-4 py-2 text-sm text-gray-500 hover:text-[#4338CA] hover:bg-indigo-50/50 rounded-lg transition-all"
-            active-class="text-[#4338CA] font-medium bg-indigo-50"
-          >
-            <UserGroupIcon class="w-4 h-4 stroke-[1.5]" />
-            <span>Profissionais</span>
-          </NuxtLink>
+            <div class="w-8 flex items-center justify-center flex-shrink-0">
+              <Cog6ToothIcon class="w-5 h-5 transition-colors duration-200 stroke-[1.5]" />
+            </div>
+            <span v-if="!isCollapsed" class="flex-1 text-left">Configurações</span>
+            <ChevronDownIcon 
+              v-if="!isCollapsed" 
+              :class="['w-4 h-4 text-gray-400 transition-transform duration-200', isConfigOpen ? 'rotate-180' : '']" 
+            />
+          </button>
+
+          <!-- Submenu de Configurações -->
+          <div v-if="isConfigOpen && !isCollapsed" class="mt-1 ml-4 pl-4 border-l border-gray-100 space-y-1">
+            <NuxtLink 
+              to="/admin" 
+              class="group flex items-center gap-3 px-4 py-2 text-sm text-gray-500 hover:text-[#4338CA] hover:bg-indigo-50/50 rounded-lg transition-all"
+              active-class="text-[#4338CA] font-medium bg-indigo-50"
+            >
+              <ShieldCheckIcon class="w-4 h-4 stroke-[1.5]" />
+              <span>Usuários</span>
+            </NuxtLink>
+            <NuxtLink 
+              to="/especialidades" 
+              class="group flex items-center gap-3 px-4 py-2 text-sm text-gray-500 hover:text-[#4338CA] hover:bg-indigo-50/50 rounded-lg transition-all"
+              active-class="text-[#4338CA] font-medium bg-indigo-50"
+            >
+              <BookOpenIcon class="w-4 h-4 stroke-[1.5]" />
+              <span>Especialidades</span>
+            </NuxtLink>
+            <NuxtLink 
+              to="/profissionais" 
+              class="group flex items-center gap-3 px-4 py-2 text-sm text-gray-500 hover:text-[#4338CA] hover:bg-indigo-50/50 rounded-lg transition-all"
+              active-class="text-[#4338CA] font-medium bg-indigo-50"
+            >
+              <UserGroupIcon class="w-4 h-4 stroke-[1.5]" />
+              <span>Profissionais</span>
+            </NuxtLink>
+          </div>
         </div>
-      </div>
+
+        <template #fallback>
+          <div class="animate-pulse space-y-2 px-4">
+            <div v-for="i in 6" :key="i" class="h-10 bg-gray-50 rounded-lg"></div>
+          </div>
+        </template>
+      </ClientOnly>
     </nav>
 
     <!-- Footer -->
@@ -138,7 +146,7 @@ const isConfigOpen = ref(false)
  */
 const navItems = computed(() => {
   return [
-    { label: 'Dashboard', to: '/', icon: HomeIcon },
+    { label: 'Dashboard', to: '/dashboard', icon: HomeIcon },
     { label: 'Mensagens', to: '/mensagens', icon: ChatBubbleLeftRightIcon },
     { label: 'Leads', to: '/leads', icon: IdentificationIcon },
     { label: 'Relatórios', to: '/relatorios', icon: ChartBarIcon },

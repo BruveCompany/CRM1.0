@@ -1,6 +1,4 @@
 <template>
-  <NuxtLayout>
-
     <div class="min-h-screen bg-white p-8">
       <div>
         <div class="mb-6">
@@ -41,8 +39,6 @@
         </div>
       </div>
     </div>
-
-  </NuxtLayout>
 </template>
 
 <script setup lang="ts">
@@ -108,5 +104,13 @@ watch(() => profile.value?.nome, (newName) => {
 
 watch(() => user.value?.email, (newEmail) => {
   if (newEmail) email.value = newEmail
+})
+
+definePageMeta({
+  layout: 'default'
+})
+
+useHead({
+  title: 'Meu Perfil'
 })
 </script>

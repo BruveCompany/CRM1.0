@@ -1,9 +1,7 @@
 <template>
-  <NuxtLayout>
-    <div class="h-full bg-white">
-      <!-- Página em branco para Mensagens -->
-    </div>
-  </NuxtLayout>
+  <div class="h-full bg-white">
+    <!-- Página em branco para Mensagens -->
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -12,6 +10,10 @@
  * Página em branco (placeholder)
  * =====================================================
  */
+
+definePageMeta({
+  layout: 'default'
+})
 
 useHead({
   title: 'Mensagens'

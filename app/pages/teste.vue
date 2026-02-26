@@ -1,235 +1,233 @@
 <template>
-  <NuxtLayout>
-    <div class="min-h-screen bg-neutral-50 py-12">
-      <div class="container mx-auto px-4 max-w-4xl">
-        <div class="text-center mb-12">
-          <h1 class="text-3xl font-bold text-neutral-900 mb-4">
-            Teste de Componentes
-          </h1>
-          <p class="text-lg text-neutral-600">
-            Avaliação dos componentes BaseButton e BaseInput
-          </p>
-        </div>
+  <div class="min-h-screen bg-neutral-50 py-12">
+    <div class="container mx-auto px-4 max-w-4xl">
+      <div class="text-center mb-12">
+        <h1 class="text-3xl font-bold text-neutral-900 mb-4">
+          Teste de Componentes
+        </h1>
+        <p class="text-lg text-neutral-600">
+          Avaliação dos componentes BaseButton e BaseInput
+        </p>
+      </div>
 
-      <!-- BaseButton Tests -->
-      <section class="mb-16">
-        <h2 class="text-2xl font-semibold text-neutral-800 mb-8 text-center">
-          BaseButton
-        </h2>
-        
-        <!-- Variants -->
-        <div class="bg-white p-8 rounded-lg shadow-md mb-8">
-          <h3 class="text-lg font-medium text-neutral-700 mb-4">Variantes</h3>
-          <div class="flex flex-wrap gap-4">
-            <BaseButton variant="primary" @click="showAlert('Primary clicked')">
-              Primary
-            </BaseButton>
-            <BaseButton variant="secondary" @click="showAlert('Secondary clicked')">
-              Secondary
-            </BaseButton>
-            <BaseButton variant="outline" @click="showAlert('Outline clicked')">
-              Outline
-            </BaseButton>
-            <BaseButton variant="ghost" @click="showAlert('Ghost clicked')">
-              Ghost
-            </BaseButton>
-          </div>
+    <!-- BaseButton Tests -->
+    <section class="mb-16">
+      <h2 class="text-2xl font-semibold text-neutral-800 mb-8 text-center">
+        BaseButton
+      </h2>
+      
+      <!-- Variants -->
+      <div class="bg-white p-8 rounded-lg shadow-md mb-8">
+        <h3 class="text-lg font-medium text-neutral-700 mb-4">Variantes</h3>
+        <div class="flex flex-wrap gap-4">
+          <BaseButton variant="primary" @click="showAlert('Primary clicked')">
+            Primary
+          </BaseButton>
+          <BaseButton variant="secondary" @click="showAlert('Secondary clicked')">
+            Secondary
+          </BaseButton>
+          <BaseButton variant="outline" @click="showAlert('Outline clicked')">
+            Outline
+          </BaseButton>
+          <BaseButton variant="ghost" @click="showAlert('Ghost clicked')">
+            Ghost
+          </BaseButton>
         </div>
+      </div>
 
-        <!-- Sizes -->
-        <div class="bg-white p-8 rounded-lg shadow-md mb-8">
-          <h3 class="text-lg font-medium text-neutral-700 mb-4">Tamanhos</h3>
-          <div class="flex flex-wrap items-center gap-4">
-            <BaseButton size="sm" @click="showAlert('Small button')">
-              Small
-            </BaseButton>
-            <BaseButton size="md" @click="showAlert('Medium button')">
-              Medium
-            </BaseButton>
-            <BaseButton size="lg" @click="showAlert('Large button')">
-              Large
-            </BaseButton>
-          </div>
+      <!-- Sizes -->
+      <div class="bg-white p-8 rounded-lg shadow-md mb-8">
+        <h3 class="text-lg font-medium text-neutral-700 mb-4">Tamanhos</h3>
+        <div class="flex flex-wrap items-center gap-4">
+          <BaseButton size="sm" @click="showAlert('Small button')">
+            Small
+          </BaseButton>
+          <BaseButton size="md" @click="showAlert('Medium button')">
+            Medium
+          </BaseButton>
+          <BaseButton size="lg" @click="showAlert('Large button')">
+            Large
+          </BaseButton>
         </div>
+      </div>
 
-        <!-- States -->
+      <!-- States -->
+      <div class="bg-white p-8 rounded-lg shadow-md">
+        <h3 class="text-lg font-medium text-neutral-700 mb-4">Estados</h3>
+        <div class="flex flex-wrap gap-4">
+          <BaseButton @click="showAlert('Normal button')">
+            Normal
+          </BaseButton>
+          <BaseButton disabled>
+            Disabled
+          </BaseButton>
+          <BaseButton :loading="isLoading" @click="testLoading">
+            {{ isLoading ? 'Loading...' : 'Test Loading' }}
+          </BaseButton>
+          <BaseButton variant="outline" @click="showToast">
+            Test Toast
+          </BaseButton>
+        </div>
+      </div>
+    </section>
+
+    <!-- BaseInput Tests -->
+    <section class="mb-16">
+      <h2 class="text-2xl font-semibold text-neutral-800 mb-8 text-center">
+        BaseInput
+      </h2>
+      
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Basic Inputs -->
         <div class="bg-white p-8 rounded-lg shadow-md">
-          <h3 class="text-lg font-medium text-neutral-700 mb-4">Estados</h3>
-          <div class="flex flex-wrap gap-4">
-            <BaseButton @click="showAlert('Normal button')">
-              Normal
-            </BaseButton>
-            <BaseButton disabled>
-              Disabled
-            </BaseButton>
-            <BaseButton :loading="isLoading" @click="testLoading">
-              {{ isLoading ? 'Loading...' : 'Test Loading' }}
-            </BaseButton>
-            <BaseButton variant="outline" @click="showToast">
-              Test Toast
-            </BaseButton>
-          </div>
-        </div>
-      </section>
-
-      <!-- BaseInput Tests -->
-      <section class="mb-16">
-        <h2 class="text-2xl font-semibold text-neutral-800 mb-8 text-center">
-          BaseInput
-        </h2>
-        
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <!-- Basic Inputs -->
-          <div class="bg-white p-8 rounded-lg shadow-md">
-            <h3 class="text-lg font-medium text-neutral-700 mb-6">Inputs Básicos</h3>
-            <div class="space-y-6">
-              <BaseInput 
-                v-model="form.name"
-                label="Nome"
-                placeholder="Digite seu nome"
-                required
-              />
-              
-              <InputEmail 
-                v-model="form.email"
-                label="Email com Ícone"
-                placeholder="seuemail@exemplo.com"
-                hint="Será usado para contato"
-              />
-              
-              <InputPhone 
-                v-model="form.phone"
-                label="Telefone com Ícone"
-                placeholder="(11) 99999-9999"
-              />
-              
-              <InputPassword 
-                v-model="form.password"
-                label="Senha com Ícone"
-                placeholder="Digite sua senha"
-                :error="passwordError"
-              />
-            </div>
-          </div>
-
-          <!-- Input Sizes & States -->
-          <div class="bg-white p-8 rounded-lg shadow-md">
-            <h3 class="text-lg font-medium text-neutral-700 mb-6">Tamanhos e Estados</h3>
-            <div class="space-y-6">
-              <BaseInput 
-                v-model="form.small"
-                size="sm"
-                label="Small Input"
-                placeholder="Tamanho pequeno"
-              />
-              
-              <BaseInput 
-                v-model="form.medium"
-                size="md"
-                label="Medium Input"
-                placeholder="Tamanho médio"
-              />
-              
-              <BaseInput 
-                v-model="form.large"
-                size="lg"
-                label="Large Input"
-                placeholder="Tamanho grande"
-              />
-              
-              <BaseInput 
-                v-model="form.disabled"
-                label="Input Disabled"
-                placeholder="Desabilitado"
-                disabled
-              />
-              
-              <BaseInput 
-                v-model="form.readonly"
-                label="Input Readonly"
-                value="Valor somente leitura"
-                readonly
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Interactive Demo -->
-      <section>
-        <h2 class="text-2xl font-semibold text-neutral-800 mb-8 text-center">
-          Demo Interativo
-        </h2>
-        
-        <div class="bg-white p-8 rounded-lg shadow-md">
-          <div class="max-w-md mx-auto">
-            <h3 class="text-lg font-medium text-neutral-700 mb-6 text-center">
-              Formulário de Teste
-            </h3>
+          <h3 class="text-lg font-medium text-neutral-700 mb-6">Inputs Básicos</h3>
+          <div class="space-y-6">
+            <BaseInput 
+              v-model="form.name"
+              label="Nome"
+              placeholder="Digite seu nome"
+              required
+            />
             
-            <form @submit.prevent="handleSubmit" class="space-y-6">
-              <BaseInput 
-                v-model="demoForm.name"
-                label="Nome"
-                placeholder="Seu nome"
-                required
-              />
-              
-              <BaseInput 
-                v-model="demoForm.email"
-                type="email"
-                label="Email"
-                placeholder="seuemail@exemplo.com"
-                required
-              />
-              
-              <div class="flex gap-3">
-                <BaseButton 
-                  type="submit" 
-                  variant="primary"
-                  class="flex-1"
-                >
-                  Enviar
-                </BaseButton>
-                
-                <BaseButton 
-                  type="button"
-                  variant="outline"
-                  @click="resetForm"
-                >
-                  Limpar
-                </BaseButton>
-              </div>
-            </form>
+            <InputEmail 
+              v-model="form.email"
+              label="Email com Ícone"
+              placeholder="seuemail@exemplo.com"
+              hint="Será usado para contato"
+            />
             
-            <div v-if="submitted" class="mt-6 p-4 bg-success-50 border border-success-200 rounded-lg">
-              <p class="text-success-700 text-sm">
-                ✓ Formulário enviado com sucesso!
-              </p>
-            </div>
+            <InputPhone 
+              v-model="form.phone"
+              label="Telefone com Ícone"
+              placeholder="(11) 99999-9999"
+            />
+            
+            <InputPassword 
+              v-model="form.password"
+              label="Senha com Ícone"
+              placeholder="Digite sua senha"
+              :error="passwordError"
+            />
           </div>
         </div>
-      </section>
 
-      <!-- Data Display -->
-      <section class="mt-12">
+        <!-- Input Sizes & States -->
         <div class="bg-white p-8 rounded-lg shadow-md">
-          <h3 class="text-lg font-medium text-neutral-700 mb-4">Dados dos Formulários</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h4 class="font-medium text-neutral-600 mb-2">Form Data:</h4>
-              <pre class="text-sm text-neutral-600 bg-neutral-50 p-3 rounded">{{ JSON.stringify(form, null, 2) }}</pre>
-            </div>
-            <div>
-              <h4 class="font-medium text-neutral-600 mb-2">Demo Form Data:</h4>
-              <pre class="text-sm text-neutral-600 bg-neutral-50 p-3 rounded">{{ JSON.stringify(demoForm, null, 2) }}</pre>
-            </div>
+          <h3 class="text-lg font-medium text-neutral-700 mb-6">Tamanhos e Estados</h3>
+          <div class="space-y-6">
+            <BaseInput 
+              v-model="form.small"
+              size="sm"
+              label="Small Input"
+              placeholder="Tamanho pequeno"
+            />
+            
+            <BaseInput 
+              v-model="form.medium"
+              size="md"
+              label="Medium Input"
+              placeholder="Tamanho médio"
+            />
+            
+            <BaseInput 
+              v-model="form.large"
+              size="lg"
+              label="Large Input"
+              placeholder="Tamanho grande"
+            />
+            
+            <BaseInput 
+              v-model="form.disabled"
+              label="Input Disabled"
+              placeholder="Desabilitado"
+              disabled
+            />
+            
+            <BaseInput 
+              v-model="form.readonly"
+              label="Input Readonly"
+              value="Valor somente leitura"
+              readonly
+            />
           </div>
         </div>
-      </section>
-    </div>
+      </div>
+    </section>
+
+    <!-- Interactive Demo -->
+    <section>
+      <h2 class="text-2xl font-semibold text-neutral-800 mb-8 text-center">
+        Demo Interativo
+      </h2>
+      
+      <div class="bg-white p-8 rounded-lg shadow-md">
+        <div class="max-w-md mx-auto">
+          <h3 class="text-lg font-medium text-neutral-700 mb-6 text-center">
+            Formulário de Teste
+          </h3>
+          
+          <form @submit.prevent="handleSubmit" class="space-y-6">
+            <BaseInput 
+              v-model="demoForm.name"
+              label="Nome"
+              placeholder="Seu nome"
+              required
+            />
+            
+            <BaseInput 
+              v-model="demoForm.email"
+              type="email"
+              label="Email"
+              placeholder="seuemail@exemplo.com"
+              required
+            />
+            
+            <div class="flex gap-3">
+              <BaseButton 
+                type="submit" 
+                variant="primary"
+                class="flex-1"
+              >
+                Enviar
+              </BaseButton>
+              
+              <BaseButton 
+                type="button"
+                variant="outline"
+                @click="resetForm"
+              >
+                Limpar
+              </BaseButton>
+            </div>
+          </form>
+          
+          <div v-if="submitted" class="mt-6 p-4 bg-success-50 border border-success-200 rounded-lg">
+            <p class="text-success-700 text-sm">
+              ✓ Formulário enviado com sucesso!
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Data Display -->
+    <section class="mt-12">
+      <div class="bg-white p-8 rounded-lg shadow-md">
+        <h3 class="text-lg font-medium text-neutral-700 mb-4">Dados dos Formulários</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h4 class="font-medium text-neutral-600 mb-2">Form Data:</h4>
+            <pre class="text-sm text-neutral-600 bg-neutral-50 p-3 rounded">{{ JSON.stringify(form, null, 2) }}</pre>
+          </div>
+          <div>
+            <h4 class="font-medium text-neutral-600 mb-2">Demo Form Data:</h4>
+            <pre class="text-sm text-neutral-600 bg-neutral-50 p-3 rounded">{{ JSON.stringify(demoForm, null, 2) }}</pre>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
-  </NuxtLayout>
+</div>
 </template>
 
 <script setup lang="ts">
@@ -238,6 +236,10 @@ import { useHead } from '@unhead/vue'
 import { useToast } from 'vue-toastification'
 
 const toast = useToast()
+
+definePageMeta({
+  layout: 'default'
+})
 
 useHead({
   title: 'Teste de Componentes'

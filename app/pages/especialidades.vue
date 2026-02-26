@@ -1,35 +1,33 @@
 
 <template>
-  <NuxtLayout name="default">
-    <div class="p-6">
-      <h1 class="text-2xl font-bold mb-4">Especialidades</h1>
-      <p class="text-gray-600 mb-6">Cadastre e gerencie as especialidades médicas do sistema.</p>
-      <TabelaEspecialidades
-        :especialidades="especialidades"
-        @add-especialidade="abrirModalAdd"
-        @editar-especialidade="abrirModalEditar"
-        @deletar-especialidade="abrirModalDeletar"
-      />
-      <ModalEspecialidade
-        v-model="modalAberto"
-        :is-edicao="isEdicao"
-        :id="idEdicao"
-        :especialidade-inicial="especialidadeEdicao"
-        @confirmar="handleConfirmar"
-        :loading="loadingAdd"
-      />
-      <!-- Modal de confirmação de exclusão agora padronizado com ModalConfirmacao.vue -->
-      <ModalConfirmacao
-        :model-value="modalDeleteAberto"
-        @update:modelValue="modalDeleteAberto = $event"
-        :titulo="'Confirmar Exclusão'"
-        :mensagem="`Tem certeza que deseja excluir a especialidade ${especialidadeDelete?.especialidade}?`"
-        :loading="loadingDelete"
-        @confirmar="handleConfirmarDelete"
-        @cancelar="modalDeleteAberto = false"
-      />
-    </div>
-  </NuxtLayout>
+  <div class="p-6">
+    <h1 class="text-2xl font-bold mb-4">Especialidades</h1>
+    <p class="text-gray-600 mb-6">Cadastre e gerencie as especialidades médicas do sistema.</p>
+    <TabelaEspecialidades
+      :especialidades="especialidades"
+      @add-especialidade="abrirModalAdd"
+      @editar-especialidade="abrirModalEditar"
+      @deletar-especialidade="abrirModalDeletar"
+    />
+    <ModalEspecialidade
+      v-model="modalAberto"
+      :is-edicao="isEdicao"
+      :id="idEdicao"
+      :especialidade-inicial="especialidadeEdicao"
+      @confirmar="handleConfirmar"
+      :loading="loadingAdd"
+    />
+    <!-- Modal de confirmação de exclusão agora padronizado com ModalConfirmacao.vue -->
+    <ModalConfirmacao
+      :model-value="modalDeleteAberto"
+      @update:modelValue="modalDeleteAberto = $event"
+      :titulo="'Confirmar Exclusão'"
+      :mensagem="`Tem certeza que deseja excluir a especialidade ${especialidadeDelete?.especialidade}?`"
+      :loading="loadingDelete"
+      @confirmar="handleConfirmarDelete"
+      @cancelar="modalDeleteAberto = false"
+    />
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -125,6 +123,10 @@ onMounted(async () => {
     id: e.id,
     especialidade: e.especialidade ?? ''
   }))
+})
+
+definePageMeta({
+  layout: 'default'
 })
 
 useHead({ title: 'Especialidades' })

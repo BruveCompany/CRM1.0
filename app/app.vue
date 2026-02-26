@@ -8,8 +8,12 @@ initPresence();
 <template>
   <div>
     <NuxtRouteAnnouncer />
-    <NuxtPage />
-    <!-- Debug temporário para ver o que está sendo retornado -->
-    <!-- <AuthDebug /> -->
+    <!-- 
+      O componente NuxtLayout é essencial aqui para que o definePageMeta({ layout: '...' }) 
+      das páginas funcione corretamente e envolva o conteúdo com a Sidebar.
+    -->
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
   </div>
 </template>

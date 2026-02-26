@@ -1,5 +1,4 @@
 <template>
-  <NuxtLayout name="default">
     <div class="p-6">
       <h1 class="text-2xl font-bold mb-4">Clientes</h1>
       <p class="text-gray-600 mb-6">Cadastre e gerencie a base de clientes do seu negócio.</p>
@@ -34,8 +33,6 @@
         @cancelar="modalDeleteAberto = false"
       />
     </div>
-
-  </NuxtLayout>
 </template>
 
 <script setup lang="ts">
@@ -220,6 +217,10 @@ onMounted(() => {
   if (route.query.novo === '1') {
     handleAddCliente()
   }
+})
+
+definePageMeta({
+  layout: 'default'
 })
 
 //Head

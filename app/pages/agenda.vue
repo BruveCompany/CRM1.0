@@ -1,5 +1,4 @@
 <template>
-  <NuxtLayout>
     <div class="agenda-page-container flex flex-col h-full bg-slate-50">
       <!-- Sistema de Navegação/Ações Estilo Leads -->
       <AgendaHeader 
@@ -33,7 +32,6 @@
         </ClientOnly>
       </main>
     </div>
-  </NuxtLayout>
 </template>
 
 <script setup lang="ts">
@@ -94,6 +92,10 @@ onMounted(async () => {
   } finally {
     loadingProfissionais.value = false
   }
+})
+
+definePageMeta({
+  layout: 'default'
 })
 
 useHead({
