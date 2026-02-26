@@ -20,7 +20,7 @@
         <span class="text-[7px] font-extrabold uppercase tracking-tight text-black/70 truncate">{{ agendamento.categoria.split(' / ')[0] }}</span>
       </div>
       <div class="text-[8px] font-black text-black/50 tabular-nums shrink-0">
-        {{ horarioFormatado.split(' - ')[0] }}
+        {{ horarioFormatado }}
       </div>
     </div>
 

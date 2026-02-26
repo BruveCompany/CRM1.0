@@ -1,7 +1,6 @@
 <template>
   <NuxtLayout name="default">
-    <ClientOnly>
-      <div class="min-h-screen bg-[#f8fafc] p-6 lg:p-8">
+    <div class="min-h-screen bg-[#f8fafc] p-6 lg:p-8">
         <!-- Page Title & Back Link -->
         <div class="mb-6 relative flex items-center justify-center pb-2 pt-2">
           <!-- Back Link (Compacto) -->
@@ -97,6 +96,15 @@
 
             <!-- 4. Right Column: Strategic Actions (3 slots) -->
             <div class="lg:col-span-3 space-y-8">
+
+              <!-- Próximo Passo Card -->
+              <ClientOnly>
+                <LeadProximoPassoCard
+                  :acao="proximaAcao"
+                  @agendar="handleSchedule"
+                />
+              </ClientOnly>
+
               <UiCard title="Ações Rápidas" icon="heroicons:bolt" padding>
                 <div class="grid grid-cols-1 gap-3">
 
@@ -198,9 +206,8 @@
           />
         </div>
       </div>
-    </ClientOnly>
-  </NuxtLayout>
-</template>
+    </NuxtLayout>
+  </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
@@ -265,6 +272,12 @@ onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside))
 const lead = ref<any>(null);
 const loading = ref(true);
 const timelineActivities = ref<any[]>([]);
+/**
+ * Dados do próximo agendamento (hora_inicio + hora_fim).
+ * Populado pelo handleScheduleSave após o modal confirmar.
+ * Não buscamos ag_agendamentos diretamente por restrição de RLS.
+ */
+const proximoAgendamento = ref<any>(null);
 
 // --- COMPUTED PROPERTIES ---
 const diasAberto = computed(() => {
@@ -289,14 +302,15 @@ const fetchData = async () => {
     }
 
     // 2. Busca Dados Principais do Lead
-    const { data: leadData, error: leadError } = await supabase
+    const { data: leadDataArray, error: leadError } = await supabase
       .from('ag_leads')
       .select('*, ag_profiles(nome)')
       .eq('id', id)
-      .maybeSingle();
+      .limit(1);
 
     if (leadError) throw leadError;
     
+    const leadData = (leadDataArray as any[])?.[0];
     if (leadData) {
       lead.value = {
         ...(leadData as any),
@@ -304,7 +318,30 @@ const fetchData = async () => {
       };
     }
 
-    // 3. Busca Timeline via RPC (Envolvida em try-catch isolado para não travar a página)
+    // 3. Busca o próximo agendamento do lead (hora_inicio + hora_fim)
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Usamos a VIEW (mesma da agenda) para garantir consistência total
+      const { data: agData, error: agError } = await supabase
+        .from('ag_view_agendamentos_completo')
+        .select('data, hora_inicio, hora_fim, titulo, categoria')
+        .eq('lead_id', id)
+        .eq('cancelado', false)
+        .gte('data', today)
+        .order('data', { ascending: true })
+        .order('hora_inicio', { ascending: true })
+        .limit(1);
+
+      if (!agError && agData && agData.length > 0) {
+        // Só atualiza se o fetch retornou algo, para não sobrescrever o dado do modal
+        proximoAgendamento.value = agData[0];
+      }
+    } catch (agErr: any) {
+      console.warn('[360] Aviso na busca de agendamento:', agErr.message);
+    }
+
+    // 4. Busca Timeline via RPC (Envolvida em try-catch isolado para não travar a página)
     try {
       console.log(`[RPC] Chamando get_lead_timeline com parâmetro lead_id_param: ${id}`);
       const { data: timelineData, error: timelineError } = await (supabase as any)
@@ -381,11 +418,48 @@ const openWhatsApp = () => {
 };
 
 const handleEdit = () => { isEditModalOpen.value = true; };
-const handleSchedule = () => alert('Ação de agendar acionada');
+const handleSchedule = () => { isScheduleModalOpen.value = true; };
 
 // --- EDIT & SCHEDULE MODALS ---
 const isEditModalOpen = ref(false);
 const isScheduleModalOpen = ref(false);
+
+/**
+ * Monta o objeto `acao` para o ProximoPassoCard.
+ * Prioriza os dados do agendamento real (hora_inicio + hora_fim).
+ * Fallback para proximo_contato_em do lead se não houver agendamento.
+ * Retorna null se não houver data futura definida.
+ */
+const proximaAcao = computed(() => {
+  // --- PRIORIDADE 1: agendamento real com hora_inicio e hora_fim ---
+  if (proximoAgendamento.value) {
+    const ag = proximoAgendamento.value;
+    return {
+      tipo: ag.categoria || lead.value?.tipo_proximo_contato || 'Contato',
+      titulo: ag.titulo || `Contato com ${lead.value?.nome || 'Lead'}`,
+      data: `${ag.data}T${(ag.hora_inicio || '00:00:00').substring(0, 5)}`,
+      hora_fim: (ag.hora_fim || '').substring(0, 5),
+      responsavel: lead.value?.vendedor_nome || 'Responsável não definido',
+    };
+  }
+
+  // --- FALLBACK: campo proximo_contato_em do lead (sem hora_fim) ---
+  if (!lead.value?.proximo_contato_em) return null;
+
+  const dataAgendada = new Date(lead.value.proximo_contato_em);
+  const agora = new Date();
+  agora.setHours(0, 0, 0, 0);
+  if (dataAgendada < agora) return null;
+
+  return {
+    tipo: lead.value.tipo_proximo_contato || 'Contato',
+    titulo: lead.value.titulo_proximo_contato || `Contato com ${lead.value.nome || 'Lead'}`,
+    data: lead.value.proximo_contato_em,
+    hora_fim: '',
+    responsavel: lead.value.vendedor_nome || 'Responsável não definido',
+  };
+});
+
 
 const handleOpenSchedule = () => {
   isEditModalOpen.value = false;
@@ -406,6 +480,16 @@ const handleScheduleSave = async (resultado: any) => {
       if (!error && lead.value) {
         lead.value.proximo_contato_em = fullDateStr;
       }
+
+      // Popula proximoAgendamento com os dados do modal (já contém hora_fim)
+      // Evita query adicional a ag_agendamentos (RLS restrita por profissional_id)
+      proximoAgendamento.value = {
+        data: resultado.data,
+        hora_inicio: resultado.hora_inicio,
+        hora_fim: resultado.hora_fim || '',
+        titulo: resultado.titulo || `Contato com ${lead.value?.nome || 'Lead'}`,
+        categoria: resultado.categoria || 'contato',
+      };
     }
     await fetchData();
   }
