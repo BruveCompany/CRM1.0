@@ -1,8 +1,9 @@
 <template>
   <header class="page-header">
 
-    <!-- ESQUERDA: Toggle de visão + Novo Agendamento (só na Agenda) -->
+    <!-- ESQUERDA: Toggle de visão + controles contextuais -->
     <div class="header-left-group">
+      <!-- Toggle Agenda/Lista — sempre visível -->
       <div class="view-toggle-group">
         <button
           class="view-toggle-btn"
@@ -22,45 +23,62 @@
         </button>
       </div>
 
-      <!-- [CONDICIONAL: AGENDA] Botão Novo Agendamento -->
+      <!-- [AGENDA] Botão Novo Agendamento -->
       <template v-if="activeView === 'agenda'">
         <button class="btn-add-agendamento" @click="$emit('novo-agendamento')">
           <Icon name="lucide:plus" class="btn-icon" />
           <span>Novo Agendamento</span>
         </button>
       </template>
+
+      <!-- [LISTA] Busca + Seletor de profissional agrupados -->
+      <template v-else>
+        <!-- [LISTA] Filtros lado a lado, cada um com identidade própria -->
+        <div class="filters-group">
+
+          <!-- Campo de busca: componente independente -->
+          <div class="search-container">
+            <Icon name="lucide:search" class="search-icon" />
+            <input
+              type="text"
+              placeholder="Pesquisar agendamentos..."
+              class="search-input"
+              @input="$emit('search', ($event.target as HTMLInputElement).value)"
+            />
+          </div>
+
+          <!-- Seletor de profissional: componente independente -->
+          <ProfissionalAtual
+            :profissionais="profissionais"
+            :loading="loading"
+          />
+
+        </div>
+      </template>
     </div>
 
-    <!-- CENTRO: Data (Agenda) ou Busca (Lista) -->
+    <!-- CENTRO: Data (apenas na Agenda) -->
     <div class="header-center-group">
       <Transition name="fade" mode="out-in">
-        <!-- [CONDICIONAL: AGENDA] Controlador de semana -->
         <div v-if="activeView === 'agenda'" class="date-navigation-wrapper">
           <ControladorSemana />
-        </div>
-
-        <!-- [CONDICIONAL: LISTA] Campo de busca centralizado -->
-        <div v-else class="search-container">
-          <Icon name="lucide:search" class="search-icon" />
-          <input
-            type="text"
-            placeholder="Pesquisar agendamentos..."
-            class="search-input"
-            @input="$emit('search', ($event.target as HTMLInputElement).value)"
-          />
         </div>
       </Transition>
     </div>
 
-    <!-- DIREITA: Profissional + Perfil (sempre visíveis) -->
+    <!-- DIREITA: Profissional (agenda) + Perfil -->
     <div class="header-right-group">
-      <div class="professional-selector-wrapper">
-        <ProfissionalAtual
-          :profissionais="profissionais"
-          :loading="loading"
-        />
-      </div>
-      <div class="divider"></div>
+      <!-- [AGENDA] Seletor de profissional fica aqui -->
+      <template v-if="activeView === 'agenda'">
+        <div class="professional-selector-wrapper">
+          <ProfissionalAtual
+            :profissionais="profissionais"
+            :loading="loading"
+          />
+        </div>
+        <div class="divider"></div>
+      </template>
+
       <UserProfileHeader />
     </div>
 
@@ -180,38 +198,62 @@ defineEmits(['update:activeView', 'novo-agendamento', 'search']);
   transform: scale(0.95);
 }
 
+/* [LISTA] Container flex — apenas agrupa, sem visual próprio */
+.filters-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Campo de busca: componente independente com identidade visual própria */
 .search-container {
   position: relative;
-  width: 100%;
-  max-width: 400px;
+  display: flex;
+  align-items: center;
+  height: 32px;
+  width: 220px;
+  background: #F3F2FB;
+  border: 1px solid #E4E2F6;
+  border-radius: 6px;
+  padding: 0 10px 0 32px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.search-container:focus-within {
+  border-color: #C7C3EC;
+  box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.08);
 }
 
 .search-icon {
   position: absolute;
-  left: 12px;
+  left: 10px;
   top: 50%;
   transform: translateY(-50%);
-  color: #94a3b8;
-  width: 1rem;
-  height: 1rem;
+  color: #9691D4;
+  width: 0.85rem;
+  height: 0.85rem;
+  pointer-events: none;
 }
 
 .search-input {
   width: 100%;
-  height: 34px;
-  padding: 0 1rem 0 2.5rem;
-  background: #f1f5f9;
-  border: 1px solid transparent;
-  border-radius: 20px;
-  font-size: 0.85rem;
+  height: 100%;
+  padding: 0;
+  background: transparent;
+  border: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #4338CA;
   transition: all 0.2s;
 }
 
+.search-input::placeholder {
+  color: #9691D4;
+  font-weight: 400;
+}
+
 .search-input:focus {
-  background: white;
-  border-color: #cbd5e1;
   outline: none;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
 /* --- Header Right --- */
