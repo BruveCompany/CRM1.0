@@ -24,7 +24,7 @@
     </div>
 
     <!-- Navigation -->
-    <nav class="flex-1 px-3 py-4 space-y-1">
+    <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto custom-scrollbar">
       <NuxtLink 
         v-for="item in navItems"
         :key="item.to"
@@ -44,6 +44,59 @@
         </div>
         <span v-if="!isCollapsed">{{ item.label }}</span>
       </NuxtLink>
+
+      <!-- Seção Configurações (Apenas Admin) -->
+      <div v-if="userStore.userRole === 'admin'" class="pt-2">
+        <div v-if="!isCollapsed" class="px-4 mb-1">
+          <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Gestão</span>
+        </div>
+
+        <button 
+          @click="isConfigOpen = !isConfigOpen"
+          :class="['w-full group flex items-center px-4 py-2.5 text-sm font-normal rounded-lg transition-all duration-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900', 
+            isCollapsed ? 'justify-center' : 'gap-3',
+            isConfigOpen && !isCollapsed ? 'bg-gray-50/50' : ''
+          ]"
+          :title="isCollapsed ? 'Configurações' : ''"
+        >
+          <div class="w-8 flex items-center justify-center flex-shrink-0">
+            <Cog6ToothIcon class="w-5 h-5 transition-colors duration-200 stroke-[1.5]" />
+          </div>
+          <span v-if="!isCollapsed" class="flex-1 text-left">Configurações</span>
+          <ChevronDownIcon 
+            v-if="!isCollapsed" 
+            :class="['w-4 h-4 text-gray-400 transition-transform duration-200', isConfigOpen ? 'rotate-180' : '']" 
+          />
+        </button>
+
+        <!-- Submenu de Configurações -->
+        <div v-if="isConfigOpen && !isCollapsed" class="mt-1 ml-4 pl-4 border-l border-gray-100 space-y-1">
+          <NuxtLink 
+            to="/admin" 
+            class="group flex items-center gap-3 px-4 py-2 text-sm text-gray-500 hover:text-[#4338CA] hover:bg-indigo-50/50 rounded-lg transition-all"
+            active-class="text-[#4338CA] font-medium bg-indigo-50"
+          >
+            <ShieldCheckIcon class="w-4 h-4 stroke-[1.5]" />
+            <span>Usuários</span>
+          </NuxtLink>
+          <NuxtLink 
+            to="/especialidades" 
+            class="group flex items-center gap-3 px-4 py-2 text-sm text-gray-500 hover:text-[#4338CA] hover:bg-indigo-50/50 rounded-lg transition-all"
+            active-class="text-[#4338CA] font-medium bg-indigo-50"
+          >
+            <BookOpenIcon class="w-4 h-4 stroke-[1.5]" />
+            <span>Especialidades</span>
+          </NuxtLink>
+          <NuxtLink 
+            to="/profissionais" 
+            class="group flex items-center gap-3 px-4 py-2 text-sm text-gray-500 hover:text-[#4338CA] hover:bg-indigo-50/50 rounded-lg transition-all"
+            active-class="text-[#4338CA] font-medium bg-indigo-50"
+          >
+            <UserGroupIcon class="w-4 h-4 stroke-[1.5]" />
+            <span>Profissionais</span>
+          </NuxtLink>
+        </div>
+      </div>
     </nav>
 
     <!-- Footer -->
@@ -62,10 +115,12 @@ import {
   UserGroupIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  ChevronDownIcon,
   ChartBarIcon,
   ChatBubbleLeftRightIcon,
   ShieldCheckIcon,
-  IdentificationIcon
+  IdentificationIcon,
+  Cog6ToothIcon
 } from '@heroicons/vue/24/outline'
 
 const user = useSupabaseUser()
@@ -74,32 +129,43 @@ const userStore = useUserStore()
 
 // Estado de recolhimento da sidebar
 const isCollapsed = ref(false)
+// Estado do submenu de configurações
+const isConfigOpen = ref(false)
 
 /**
  * Itens de Navegação Dinâmicos
- * Define a ordem e os ícones dos links na sidebar.
- * Adiciona o link 'Admin' apenas para usuários com role 'admin'.
+ * Define a ordem e os ícones dos links principais na sidebar.
  */
 const navItems = computed(() => {
-  const items = [
+  return [
     { label: 'Dashboard', to: '/', icon: HomeIcon },
     { label: 'Mensagens', to: '/mensagens', icon: ChatBubbleLeftRightIcon },
     { label: 'Leads', to: '/leads', icon: IdentificationIcon },
     { label: 'Relatórios', to: '/relatorios', icon: ChartBarIcon },
     { label: 'Agenda', to: '/agenda', icon: CalendarIcon },
     { label: 'Clientes', to: '/clientes', icon: UserIcon },
-    { label: 'Especialidades', to: '/especialidades', icon: BookOpenIcon },
-    { label: 'Profissionais', to: '/profissionais', icon: UserGroupIcon },
   ]
-
-  if (userStore.userRole === 'admin') {
-    items.push({ label: 'Admin', to: '/admin', icon: ShieldCheckIcon })
-  }
-
-  return items
 })
 
 const toggleSidebar = () => {
   isCollapsed.value = !isCollapsed.value
+  if (isCollapsed.value) isConfigOpen.value = false
 }
 </script>
+
+<style scoped>
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #f1f5f9 transparent;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+</style>
