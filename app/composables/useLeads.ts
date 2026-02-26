@@ -198,9 +198,11 @@ export const useLeads = () => {
         // 3. Montar mapa final de LeadID -> ClienteID e lista de ClientIDs únicos
         const leadToClientMapping: Record<string, number> = {};
         const allTargetClientIds = new Set<number>();
+        const allLeadIds: string[] = [];
 
         allLeads.value.forEach(l => {
             const lid = String(l.id);
+            allLeadIds.push(lid);
             const cid = l.cliente_id || autoClientIds[lid];
             if (cid) {
                 leadToClientMapping[lid] = Number(cid);
@@ -210,18 +212,32 @@ export const useLeads = () => {
             }
         });
 
-        if (allTargetClientIds.size === 0) {
-            console.log('⚠️ [fetchNextAppointments] Nenhum lead com cliente_id encontrado.');
+        if (allTargetClientIds.size === 0 && allLeadIds.length === 0) {
+            console.log('⚠️ [fetchNextAppointments] Nenhum lead ou cliente para buscar agendamentos.');
             appointmentsMap.value = {};
             return;
         }
 
-        // 4. Buscar TODOS os agendamentos ativos dos clientes encontrados
-        const { data, error } = await supabase
+        // 4. Buscar TODOS os agendamentos ativos dos clientes OU leads encontrados
+        let query = supabase
             .from('ag_agendamentos')
-            .select('cliente_id, data, hora_inicio, hora_fim, titulo, descricao, categoria')
-            .in('cliente_id', Array.from(allTargetClientIds))
-            .eq('cancelado', false)
+            .select('cliente_id, lead_id, data, hora_inicio, hora_fim, titulo, descricao, categoria')
+            .eq('cancelado', false);
+
+        const filters: string[] = [];
+        if (allTargetClientIds.size > 0) {
+            filters.push(`cliente_id.in.(${Array.from(allTargetClientIds).join(',')})`);
+        }
+        if (allLeadIds.length > 0) {
+            // Usa aspas para IDs de string/UUID
+            filters.push(`lead_id.in.(${allLeadIds.map(id => `"${id}"`).join(',')})`);
+        }
+
+        if (filters.length > 0) {
+            query = query.or(filters.join(','));
+        }
+
+        const { data, error } = await query
             .order('data', { ascending: true })
             .order('hora_inicio', { ascending: true });
 
@@ -230,7 +246,7 @@ export const useLeads = () => {
             return;
         }
 
-        console.log(`📡 [fetchNextAppointments] ${data.length} agendamentos totais encontrados para ${allTargetClientIds.size} clientes.`);
+        console.log(`📡 [fetchNextAppointments] ${data?.length || 0} agendamentos totais encontrados para ${allTargetClientIds.size} clientes e ${allLeadIds.length} leads.`);
 
         const newMap: Record<string, any> = {};
         const now = new Date();
@@ -246,16 +262,32 @@ export const useLeads = () => {
             }
         }
 
-        data.forEach((app: any) => {
-            const leadsMatching = clientToLeads[app.cliente_id];
-            if (leadsMatching) {
+        data?.forEach((app: any) => {
+            // Identifica quais leads este agendamento atende (via lead_id direto ou via cliente_id)
+            const leadsMatching: string[] = [];
+
+            if (app.lead_id) {
+                leadsMatching.push(String(app.lead_id));
+            }
+
+            if (app.cliente_id) {
+                const leadsByClient = clientToLeads[app.cliente_id];
+                if (leadsByClient) {
+                    leadsByClient.forEach(lid => {
+                        if (!leadsMatching.includes(lid)) leadsMatching.push(lid);
+                    });
+                }
+            }
+
+            if (leadsMatching.length > 0) {
                 leadsMatching.forEach(leadId => {
                     if (!newMap[leadId]) {
                         newMap[leadId] = { count: 0, next: null };
                     }
 
                     // Corrige parsing de data ISO removendo offset se necessário ou tratando UTC
-                    const appDate = `${app.data}T${app.hora_inicio.split(/[-+]/)[0]}`;
+                    const horaInicioLimpa = (app.hora_inicio || '00:00:00').split(/[-+]/)[0] || '00:00:00';
+                    const appDate = `${app.data}T${horaInicioLimpa}`;
                     const appObj = {
                         appointment_date: appDate,
                         status: 'active',

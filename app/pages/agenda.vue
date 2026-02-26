@@ -2,7 +2,14 @@
   <NuxtLayout>
     <div class="flex flex-col h-full bg-white p-4">
       <div class="flex-1 min-h-0">
-        <AgendamentoManager />
+        <ClientOnly>
+          <AgendamentoManager />
+          <template #fallback>
+            <div class="flex items-center justify-center h-full">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            </div>
+          </template>
+        </ClientOnly>
       </div>
     </div>
   </NuxtLayout>

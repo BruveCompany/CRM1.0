@@ -37,14 +37,16 @@
 
         <!-- Cliente (componente extraído) - OCULTO se for agendamento de Lead -->
         <SeletorCliente
-          v-if="!leadId"
+          v-if="!leadId && !clienteNome"
           ref="seletorClienteRef"
           v-model="formData.clienteId"
           :clientes="clientes"
           @cadastrar="irParaCadastroCliente"
         />
         <div v-else class="pb-1">
-          <label class="block text-sm font-semibold text-neutral-700 mb-1">Lead</label>
+          <label class="block text-sm font-semibold text-neutral-700 mb-1">
+            {{ leadId || clienteNome ? 'Lead' : 'Cliente' }}
+          </label>
           <div class="px-3 py-2 bg-neutral-50 rounded-lg border border-neutral-200 text-sm text-neutral-600 font-medium">
             {{ clienteNome || 'Lead Selecionado' }}
           </div>
@@ -399,7 +401,7 @@ async function handleSalvar() {
     notifyWarning('Selecione um profissional')
     return
   }
-  if (!formData.value.clienteId && !props.leadId) {
+  if (!formData.value.clienteId && !props.leadId && !props.clienteNome) {
     notifyWarning('Selecione um cliente ou lead')
     return
   }
@@ -421,6 +423,18 @@ async function handleSalvar() {
   }
 
   salvando.value = true
+
+  // Se não tem ID (Lead novo), apenas emite a "intenção" de agendamento 
+  // O salvamento real ocorrerá após a criação do Lead pelo componente pai
+  if (!props.leadId && !props.clienteId) {
+    emit('salvar', {
+      ...formData.value,
+      isTemplate: true // Indica que é um agendamento temporário
+    })
+    salvando.value = false
+    isOpen.value = false
+    return
+  }
 
   const resultado = await inserirAgendamento({
     profissional_id: formData.value.profissionalId,

@@ -41,6 +41,18 @@
           :lead="leadToEdit" 
           :is-editing="!!leadToEdit?.id"
           @save="handleSave"
+          @open-schedule-modal="handleOpenSchedule"
+        />
+
+        <!-- Modal de Novo Agendamento (Secundário) -->
+        <ModalNovoAgendamento
+          v-model="isScheduleModalOpen"
+          :lead-id="leadToEdit?.id"
+          :cliente-nome="leadToEdit?.nome"
+          :profissional-id="profile?.id"
+          :profissionais="globalProfissionais"
+          :dias-semana="globalDiasSemana"
+          @salvar="handleScheduleSave"
         />
       </ClientOnly>
     </div>
@@ -55,6 +67,13 @@ import LeadsKanban from '~/components/leads/LeadsKanban.vue';
 import LeadsTable from '~/components/leads/LeadsTable.vue';
 import LeadsLeadDetailsModal from '~/components/leads/LeadsLeadDetailsModal.vue';
 import LeadEditModal from '~/components/lead/EditModal.vue';
+import ModalNovoAgendamento from '~/components/agendamentos/ModalNovoAgendamento.vue';
+import { useProfissionais } from '~/composables/useProfissionais';
+import { useAgendamentoStore } from '~/stores/agendamento';
+import { useAgendamento } from '~/composables/useAgendamento';
+
+
+
 
 const { 
   fetchLeads, 
@@ -70,14 +89,61 @@ const {
 const supabase = useSupabaseClient();
 const { notifySuccess, notifyError } = useNotification();
 const { profile } = useAuth();
+const { fetchProfissionais } = useProfissionais();
+const agendamentoStore = useAgendamentoStore();
+const { inserirAgendamento } = useAgendamento();
+
+// Refs globais para o modal de agendamento
+const globalProfissionais = ref<any[]>([]);
+const globalDiasSemana = computed(() => agendamentoStore.diasSemana);
+
+
 
 // Estado para controlar se estamos editando ou criando
 const leadToEdit = ref<any>({});
+
+const isScheduleModalOpen = ref(false);
 
 // Sempre que o modal for aberto, se não houver lead definido, ele começa vazio
 watch(isCreateLeadModalOpen, (val) => {
   if (!val) leadToEdit.value = {};
 });
+
+const handleOpenSchedule = (currentForm?: any) => {
+  if (currentForm?.nome) {
+    leadToEdit.value.nome = currentForm.nome;
+  }
+  isScheduleModalOpen.value = true;
+};
+
+const handleScheduleSave = async (data: any) => {
+  if (data?.isTemplate) {
+    // Se for um lead novo, guardamos a data para o formulário
+    const fullDate = `${data.data}T${data.horaInicio}`;
+    leadToEdit.value.proximo_contato_em = fullDate;
+    
+    // Podemos guardar o objeto completo para salvar depois se necessário
+    leadToEdit.value._pendingSchedule = data;
+    
+    notifySuccess('Horário selecionado! Salve o lead para confirmar.');
+  } else {
+    await fetchLeads();
+  }
+  isScheduleModalOpen.value = false;
+};
+
+onMounted(async () => {
+  // Busca lista de profissionais para o modal de agendamento
+  const profs = await fetchProfissionais();
+  if (profs) globalProfissionais.value = profs;
+  
+  // Garante que os dias da semana estejam carregados na store
+  if (agendamentoStore.diasSemana.length === 0) {
+    await agendamentoStore.carregarAgendamentos(); 
+  }
+});
+
+
 
 const handleSave = async (formData: any) => {
   try {
@@ -127,9 +193,9 @@ const handleSave = async (formData: any) => {
 
       // Se informou data, cria o agendamento correspondente na estrutura correta
       if (formData.proximo_contato_em) {
-        const dateObj = new Date(formData.proximo_contato_em);
+        const pending = leadToEdit.value._pendingSchedule;
         
-        // Extrai Data (YYYY-MM-DD) e Hora (HH:MM:SS) em formato local
+        const dateObj = new Date(formData.proximo_contato_em);
         const yyyy = dateObj.getFullYear();
         const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
         const dd = String(dateObj.getDate()).padStart(2, '0');
@@ -140,17 +206,24 @@ const handleSave = async (formData: any) => {
         const ss = String(dateObj.getSeconds()).padStart(2, '0');
         const timeStr = `${hh}:${min}:${ss}`;
 
-        await (supabase.from('ag_agendamentos') as any).insert({
-          lead_id: newLead.id,
-          cliente_id: null,
-          profissional_id: profile.value?.id,
-          data: dateStr,
-          hora_inicio: timeStr,
-          titulo: `Contato inicial com ${payload.nome}`,
-          descricao: `Agendamento automático via criação de lead. Interesse: ${payload.interesse || 'Não informado'}`,
-          status: 'pendente',
-          categoria: 'contato'
-        });
+        // Busca o ID do profissional correspondente ao perfil logado como fallback secundário
+        const currentProfId = globalProfissionais.value.find(p => p.profile_id === profile.value?.id)?.profissional_id;
+        
+        // Dados do agendamento (usa o que foi preenchido no modal, se houver)
+        const agPayload = {
+          profissional_id: pending?.profissionalId || currentProfId || profile.value?.id,
+          lead_id: newLead.id as string,
+          data: pending?.data || dateStr,
+          hora_inicio: pending?.horaInicio || timeStr.slice(0, 5),
+          hora_fim: pending?.horaFim || pending?.horaInicio || timeStr.slice(0, 5),
+          titulo: pending?.titulo || `Contato inicial com ${payload.nome}`,
+          descricao: pending?.descricao || `Agendamento automático via criação de lead. Interesse: ${payload.interesse || 'Não informado'}`,
+          categoria: pending?.categoria || 'Visita ao Showroom / Loja',
+          cor: pending?.cor || null
+        };
+
+        const agResult = await inserirAgendamento(agPayload);
+        if (!agResult) console.error('[AGENDAMENTO] Erro ao salvar agendamento automático');
       }
 
       notifySuccess('Lead criado com sucesso!');

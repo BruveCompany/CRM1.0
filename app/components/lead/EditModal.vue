@@ -212,23 +212,18 @@
             <div class="form-field col-2">
               <label>Próximo Contato Agendado</label>
               
-              <!-- Na criação, mantém o input simples -->
-              <div v-if="!isEditing" class="input-container">
-                <Icon name="lucide:calendar-clock" class="field-icon" />
-                <input v-model="form.proximo_contato_em" type="datetime-local" class="field-input" />
-              </div>
-
-              <!-- Na edição, usa o botão para abrir o modal dedicado -->
-              <div v-else class="schedule-action-wrapper">
+              <div class="schedule-action-wrapper">
                 <button 
                   type="button" 
                   class="btn-manage-schedule"
-                  @click="$emit('open-schedule-modal')"
+                  @click="$emit('open-schedule-modal', form)"
                 >
-                  <Icon name="lucide:calendar-plus" class="w-5 h-5 mr-2" />
+                  <Icon name="lucide:calendar-plus" class="w-5 h-5 mr-3" />
                   Gerenciar Agendamento
                 </button>
+                
                 <div v-if="form.proximo_contato_em" class="current-schedule-info">
+                  <div class="info-dot"></div>
                   <Icon name="lucide:info" class="w-3.5 h-3.5 text-indigo-400" />
                   <span>Agendado: {{ formatDate(form.proximo_contato_em) }}</span>
                 </div>
@@ -415,6 +410,22 @@ watch(
     }
   },
   { immediate: true }
+);
+
+// Sincroniza campos que podem ser alterados externamente (ex: via modal de agendamento)
+watch(
+  () => props.lead,
+  (newLead) => {
+    if (newLead && props.modelValue) {
+      if (newLead.proximo_contato_em && newLead.proximo_contato_em !== form.value.proximo_contato_em) {
+        form.value.proximo_contato_em = newLead.proximo_contato_em.slice(0, 16);
+      }
+      if (newLead.nome && !form.value.nome) {
+        form.value.nome = newLead.nome;
+      }
+    }
+  },
+  { deep: true }
 );
 
 // Computed tags previews
@@ -718,29 +729,55 @@ async function handleSubmit() {
   align-items: center;
   justify-content: center;
   width: 100%;
-  padding: 0.65rem;
+  padding: 0.75rem;
   background: white;
-  border: 1px dashed #cbd5e1;
-  border-radius: 10px;
+  border: 2px dashed #e0e7ff;
+  border-radius: 12px;
   color: #4f46e5;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
 .btn-manage-schedule:hover {
   background: #f5f3ff;
   border-color: #6366f1;
-  border-style: solid;
+  transform: translateY(-1px);
+}
+
+.btn-manage-schedule:active {
+  transform: translateY(0);
 }
 
 .current-schedule-info {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  font-size: 0.7rem;
-  color: #64748b;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  color: #6366f1;
   font-weight: 600;
+  background: #f5f3ff;
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  width: fit-content;
+  border: 1px solid #e0e7ff;
+  margin-top: 0.25rem;
 }
+
+.info-dot {
+  width: 4px;
+  height: 4px;
+  background: #6366f1;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.3; }
+  100% { opacity: 1; }
+}
+
+
 </style>
