@@ -1,19 +1,20 @@
 <template>
   <header class="page-header">
-    <!-- Esquerda: Controles de Vista -->
+
+    <!-- ESQUERDA: Toggle de visão + Novo Agendamento (só na Agenda) -->
     <div class="header-left-group">
       <div class="view-toggle-group">
-        <button 
-          class="view-toggle-btn" 
-          @click="$emit('update:activeView', 'agenda')" 
+        <button
+          class="view-toggle-btn"
+          @click="$emit('update:activeView', 'agenda')"
           :class="{ 'active': activeView === 'agenda' }"
         >
           <Icon name="lucide:calendar" class="btn-icon" />
           <span>Agenda</span>
         </button>
-        <button 
-          class="view-toggle-btn" 
-          @click="$emit('update:activeView', 'lista')" 
+        <button
+          class="view-toggle-btn"
+          @click="$emit('update:activeView', 'lista')"
           :class="{ 'active': activeView === 'lista' }"
         >
           <Icon name="lucide:list" class="btn-icon" />
@@ -21,23 +22,29 @@
         </button>
       </div>
 
-      <button class="btn-add-agendamento" @click="$emit('novo-agendamento')">
-        <Icon name="lucide:plus" class="btn-icon" />
-        <span>Novo Agendamento</span>
-      </button>
+      <!-- [CONDICIONAL: AGENDA] Botão Novo Agendamento -->
+      <template v-if="activeView === 'agenda'">
+        <button class="btn-add-agendamento" @click="$emit('novo-agendamento')">
+          <Icon name="lucide:plus" class="btn-icon" />
+          <span>Novo Agendamento</span>
+        </button>
+      </template>
     </div>
 
-    <!-- Centro: Navegação de Data ou Busca -->
+    <!-- CENTRO: Data (Agenda) ou Busca (Lista) -->
     <div class="header-center-group">
       <Transition name="fade" mode="out-in">
+        <!-- [CONDICIONAL: AGENDA] Controlador de semana -->
         <div v-if="activeView === 'agenda'" class="date-navigation-wrapper">
           <ControladorSemana />
         </div>
+
+        <!-- [CONDICIONAL: LISTA] Campo de busca centralizado -->
         <div v-else class="search-container">
           <Icon name="lucide:search" class="search-icon" />
-          <input 
-            type="text" 
-            placeholder="Pesquisar agendamentos..." 
+          <input
+            type="text"
+            placeholder="Pesquisar agendamentos..."
             class="search-input"
             @input="$emit('search', ($event.target as HTMLInputElement).value)"
           />
@@ -45,17 +52,18 @@
       </Transition>
     </div>
 
-    <!-- Direita: Seletor de Profissional e Perfil -->
+    <!-- DIREITA: Profissional + Perfil (sempre visíveis) -->
     <div class="header-right-group">
       <div class="professional-selector-wrapper">
-        <ProfissionalAtual 
-          :profissionais="profissionais" 
-          :loading="loading" 
+        <ProfissionalAtual
+          :profissionais="profissionais"
+          :loading="loading"
         />
       </div>
       <div class="divider"></div>
       <UserProfileHeader />
     </div>
+
   </header>
 </template>
 
@@ -98,18 +106,18 @@ defineEmits(['update:activeView', 'novo-agendamento', 'search']);
 .view-toggle-group {
   display: flex;
   align-items: center;
-  border: 1px solid #cbd5e1;
+  border: 1px solid #E4E2F6;
   border-radius: 6px;
   overflow: hidden;
-  background: white;
+  background: #F3F2FB;
 }
 
 .view-toggle-btn {
   height: 32px;
   padding: 0 0.75rem;
   border: none;
-  background: white;
-  color: #64748b;
+  background: transparent;
+  color: #6b7280;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -120,13 +128,13 @@ defineEmits(['update:activeView', 'novo-agendamento', 'search']);
 }
 
 .view-toggle-btn:hover {
-  background-color: #f8fafc;
-  color: #1e293b;
+  background-color: #ECEAF7;
+  color: #4338CA;
 }
 
 .view-toggle-btn.active {
-  background-color: #eef2ff;
-  color: #4f46e5;
+  background-color: #ECEAF7;
+  color: #4338CA;
 }
 
 .view-toggle-btn .btn-icon {
@@ -147,13 +155,13 @@ defineEmits(['update:activeView', 'novo-agendamento', 'search']);
   cursor: pointer;
   transition: all 0.2s;
   border: none;
-  background-color: #eef2ff;
-  color: #4f46e5;
+  background-color: #F3F2FB;
+  color: #4338CA;
   white-space: nowrap;
 }
 
 .btn-add-agendamento:hover {
-  background-color: #e0e7ff;
+  background-color: #ECEAF7;
 }
 
 .btn-add-agendamento .btn-icon {

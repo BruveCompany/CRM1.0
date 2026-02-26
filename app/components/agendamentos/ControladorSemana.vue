@@ -1,26 +1,26 @@
 <template>
-  <div class="flex items-center gap-4">
+  <div class="date-nav-wrapper">
     <!-- Botão: Semana anterior -->
     <button
       @click="voltarSemana"
-      class="flex items-center justify-center w-8 h-8 rounded-full transition-all bg-[#eef2ff] text-[#4f46e5] hover:bg-[#e0e7ff] border-none cursor-pointer"
+      class="nav-btn"
       title="Semana anterior"
     >
-      <Icon name="lucide:chevron-left" class="w-5 h-5" />
+      <Icon name="lucide:chevron-left" class="w-4 h-4" />
     </button>
 
     <!-- Período da semana atual -->
-    <div v-if="primeiroDia && ultimoDia" class="text-sm font-semibold text-neutral-600 whitespace-nowrap px-2">
-      {{ formatarData(primeiroDia) }} — {{ formatarData(ultimoDia) }}
+    <div v-if="primeiroDia && ultimoDia" class="date-label">
+      {{ formatarData(primeiroDia) }} · {{ formatarData(ultimoDia) }}
     </div>
 
     <!-- Botão: Próxima semana -->
     <button
       @click="avancarSemana"
-      class="flex items-center justify-center w-8 h-8 rounded-full transition-all bg-[#eef2ff] text-[#4f46e5] hover:bg-[#e0e7ff] border-none cursor-pointer"
+      class="nav-btn"
       title="Próxima semana"
     >
-      <Icon name="lucide:chevron-right" class="w-5 h-5" />
+      <Icon name="lucide:chevron-right" class="w-4 h-4" />
     </button>
   </div>
 </template>
@@ -81,3 +81,49 @@ function formatarData(data: Date): string {
 }
 
 </script>
+
+<style scoped>
+/* Wrapper: container com borda sutil unindo os três elementos */
+.date-nav-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid #E4E2F6;
+  border-radius: 8px;
+  background: white;
+  overflow: hidden;
+}
+
+/* Botões ghost — sem fundo, só ícone */
+.nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 30px;
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+  flex-shrink: 0;
+}
+
+.nav-btn:hover {
+  background: #F3F2FB;
+  color: #4338CA;
+}
+
+/* Data: tipografia refinada */
+.date-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  white-space: nowrap;
+  padding: 0 12px;
+  border-left: 1px solid #E4E2F6;
+  border-right: 1px solid #E4E2F6;
+  line-height: 30px;
+  letter-spacing: -0.01em;
+}
+</style>

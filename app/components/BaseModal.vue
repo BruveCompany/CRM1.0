@@ -1,5 +1,6 @@
 <template>
-  <Transition name="modal">
+  <Teleport to="body">
+    <Transition name="modal">
     <div 
       v-if="modelValue" 
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
@@ -38,7 +39,8 @@
         </div>
       </div>
     </div>
-  </Transition>
+    </Transition>
+  </Teleport>
 </template>
 
 <script setup lang="ts">

@@ -1,34 +1,20 @@
 <template>
-  <div id="profissional-atual" class="w-full flex">
-    <!-- Estado: Carregando dados -->
-    <div v-if="loading && (!profissionais || profissionais.length === 0)" class="p-2">
-      <div class="h-10 w-48 bg-neutral-200 rounded-full animate-pulse"></div>
+  <div id="profissional-atual" class="flex items-center">
+    <!-- Estado: Carregando -->
+    <div v-if="loading && (!profissionais || profissionais.length === 0)">
+      <div class="h-8 w-40 bg-neutral-100 rounded-lg animate-pulse"></div>
     </div>
 
-    <!-- Botão de Seleção (Sincronizado com Padrão do Modal) -->
-    <div v-else class="py-1">
+    <!-- Botão de Seleção Clean -->
+    <div v-else>
       <button
         type="button"
-        class="flex items-center gap-2.5 pl-1 pr-4 py-1 rounded-full border border-primary-100 bg-primary-50 hover:bg-primary-100/50 transition-all group min-h-[40px] cursor-pointer"
+        class="prof-selector-btn"
         @click="modalAberto = true"
       >
-        <!-- Ícone Sem Fundo -->
-        <div 
-          class="w-9 h-9 flex items-center justify-center text-primary-600 flex-shrink-0 ml-0.5"
-        >
-          <UsersIcon class="w-5 h-5" />
-        </div>
-
-        <!-- Labels e Nome -->
-        <div class="text-left flex flex-col justify-center min-w-0">
-          <p class="text-[9px] text-primary-600 font-semibold uppercase tracking-widest leading-none mb-1">PROFISSIONAL</p>
-          <div class="flex items-center gap-1.5">
-            <span class="text-[13px] font-semibold text-primary-900 leading-none truncate max-w-[140px]">
-              {{ nomeExibicao }}
-            </span>
-            <ChevronDownIcon class="w-3 h-3 text-primary-400 group-hover:text-primary-600 transition-colors shrink-0" />
-          </div>
-        </div>
+        <Icon name="lucide:users" class="prof-icon" />
+        <span class="prof-name">{{ nomeExibicao }}</span>
+        <Icon name="lucide:chevron-down" class="prof-chevron" />
       </button>
 
       <!-- Modal de Seleção -->
@@ -146,3 +132,71 @@ onMounted(() => {
   console.log('📍 ProfissionalAtual montado. Profissionais recebidos:', props.profissionais?.length || 0)
 })
 </script>
+
+<style scoped>
+.prof-selector-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  height: 32px;
+  border: none;
+  background: #F3F2FB;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  color: #111827;
+  white-space: nowrap;
+}
+
+.prof-selector-btn:hover {
+  background: #ECEAF7;
+}
+
+.prof-icon {
+  width: 15px;
+  height: 15px;
+  color: #9691D4;
+  flex-shrink: 0;
+}
+
+.prof-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-width: 0;
+}
+
+.prof-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: #9691D4;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.prof-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #4338CA;
+  line-height: 1;
+  white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prof-chevron {
+  width: 12px;
+  height: 12px;
+  color: #9691D4;
+  flex-shrink: 0;
+  margin-left: 1px;
+  transition: color 0.15s;
+}
+
+.prof-selector-btn:hover .prof-chevron {
+  color: #6b7280;
+}
+</style>
