@@ -3,7 +3,12 @@
     <!-- Tabs -->
     <div class="flex items-center gap-6 px-8 pt-6 pb-2 border-b border-gray-100/50">
       <button 
-        v-for="tab in [{id: 'ATIVIDADES', label: 'Atividades'}, {id: 'NOTAS', label: 'Notas'}, {id: 'MENSAGENS', label: 'Mensagens'}]" 
+        v-for="tab in [
+          {id: 'ATIVIDADES', label: 'Atividades'}, 
+          {id: 'NOTAS', label: 'Notas'}, 
+          {id: 'MENSAGENS', label: 'Mensagens'},
+          {id: 'ARQUIVOS', label: 'Arquivos'}
+        ]" 
         :key="tab.id"
         @click="setFilter(tab.id)"
         :class="['text-[10px] font-bold uppercase tracking-widest pb-2 transition-all relative', activeFilter === tab.id ? 'active-tab text-primary-600' : 'text-slate-400 hover:text-slate-600']"
@@ -15,7 +20,8 @@
 
     <!-- Timeline Content -->
     <div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
-      <div class="space-y-5">
+      <!-- 1. Conteúdo de Atividades/Notas/Mensagens -->
+      <div v-if="activeFilter !== 'ARQUIVOS'" class="space-y-5">
         <!-- New Note Input -->
         <div class="relative group">
           <textarea 
@@ -42,6 +48,16 @@
            Nenhuma atividade registrada ainda.
         </div>
       </div>
+
+      <!-- 2. Conteúdo de Arquivos -->
+      <div v-else class="animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <LeadGerenciadorArquivos 
+          :files="files"
+          @files-selected="$emit('files-selected', $event)"
+          @download-file="$emit('download-file', $event)"
+          @delete-file="$emit('delete-file', $event)"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -49,9 +65,10 @@
 <script setup lang="ts">
 const props = defineProps<{
   activities: any[];
+  files: any[];
 }>();
 
-const emit = defineEmits(['add-note']);
+const emit = defineEmits(['add-note', 'files-selected', 'download-file', 'delete-file']);
 const internalNote = ref('');
 
 // --- GERENCIAMENTO DE ESTADO ---

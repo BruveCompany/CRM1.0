@@ -72,7 +72,7 @@
         <UiActionButton variant="outline" size="sm" icon="heroicons:pencil-square" @click="$emit('edit')">
           Editar
         </UiActionButton>
-        <UiActionButton variant="outline" size="sm" icon="heroicons:calendar-days" @click="$emit('schedule')">
+        <UiActionButton variant="outline" size="sm" icon="heroicons:clipboard-document-list" @click="$emit('add-task')">
           Tarefa
         </UiActionButton>
         <UiActionButton variant="success" size="sm" icon="simple-icons:whatsapp" @click="$emit('whatsapp')">
@@ -88,7 +88,7 @@ defineProps<{
   lead: any;
 }>();
 
-defineEmits(['edit', 'schedule', 'whatsapp']);
+defineEmits(['edit', 'add-task', 'schedule', 'whatsapp']);
 
 const getScoreColor = (score: number) => {
   if (score >= 80) return '#10b981';

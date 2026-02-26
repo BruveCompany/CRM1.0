@@ -7,15 +7,38 @@
       :class="getStageStatus(index)"
     >
       <!-- Linha Conectora (aparece antes de cada item, exceto o primeiro) -->
-      <div v-if="index > 0" class="connector" :class="{ 'connector--active': index <= currentStageIndex }"></div>
+      <div 
+        v-if="index > 0" 
+        class="connector" 
+        :class="{ 'connector--active': index <= currentStageIndex }"
+        :style="getConnectorStyle(index)"
+      ></div>
 
       <!-- Círculo e Label da Etapa -->
       <div class="stage-wrapper">
-        <div class="stage-circle">
-          <Icon v-if="getStageStatus(index) === 'completed'" name="heroicons:check-20-solid" class="check-icon" />
-          <span v-else class="stage-number">{{ index + 1 }}</span>
+        <div 
+          class="stage-circle" 
+          :style="getCircleStyle(index, stage)"
+        >
+          <Icon 
+            v-if="getStageStatus(index) === 'completed'" 
+            name="heroicons:check-20-solid" 
+            class="check-icon" 
+          />
+          <span 
+            v-else 
+            class="stage-number"
+            :style="getNumberStyle(index, stage)"
+          >
+            {{ index + 1 }}
+          </span>
         </div>
-        <span class="stage-label">{{ stage }}</span>
+        <span 
+          class="stage-label"
+          :style="getLabelStyle(index, stage)"
+        >
+          {{ stage.name }}
+        </span>
       </div>
     </div>
   </div>
@@ -28,21 +51,26 @@ import { computed } from 'vue';
  * FunilVendasStepper.vue
  * ─────────────────────────────────────────────────────────────────
  * Exibe o progresso de um lead através de etapas customizáveis.
- * Design moderno, horizontal e totalmente reativo.
+ * Cores dinâmicas por estágio, design modernizado.
  * ─────────────────────────────────────────────────────────────────
  */
 
+interface Stage {
+  name: string;
+  color: string;
+}
+
 interface Props {
-  /** Lista de nomes das etapas do funil */
-  stages: string[];
+  /** Lista de objetos de etapas do funil { name, color } */
+  stages: Stage[];
   /** Nome exato da etapa em que o lead se encontra atualmente */
-  currentStage: string;
+  currentStageName: string;
 }
 
 const props = defineProps<Props>();
 
 // Encontra o índice da etapa atual para lógica de comparação
-const currentStageIndex = computed(() => props.stages.indexOf(props.currentStage));
+const currentStageIndex = computed(() => props.stages.findIndex(s => s.name === props.currentStageName));
 
 /**
  * Determina o estado da etapa baseado na posição atual.
@@ -53,6 +81,71 @@ const getStageStatus = (index: number) => {
   if (index === currentStageIndex.value) return 'current';
   return 'inactive';
 };
+
+/**
+ * Estilos dinâmicos para a linha conectora
+ */
+const getConnectorStyle = (index: number) => {
+  const isCompleted = index <= currentStageIndex.value;
+  if (isCompleted) {
+    // A cor da linha vem da etapa anterior (ou da atual se preferir)
+    const prevColor = props.stages[index - 1]?.color || '#4f46e5';
+    return {
+      backgroundColor: prevColor,
+      boxShadow: `0 0 10px ${prevColor}33`
+    };
+  }
+  return {}; // Segue o padrão do CSS
+};
+
+/**
+ * Estilos dinâmicos para o círculo
+ */
+const getCircleStyle = (index: number, stage: Stage) => {
+  const status = getStageStatus(index);
+  
+  if (status === 'completed') {
+    return {
+      backgroundColor: stage.color,
+      borderColor: stage.color,
+      boxShadow: `0 4px 12px ${stage.color}40`
+    };
+  }
+  
+  if (status === 'current') {
+    return {
+      borderColor: stage.color,
+      boxShadow: `0 0 15px ${stage.color}40`
+    };
+  }
+  
+  // Inativo: Borda com cor da etapa em baixa opacidade
+  return {
+    borderColor: `${stage.color}40`,
+    backgroundColor: '#f8fafc'
+  };
+};
+
+/**
+ * Estilos dinâmicos para o número interno
+ */
+const getNumberStyle = (index: number, stage: Stage) => {
+  const status = getStageStatus(index);
+  if (status === 'current') {
+    return { color: stage.color };
+  }
+  return {};
+};
+
+/**
+ * Estilos dinâmicos para o label (nome da etapa)
+ */
+const getLabelStyle = (index: number, stage: Stage) => {
+  const status = getStageStatus(index);
+  if (status === 'completed') return { color: stage.color };
+  if (status === 'current') return { color: '#1e293b', fontWeight: '850' };
+  return { color: '#94a3b8' };
+};
 </script>
 
 <style scoped>
@@ -60,39 +153,34 @@ const getStageStatus = (index: number) => {
 .stepper-container {
   display: flex;
   align-items: flex-start;
-  justify-content: center; /* Centraliza o stepper no meio do card */
+  justify-content: center;
   width: 100%;
   padding: 1.5rem 1.25rem;
   background: #ffffff;
   border-radius: 1.5rem;
   border: 1px solid #f1f5f9;
   user-select: none;
-  gap: 0.25rem; /* Ajuste fino do espaçamento entre itens */
+  gap: 0.25rem;
 }
 
 .step-item {
   display: flex;
   align-items: flex-start;
-  flex: 0 0 auto; /* Impede que o item estique desproporcionalmente */
+  flex: 0 0 auto;
   position: relative;
 }
 
 /* ── Linha Conectora ── */
 .connector {
-  width: 50px; /* Largura fixa para manter a proporção elegante */
+  width: 50px;
   height: 2px;
   background: #e2e8f0;
-  margin-top: 15px; /* Alinhamento vertical com o centro do círculo */
+  margin-top: 15px;
   margin-left: 0.5rem;
   margin-right: 0.5rem;
   transition: all 0.4s ease;
   border-radius: 2px;
   flex-shrink: 0;
-}
-
-.connector--active {
-  background: #4f46e5; /* Cor ativa (brand) */
-  box-shadow: 0 0 10px rgba(79, 70, 229, 0.2);
 }
 
 /* ── Wrapper da Etapa (Círculo + Texto) ── */
@@ -114,11 +202,13 @@ const getStageStatus = (index: number) => {
   justify-content: center;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 2px solid transparent;
+  background: #ffffff;
 }
 
 .stage-number {
   font-size: 0.75rem;
   font-weight: 800;
+  color: #94a3b8;
 }
 
 .check-icon {
@@ -133,56 +223,23 @@ const getStageStatus = (index: number) => {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #94a3b8;
-  transition: color 0.3s ease;
+  transition: all 0.3s ease;
   white-space: nowrap;
 }
 
-/* ── ESTADO: CONCLUÍDO (Completed) ── */
-.step-item.completed .stage-circle {
-  background: #4f46e5; /* Pode ser verde se preferir: #10b981 */
-  border-color: #4f46e5;
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
-}
-
-.step-item.completed .stage-label {
-  color: #4f46e5;
-}
-
-/* ── ESTADO: ATUAL (Current) ── */
+/* ── ESTADO: ATUAL (Scale) ── */
 .step-item.current .stage-circle {
-  background: #ffffff;
-  border: 2px solid #4f46e5;
   transform: scale(1.15);
-  box-shadow: 0 0 15px rgba(79, 70, 229, 0.25);
-}
-
-.step-item.current .stage-number {
-  color: #4f46e5;
-}
-
-.step-item.current .stage-label {
-  color: #1e293b;
-  font-weight: 850;
-}
-
-/* ── ESTADO: INATIVO (Inactive/Future) ── */
-.step-item.inactive .stage-circle {
-  background: #f8fafc;
-  border: 2px solid #e2e8f0;
-}
-
-.step-item.inactive .stage-number {
-  color: #94a3b8;
 }
 
 /* Responsividade Básica */
 @media (max-width: 768px) {
   .stage-label {
-    display: none; /* Esconde texto em telas muito pequenas para não quebrar */
+    display: none;
   }
   .connector {
     margin: 0 0.5rem;
+    width: 30px;
   }
 }
 </style>

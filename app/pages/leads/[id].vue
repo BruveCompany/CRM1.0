@@ -54,15 +54,18 @@
             :lead="lead" 
             @whatsapp="openWhatsApp"
             @edit="isEditModalOpen = true"
+            @add-task="isTaskModalOpen = true"
             @schedule="handleSchedule"
           />
 
           <!-- 1.1 Funil de Vendas Stepper -->
-          <LeadFunilVendasStepper 
-            v-if="leadStatuses.length > 0"
-            :stages="leadStatuses.map(s => s.display_name)" 
-            :current-stage="leadStatuses.find(s => isCurrentStatus(s.id))?.display_name || ''" 
-          />
+          <ClientOnly>
+            <LeadFunilVendasStepper 
+              v-if="leadStatuses.length > 0"
+              :stages="leadStatuses.map(s => ({ name: s.display_name, color: s.color_bg || '#4f46e5' }))" 
+              :current-stage-name="leadStatuses.find(s => isCurrentStatus(s.id))?.display_name || ''" 
+            />
+          </ClientOnly>
 
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
@@ -95,10 +98,17 @@
 
             <!-- 3. Center Column: Timeline (5 slots) -->
             <div class="lg:col-span-5">
-              <LeadTimeline 
-                :activities="timelineActivities" 
-                @add-note="saveQuickNote" 
-              />
+              <ClientOnly>
+                <LeadTimeline 
+                  :activities="timelineActivities" 
+                  :files="listaDeArquivos"
+                  @add-note="saveQuickNote" 
+                  @files-selected="processarUpload"
+                  @download-file="iniciarDownload"
+                  @delete-file="confirmarExclusao"
+                  @add-task="isTaskModalOpen = true"
+                />
+              </ClientOnly>
             </div>
 
             <!-- 4. Right Column: Strategic Actions (3 slots) -->
@@ -211,6 +221,17 @@
             :dias-semana="globalDiasSemana"
             @salvar="handleScheduleSave"
           />
+
+          <!-- Modal Nova Tarefa -->
+          <LeadNovaTarefaModal
+            v-if="isTaskModalOpen"
+            v-model="isTaskModalOpen"
+            :lead-name="lead?.nome || ''"
+            :current-user="{ id: profile?.id, name: profile?.nome }"
+            :team-members="globalProfissionais"
+            @close="isTaskModalOpen = false"
+            @save="handleSaveTask"
+          />
         </div>
       </div>
     </NuxtLayout>
@@ -279,6 +300,7 @@ onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside))
 const lead = ref<any>(null);
 const loading = ref(true);
 const timelineActivities = ref<any[]>([]);
+const listaDeArquivos = ref<any[]>([]);
 /**
  * Dados do próximo agendamento (hora_inicio + hora_fim).
  * Populado pelo handleScheduleSave após o modal confirmar.
@@ -295,6 +317,30 @@ const diasAberto = computed(() => {
 });
 
 // --- FETCH DATA ---
+const carregarArquivosDoLead = async (leadId: string) => {
+  try {
+    const { data, error } = await (supabase as any)
+      .from('attachments')
+      .select('*')
+      .eq('lead_id', leadId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    
+    // Mapeia para o formato esperado pelo componente GerenciadorArquivos
+    listaDeArquivos.value = ((data as any[]) || []).map(f => ({
+      id: f.id,
+      name: f.file_name || f.name, // Fallback caso ainda existam registros antigos
+      size: f.file_size || f.size,
+      uploadDate: f.created_at,
+      uploadedBy: lead.value?.vendedor_nome || 'Consultor',
+      file_path: f.file_path // Importante para o Storage
+    }));
+  } catch (err: any) {
+    console.error('[Arquivos] Erro ao carregar:', err.message);
+  }
+};
+
 const fetchData = async () => {
   loading.value = true;
   console.log(`[DIAGNÓSTICO] Iniciando busca unificada para o Lead ID: ${id}`);
@@ -323,6 +369,9 @@ const fetchData = async () => {
         ...(leadData as any),
         vendedor_nome: (leadData as any).ag_profiles?.nome
       };
+      
+      // Carrega os arquivos associados
+      carregarArquivosDoLead(id as string);
     }
 
     // 3. Busca o próximo agendamento do lead (hora_inicio + hora_fim)
@@ -392,6 +441,143 @@ onMounted(async () => {
 });
 
 // --- MÉTODOS DE AÇÃO ---
+// --- GESTÃO DE ARQUIVOS (Supabase Integration) ---
+const processarUpload = async (receivedFiles: any) => {
+  // Limpa o console a cada tentativa para facilitar a leitura
+  console.clear();
+  console.log('--- INICIANDO PROCESSO DE UPLOAD ---');
+
+  // Adiciona verificação e garante que estamos trabalhando com um array
+  if (!receivedFiles) {
+      console.error('Nenhum arquivo recebido no evento. O processo foi interrompido.');
+      return;
+  }
+  
+  const files = Array.isArray(receivedFiles) 
+    ? receivedFiles 
+    : (receivedFiles instanceof FileList ? Array.from(receivedFiles) : [receivedFiles]);
+
+  console.log(`[PRE-CHECK] Quantidade de arquivos a processar: ${files.length}`);
+
+  try {
+    if (!lead.value || !id) {
+      throw new Error('ID do Lead não encontrado.');
+    }
+
+    // 1. OBTÉM A SESSÃO COMPLETA PARA EXTRAIR O TOKEN JWT
+    // Isso é crucial para garantir que o Supabase Storage valide o RLS corretamente
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) throw sessionError;
+    if (!sessionData.session) throw new Error('Sessão do usuário não encontrada.');
+    
+    const accessToken = sessionData.session.access_token;
+    const user = sessionData.session.user;
+
+    console.log(`[CHECK 2] SUCESSO: Usuário autenticado com ID ${user.id}`);
+
+    for (const file of files) {
+      console.log(`--- Processando arquivo: ${file.name} ---`);
+      
+      const timestamp = Date.now();
+      const fileName = file.name.replace(/[^\x00-\x7F]/g, ""); 
+      const filePath = `lead_files/${id}/${timestamp}-${fileName}`;
+
+      // 2. PASSA O TOKEN NA CHAMADA DE UPLOAD EXPLICITAMENTE
+      // Isso força a autorização mesmo que o cliente não o faça automaticamente no Storage
+      console.log('[AÇÃO] Enviando arquivo para o Storage com Header de Autorização...');
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('lead-attachments')
+        .upload(filePath, file, {
+          headers: {
+            authorization: `Bearer ${accessToken}`,
+          },
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+      console.log('[CHECK 4] SUCESSO: Upload para Storage concluído.');
+
+      // 3. Inserção no Banco de Dados (Metadados)
+      console.log('[AÇÃO] Inserindo metadados na tabela "attachments"...');
+      const { data: dbData, error: dbError } = await (supabase as any)
+        .from('attachments')
+        .insert({
+          lead_id: id,
+          file_name: file.name,
+          file_path: filePath,
+          file_type: file.type,
+          file_size: file.size,
+          uploaded_by: user.id
+        })
+        .select()
+        .single();
+      
+      if (dbError) throw dbError;
+      
+      listaDeArquivos.value.unshift({
+        id: dbData.id,
+        name: dbData.file_name,
+        size: dbData.file_size,
+        uploadDate: dbData.created_at,
+        uploadedBy: lead.value?.vendedor_nome || 'Consultor',
+        file_path: dbData.file_path
+      });
+      console.log('--- UPLOAD DO ARQUIVO CONCLUÍDO COM SUCESSO ---');
+    }
+
+    notifySuccess('Upload concluído com sucesso!');
+
+  } catch (error: any) {
+    console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+    console.error('!!! ERRO CAPTURADO NO PROCESSO DE UPLOAD !!!');
+    console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+    console.error('Objeto do erro:', error);
+    notifyError('Erro no upload: ' + (error.message || 'Verifique o console'));
+  }
+};
+
+const iniciarDownload = async (file: any) => {
+  try {
+    const { data } = supabase.storage
+      .from('lead-attachments')
+      .getPublicUrl(file.file_path);
+
+    if (data?.publicUrl) {
+      window.open(data.publicUrl, '_blank');
+    }
+  } catch (err: any) {
+    notifyError('Não foi possível gerar o link de download.');
+  }
+};
+
+const confirmarExclusao = async (file: any) => {
+  if (!confirm(`Tem certeza que deseja excluir o arquivo "${file.name}"?`)) return;
+
+  try {
+    // 1. Remover do Storage
+    const { error: storageError } = await supabase.storage
+      .from('lead-attachments')
+      .remove([file.file_path]);
+
+    if (storageError) throw storageError;
+
+    // 2. Remover do Banco
+    const { error: dbError } = await (supabase as any)
+      .from('attachments')
+      .delete()
+      .eq('id', file.id);
+
+    if (dbError) throw dbError;
+
+    // 3. Atualizar UI
+    listaDeArquivos.value = listaDeArquivos.value.filter(f => f.id !== file.id);
+    notifySuccess('Arquivo excluído.');
+  } catch (err: any) {
+    notifyError('Erro ao excluir arquivo.');
+  }
+};
+
 const saveQuickNote = async (content: string) => {
   try {
     const { profile } = useAuth();
@@ -426,6 +612,38 @@ const openWhatsApp = () => {
 
 const handleEdit = () => { isEditModalOpen.value = true; };
 const handleSchedule = () => { isScheduleModalOpen.value = true; };
+
+const isTaskModalOpen = ref(false);
+const handleSaveTask = async (taskData: any) => {
+  try {
+    const { profile: authProfile } = useAuth();
+    if (!authProfile.value?.id) {
+       notifyError('Sessão expirada. Faça login novamente.');
+       return;
+    }
+
+    const { error } = await (supabase.from('ag_tarefas') as any)
+      .insert({
+        lead_id: id,
+        titulo: taskData.title,
+        descricao: taskData.description,
+        data_vencimento: taskData.dueDate,
+        profissional_id: taskData.assigneeId,
+        criado_por: authProfile.value.id
+      });
+
+    if (error) throw error;
+
+    isTaskModalOpen.value = false;
+    notifySuccess('Tarefa criada com sucesso!');
+    
+    // Atualiza a timeline para mostrar a nova tarefa (se o RPC incluir tarefas)
+    await fetchData();
+  } catch (err: any) {
+    console.error('[ERRO AO SALVAR TAREFA]', err.message);
+    notifyError('Erro ao criar tarefa. Verifique as permissões do banco de dados.');
+  }
+};
 
 // --- EDIT & SCHEDULE MODALS ---
 const isEditModalOpen = ref(false);
