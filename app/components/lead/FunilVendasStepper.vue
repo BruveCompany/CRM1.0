@@ -10,7 +10,6 @@
       <div 
         v-if="index > 0" 
         class="connector" 
-        :class="{ 'connector--active': index <= currentStageIndex }"
         :style="getConnectorStyle(index)"
       ></div>
 
@@ -23,7 +22,8 @@
           <Icon 
             v-if="getStageStatus(index) === 'completed'" 
             name="heroicons:check-20-solid" 
-            class="check-icon" 
+            class="check-icon"
+            :style="{ color: stage.color }"
           />
           <span 
             v-else 
@@ -51,7 +51,7 @@ import { computed } from 'vue';
  * FunilVendasStepper.vue
  * ─────────────────────────────────────────────────────────────────
  * Exibe o progresso de um lead através de etapas customizáveis.
- * Cores dinâmicas por estágio, design modernizado.
+ * Design Minimalista: Foco em bordas, brilhos e transparências.
  * ─────────────────────────────────────────────────────────────────
  */
 
@@ -73,6 +73,16 @@ const props = defineProps<Props>();
 const currentStageIndex = computed(() => props.stages.findIndex(s => s.name === props.currentStageName));
 
 /**
+ * Utilitário para adicionar opacidade a uma cor HEX
+ */
+const hexToRGBA = (hex: string, opacity: number) => {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+};
+
+/**
  * Determina o estado da etapa baseado na posição atual.
  * @param index Posição da etapa no array
  */
@@ -86,16 +96,21 @@ const getStageStatus = (index: number) => {
  * Estilos dinâmicos para a linha conectora
  */
 const getConnectorStyle = (index: number) => {
-  const isCompleted = index <= currentStageIndex.value;
-  if (isCompleted) {
-    // A cor da linha vem da etapa anterior (ou da atual se preferir)
-    const prevColor = props.stages[index - 1]?.color || '#4f46e5';
+  const status = getStageStatus(index);
+  const isActive = index <= currentStageIndex.value;
+  const prevStage = props.stages[index - 1];
+  
+  if (isActive) {
     return {
-      backgroundColor: prevColor,
-      boxShadow: `0 0 10px ${prevColor}33`
+      backgroundColor: prevStage?.color || '#4f46e5',
+      boxShadow: `0 0 8px ${hexToRGBA(prevStage?.color || '#4f46e5', 0.2)}`
     };
   }
-  return {}; // Segue o padrão do CSS
+  
+  // Inativo: Cor do estágio atual suave ou cinza
+  return {
+    backgroundColor: hexToRGBA(props.stages[index]?.color || '#e2e8f0', 0.2),
+  };
 };
 
 /**
@@ -106,23 +121,25 @@ const getCircleStyle = (index: number, stage: Stage) => {
   
   if (status === 'completed') {
     return {
-      backgroundColor: stage.color,
       borderColor: stage.color,
-      boxShadow: `0 4px 12px ${stage.color}40`
+      backgroundColor: '#ffffff'
     };
   }
   
   if (status === 'current') {
     return {
       borderColor: stage.color,
-      boxShadow: `0 0 15px ${stage.color}40`
+      backgroundColor: '#ffffff',
+      boxShadow: `0 0 12px 2px ${hexToRGBA(stage.color, 0.4)}`, // Glow
+      borderWidth: '2px'
     };
   }
   
-  // Inativo: Borda com cor da etapa em baixa opacidade
+  // Inativo: Borda suave
   return {
-    borderColor: `${stage.color}40`,
-    backgroundColor: '#f8fafc'
+    borderColor: hexToRGBA(stage.color, 0.3),
+    backgroundColor: '#ffffff',
+    borderWidth: '1.5px'
   };
 };
 
@@ -134,7 +151,10 @@ const getNumberStyle = (index: number, stage: Stage) => {
   if (status === 'current') {
     return { color: stage.color };
   }
-  return {};
+  if (status === 'inactive') {
+    return { color: hexToRGBA(stage.color, 0.4) };
+  }
+  return { color: stage.color };
 };
 
 /**
@@ -143,8 +163,8 @@ const getNumberStyle = (index: number, stage: Stage) => {
 const getLabelStyle = (index: number, stage: Stage) => {
   const status = getStageStatus(index);
   if (status === 'completed') return { color: stage.color };
-  if (status === 'current') return { color: '#1e293b', fontWeight: '850' };
-  return { color: '#94a3b8' };
+  if (status === 'current') return { color: stage.color, fontWeight: '800' };
+  return { color: hexToRGBA(stage.color, 0.4) };
 };
 </script>
 
@@ -174,7 +194,6 @@ const getLabelStyle = (index: number, stage: Stage) => {
 .connector {
   width: 50px;
   height: 2px;
-  background: #e2e8f0;
   margin-top: 15px;
   margin-left: 0.5rem;
   margin-right: 0.5rem;
@@ -201,20 +220,17 @@ const getLabelStyle = (index: number, stage: Stage) => {
   align-items: center;
   justify-content: center;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 2px solid transparent;
-  background: #ffffff;
+  border: 1.5px solid transparent;
 }
 
 .stage-number {
   font-size: 0.75rem;
   font-weight: 800;
-  color: #94a3b8;
 }
 
 .check-icon {
   width: 18px;
   height: 18px;
-  color: #ffffff;
 }
 
 /* Label da Etapa */
