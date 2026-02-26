@@ -57,6 +57,13 @@
             @schedule="handleSchedule"
           />
 
+          <!-- 1.1 Funil de Vendas Stepper -->
+          <LeadFunilVendasStepper 
+            v-if="leadStatuses.length > 0"
+            :stages="leadStatuses.map(s => s.display_name)" 
+            :current-stage="leadStatuses.find(s => isCurrentStatus(s.id))?.display_name || ''" 
+          />
+
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
             <!-- 2. Left Column: Information (4 slots) -->

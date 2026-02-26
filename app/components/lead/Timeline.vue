@@ -3,13 +3,13 @@
     <!-- Tabs -->
     <div class="flex items-center gap-6 px-8 pt-6 pb-2 border-b border-gray-100/50">
       <button 
-        v-for="tab in ['Atividades', 'Notas', 'Mensagens']" 
-        :key="tab"
-        @click="activeTab = tab"
-        :class="['text-[10px] font-bold uppercase tracking-widest pb-2 transition-all relative', activeTab === tab ? 'text-primary-600' : 'text-slate-400 hover:text-slate-600']"
+        v-for="tab in [{id: 'ATIVIDADES', label: 'Atividades'}, {id: 'NOTAS', label: 'Notas'}, {id: 'MENSAGENS', label: 'Mensagens'}]" 
+        :key="tab.id"
+        @click="setFilter(tab.id)"
+        :class="['text-[10px] font-bold uppercase tracking-widest pb-2 transition-all relative', activeFilter === tab.id ? 'active-tab text-primary-600' : 'text-slate-400 hover:text-slate-600']"
       >
-        {{ tab }}
-        <span v-if="activeTab === tab" class="absolute bottom-0 left-0 w-full h-[2px] bg-primary-600 rounded-full"></span>
+        {{ tab.label }}
+        <span v-if="activeFilter === tab.id" class="absolute bottom-0 left-0 w-full h-[2px] bg-primary-600 rounded-full animate-in fade-in slide-in-from-left-2"></span>
       </button>
     </div>
 
@@ -29,10 +29,10 @@
         </div>
 
         <!-- Timeline List -->
-        <div v-if="activities.length > 0" class="relative pl-8 space-y-5">
+        <div v-if="filteredActivities.length > 0" class="relative pl-8 space-y-5">
           <div class="absolute left-0 top-2 bottom-0 w-[1px] bg-slate-100 border-l border-dashed border-slate-200"></div>
           <LeadTimelineItem 
-            v-for="(activity, idx) in activities" 
+            v-for="(activity, idx) in filteredActivities" 
             :key="idx" 
             :activity="activity" 
           />
@@ -53,7 +53,24 @@ const props = defineProps<{
 
 const emit = defineEmits(['add-note']);
 const internalNote = ref('');
-const activeTab = ref('Atividades');
+
+// --- GERENCIAMENTO DE ESTADO ---
+const activeFilter = ref('ATIVIDADES');
+
+function setFilter(filterName: string) {
+  activeFilter.value = filterName;
+}
+
+// --- LÓGICA DE FILTRAGEM ---
+const filteredActivities = computed(() => {
+  if (activeFilter.value === 'NOTAS') {
+    return props.activities.filter(a => a.type === 'note');
+  }
+  if (activeFilter.value === 'MENSAGENS') {
+    return props.activities.filter(a => a.type === 'message');
+  }
+  return props.activities; // 'ATIVIDADES' (todas)
+});
 
 function handleSave() {
   if (!internalNote.value.trim()) return;
@@ -81,5 +98,11 @@ function handleSave() {
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(148, 163, 184, 0.6);
+}
+
+/* Estilo para Aba Ativa */
+.active-tab {
+  text-shadow: 0 0 1px currentColor; /* Leve negrito sem alterar largura */
+  letter-spacing: 0.1em;
 }
 </style>
