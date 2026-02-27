@@ -1,5 +1,5 @@
 <template>
-  <div class="p-6 lg:p-8 space-y-8 animate-fade-in max-w-[1600px] mx-auto">
+  <div class="p-6 lg:p-8 space-y-6 animate-fade-in max-w-[1600px] mx-auto">
     <!-- Cabeçalho da Página -->
     <header class="flex flex-col md:flex-row md:items-center justify-between gap-4">
       <div>
@@ -53,7 +53,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
       
       <!-- Minha Agenda (Funcional) -->
-      <section class="lg:col-span-2 flex flex-col h-[480px]">
+      <section class="lg:col-span-2 flex flex-col h-[450px]">
         <div class="flex items-center justify-between mb-4 px-1">
           <h2 class="text-xl font-bold text-neutral-900 flex items-center gap-2">
             <ClientOnly>
@@ -67,18 +67,12 @@
         <div class="flex-1 bg-white rounded-2xl border border-neutral-100 p-6 shadow-soft overflow-hidden">
           <ClientOnly>
             <DashboardMinhaAgendaWidget :items="proximasAcoes" />
-            <template #fallback>
-              <div class="flex flex-col gap-3 animate-pulse">
-                <div class="h-20 bg-neutral-50 rounded-xl"></div>
-                <div class="h-20 bg-neutral-50 rounded-xl"></div>
-              </div>
-            </template>
           </ClientOnly>
         </div>
       </section>
 
       <!-- Funil de Vendas (Dinâmico) -->
-      <section class="flex flex-col h-[480px]">
+      <section class="flex flex-col h-[450px]">
         <div class="flex flex-col mb-4 px-1">
           <h2 class="text-xl font-bold text-neutral-900 flex items-center gap-2">
             <ClientOnly>
@@ -86,7 +80,6 @@
             </ClientOnly>
             Funil de Vendas
           </h2>
-          <p class="text-xs text-neutral-400 font-medium mt-0.5">Fluxo de efetividade comercial</p>
         </div>
         
         <div class="flex-1 bg-white rounded-2xl border border-neutral-100 p-6 shadow-soft overflow-hidden flex flex-col items-center justify-center">
