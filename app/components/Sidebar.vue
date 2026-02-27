@@ -9,14 +9,18 @@
       @click="toggleSidebar"
       class="absolute -right-3 top-9 bg-white border border-gray-200 rounded-full p-1 shadow-sm hover:bg-gray-50 transition-colors z-10"
     >
-      <ChevronLeftIcon v-if="!isCollapsed" class="w-4 h-4 text-gray-400" />
-      <ChevronRightIcon v-else class="w-4 h-4 text-gray-400" />
+      <ClientOnly>
+        <ChevronLeftIcon v-if="!isCollapsed" class="w-4 h-4 text-gray-400" />
+        <ChevronRightIcon v-else class="w-4 h-4 text-gray-400" />
+      </ClientOnly>
     </button>
 
     <!-- Header -->
     <div :class="['flex items-center gap-3 px-4 py-6', isCollapsed ? 'justify-center px-2' : '']">
       <div class="flex items-center justify-center flex-shrink-0">
-        <ChatBubbleLeftRightIcon class="w-8 h-8 text-[#4338CA] stroke-1" />
+        <ClientOnly>
+          <ChatBubbleLeftRightIcon class="w-8 h-8 text-[#4338CA] stroke-1" />
+        </ClientOnly>
       </div>
       <div v-if="!isCollapsed" class="flex-1 overflow-hidden">
         <h2 class="text-base font-medium text-gray-900 leading-tight whitespace-nowrap">Painel de<br>Atendimento</h2>

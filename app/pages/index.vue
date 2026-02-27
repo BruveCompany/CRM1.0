@@ -1,30 +1,12 @@
-<template>
-  <div>
-    <!-- Página de redirecionamento para o Dashboard -->
-    <div class="flex items-center justify-center h-screen bg-neutral-50">
-      <div class="animate-pulse text-neutral-400 font-medium">
-        Carregando Dashboard...
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
-/**
- * Rota raiz (/)
- * Redireciona para /dashboard para manter a estrutura solicitada.
- */
+// Redireciona imediatamente da rota raiz '/' para '/dashboard'.
+// Isso é executado no lado do servidor, sendo a forma mais eficiente.
 definePageMeta({
-  layout: false // Sem layout para o redirecionamento
+  middleware: [() => navigateTo('/dashboard', { replace: true, redirectCode: 301 })]
 })
-
-// Redirecionamento tanto no servidor quanto no cliente
-onBeforeMount(() => {
-  navigateTo('/dashboard')
-})
-
-// Redirecionamento no servidor
-if (process.server) {
-  navigateTo('/dashboard')
-}
 </script>
+
+<template>
+  <!-- O template pode ficar vazio, pois o usuário nunca verá esta página -->
+  <div></div>
+</template>

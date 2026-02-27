@@ -424,9 +424,10 @@ async function handleSalvar() {
 
   salvando.value = true
 
-  // Se não tem ID (Lead novo), apenas emite a "intenção" de agendamento 
-  // O salvamento real ocorrerá após a criação do Lead pelo componente pai
-  if (!props.leadId && !props.clienteId) {
+  // Se não tem ID vinculado (nem via Props, nem selecionado no formulário), 
+  // significa que estamos em um fluxo de 'Novo Lead' onde o salvamento real
+  // ocorrerá após a criação do Lead pelo componente pai (modo template).
+  if (!props.leadId && !props.clienteId && !formData.value.clienteId) {
     emit('salvar', {
       ...formData.value,
       isTemplate: true // Indica que é um agendamento temporário
