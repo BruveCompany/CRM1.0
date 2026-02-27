@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full h-full min-h-[300px] flex items-center justify-center">
+  <div class="w-full h-full min-h-[300px] flex items-center justify-center pt-2">
     <Bar 
       v-if="chartData && chartData.datasets && chartData.datasets[0] && chartData.datasets[0].data.length > 0"
       :data="chartData" 
@@ -23,9 +23,10 @@ import {
   CategoryScale, 
   LinearScale 
 } from 'chart.js'
+import ChartDataLabels from 'chartjs-plugin-datalabels'
 
-// Registro obrigatório do Chart.js
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
+// Registro obrigatório do Chart.js + Plugin de Labels
+ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ChartDataLabels)
 
 const props = defineProps<{
   chartData: {
@@ -33,7 +34,8 @@ const props = defineProps<{
     datasets: {
       data: number[]
       backgroundColor: string[]
-      borderRadius?: number
+      borderWidth?: number | any
+      borderRadius?: any
       barThickness?: number
     }[]
   } | null
@@ -41,51 +43,58 @@ const props = defineProps<{
 
 // Configurações do gráfico
 const chartOptions = {
-  indexAxis: 'y' as const, // Gráfico Horizontal
+  indexAxis: 'y' as const,
   responsive: true,
   maintainAspectRatio: false,
+  animation: {
+    duration: 2200,
+    easing: 'easeOutQuart' as const,
+    x: {
+      from: -500, // Começa fora da tela à esquerda
+      type: 'number'
+    }
+  },
   plugins: {
-    legend: {
-      display: false, // Remove a legenda conforme pedido
+    legend: { display: false },
+    datalabels: {
+      anchor: 'center' as const,
+      align: 'center' as const,
+      color: '#ffffff', // Números agora em branco para melhor contraste
+      font: {
+        size: 11,
+        weight: 600
+      },
+      formatter: (value: number) => value > 0 ? value : ''
     },
     tooltip: {
-      callbacks: {
-        label: (context: any) => {
-          return ` ${context.raw} leads`; // Formato "X leads"
-        }
-      },
       backgroundColor: '#1e293b',
       padding: 12,
-      titleFont: { size: 14, weight: 'bold' as const },
-      bodyFont: { size: 13 },
-      displayColors: false
+      displayColors: false,
+      callbacks: {
+        label: (context: any) => ` Total: ${context.raw} leads`
+      }
     }
   },
   scales: {
-    x: {
-      display: false, // Remove o eixo X para um look clean
-      grid: {
-        display: false
-      }
-    },
+    x: { display: false, grid: { display: false } },
     y: {
-      grid: {
-        display: false // Remove as linhas de grade do eixo Y
-      },
+      grid: { display: false },
       ticks: {
-        font: {
-          size: 12,
-          weight: 'bold' as const
-        },
-        color: '#64748b'
+        font: { size: 11, weight: 600 },
+        color: '#64748b',
+        padding: 12
       }
     }
   },
-  // Arredondamento das barras
   elements: {
     bar: {
-      borderRadius: 8,
-      borderSkipped: false as const
+      borderRadius: {
+        topRight: 20,
+        bottomRight: 20,
+        topLeft: 0,
+        bottomLeft: 0
+      }, // Lado esquerdo reto, lado direito redondo
+      borderSkipped: 'left' as const
     }
   }
 }

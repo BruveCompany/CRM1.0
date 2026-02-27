@@ -79,13 +79,14 @@
 
       <!-- Funil de Vendas (Dinâmico) -->
       <section class="flex flex-col h-[480px]">
-        <div class="flex items-center justify-between mb-4 px-1">
+        <div class="flex flex-col mb-4 px-1">
           <h2 class="text-xl font-bold text-neutral-900 flex items-center gap-2">
             <ClientOnly>
               <Icon name="heroicons:funnel" class="w-5 h-5 text-indigo-500" />
             </ClientOnly>
             Funil de Vendas
           </h2>
+          <p class="text-xs text-neutral-400 font-medium mt-0.5">Fluxo de efetividade comercial</p>
         </div>
         
         <div class="flex-1 bg-white rounded-2xl border border-neutral-100 p-6 shadow-soft overflow-hidden flex flex-col items-center justify-center">
@@ -226,7 +227,7 @@ const fetchDashboardData = async () => {
     
     leadsAtivosCount.value = count || 0;
 
-    // 5. Buscar Dados do Funil via RPC (Parte 3 do seu pedido)
+    // 5. Buscar Dados do Funil via RPC (Por Status)
     const { data: funilData, error: funilError } = await (supabase.rpc as any)('get_funil_vendas_dashboard', { 
       user_id_param: profile.value.user_id 
     });
@@ -236,11 +237,14 @@ const fetchDashboardData = async () => {
         labels: funilData.map((d: any) => d.status_nome),
         datasets: [{
           data: funilData.map((d: any) => d.lead_count),
-          backgroundColor: funilData.map((d: any) => hexToRgba(d.cor, 0.7)),
-          borderColor: funilData.map((d: any) => d.cor),
-          borderWidth: 1,
-          borderRadius: 6,
-          barThickness: 24
+          // Avançado para a cor Indigo base (#6366f1) com gradiente de opacidade
+          backgroundColor: funilData.map((_: any, index: number) => {
+            const opacity = Math.max(0.3, 1 - (index * 0.12)); 
+            return hexToRgba('#6366f1', opacity);
+          }),
+          borderRadius: 20,
+          barThickness: 24,
+          borderWidth: 0
         }]
       };
     }
