@@ -4,15 +4,34 @@
     <header class="flex flex-col md:flex-row md:items-center justify-between gap-4">
       <div>
         <h1 class="text-3xl font-bold text-neutral-900 tracking-tight">Dashboard</h1>
-        <p class="text-neutral-500 mt-1 font-medium">Bem-vindo de volta! Aqui está o resumo do seu CRM hoje.</p>
+        <p class="text-neutral-500 mt-1 font-medium">Bem-vindo {{ userNameDisplay }}! Aqui está o resumo do seu CRM hoje.</p>
       </div>
       <div class="flex items-center gap-3">
-        <button class="px-4 py-2 bg-white border border-neutral-200 rounded-lg text-sm font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors shadow-sm flex items-center gap-2">
-          <ClientOnly>
-            <Icon name="heroicons:calendar" class="w-4 h-4" />
-          </ClientOnly>
-          Últimos 30 dias
-        </button>
+        <!-- Filtro de Período -->
+        <div class="relative">
+          <button 
+            @click="showPeriodPopover = !showPeriodPopover"
+            class="px-4 py-2 bg-white border border-neutral-200 rounded-lg text-sm font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors shadow-sm flex items-center gap-2"
+          >
+            <ClientOnly>
+              <Icon name="heroicons:calendar" class="w-4 h-4 text-neutral-400" />
+            </ClientOnly>
+            {{ periods.find(p => p.value === selectedPeriod)?.label }}
+          </button>
+
+          <div v-if="showPeriodPopover" class="absolute right-0 mt-2 w-48 bg-white border border-neutral-100 rounded-xl shadow-xl z-50 p-2 space-y-1">
+            <button 
+              v-for="p in periods" 
+              :key="p.value"
+              @click="selectedPeriod = p.value; showPeriodPopover = false"
+              class="w-full text-left px-3 py-2 text-sm font-medium rounded-lg transition-colors"
+              :class="selectedPeriod === p.value ? 'bg-primary-50 text-primary-600' : 'text-neutral-600 hover:bg-neutral-50'"
+            >
+              {{ p.label }}
+            </button>
+          </div>
+        </div>
+
         <button 
           @click="isCreateLeadModalOpen = true"
           class="px-4 py-2 bg-primary-600 rounded-lg text-sm font-semibold text-white hover:bg-primary-700 transition-colors shadow-sm flex items-center gap-2"
@@ -164,6 +183,24 @@ const funnelResult = ref<any[]>([]);
 const funilChartData = ref<any>(null);
 const leadsAtivosCount = ref(0);
 const loading = ref(true);
+const showPeriodPopover = ref(false);
+const selectedPeriod = ref(30);
+
+const periods = [
+  { label: 'Últimos 7 dias', value: 7 },
+  { label: 'Últimos 15 dias', value: 15 },
+  { label: 'Últimos 30 dias', value: 30 },
+  { label: 'Últimos 90 dias', value: 90 },
+  { label: 'Todo o período', value: 3650 },
+];
+
+// --- COMPUTADOS ---
+const userNameDisplay = computed(() => {
+  if (!profile.value?.nome) return 'de volta';
+  const names = profile.value.nome.trim().split(/\s+/);
+  if (names.length <= 2) return profile.value.nome;
+  return `${names[0]} ${names[1]}`;
+});
 
 // --- AUXILIARES ---
 /**
@@ -197,13 +234,18 @@ const fetchDashboardData = async () => {
     
     const profId = profissionalData?.id;
 
+    // Calcular data de início baseada no período
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - selectedPeriod.value);
+    const startDateISO = startDate.toISOString();
+
     if (profId) {
       // 2. Chamar a função do composable (Passo 4 do seu pedido)
       tarefas.value = await getProximasTarefas(profId, 5);
-      console.log('Tarefas carregadas:', tarefas.value.length);
+      console.log('Dashboard: Tarefas carregadas');
     }
 
-    // 3. Buscar Agendamentos (Visão Geral da Empresa)
+    // 3. Buscar Agendamentos (Visão Geral da Empresa - Próximos, não filtrados por passado)
     const today = new Date().toLocaleDateString('en-CA');
     const { data: agData } = await supabase
       .from('ag_view_agendamentos_completo')
@@ -216,11 +258,12 @@ const fetchDashboardData = async () => {
     
     agendamentos.value = agData || [];
 
-    // 4. Buscar KPI
+    // 4. Buscar KPI (Filtrado por Período)
     const { count } = await supabase
       .from('ag_leads')
       .select('*', { count: 'exact', head: true })
-      .eq('vendedor_id', profile.value.id);
+      .eq('vendedor_id', profile.value.id)
+      .gte('criado_em', startDateISO);
     
     leadsAtivosCount.value = count || 0;
 
@@ -246,10 +289,11 @@ const fetchDashboardData = async () => {
       };
     }
 
-    // 6. Buscar Atividades Recentes (Nova View)
+    // 6. Buscar Atividades Recentes (Nova View - Filtrada por Período)
     const { data: actData } = await supabase
       .from('view_atividades_recentes')
       .select('*')
+      .gte('data_criacao', startDateISO)
       .order('data_criacao', { ascending: false })
       .limit(10);
     
@@ -305,6 +349,11 @@ onMounted(() => {
 // Watch para recarregar se o profile mudar (ex: login tardio)
 watch(() => profile.value?.id, (newId) => {
   if (newId) fetchDashboardData();
+});
+
+// Watch para recarregar quando o período mudar
+watch(selectedPeriod, () => {
+  fetchDashboardData();
 });
 </script>
 

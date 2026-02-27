@@ -10,10 +10,16 @@
         <slot />
       </div>
     </main>
+
+    <!-- Modais Globais -->
+    <LeadsLeadFormModal v-model="isCreateLeadModalOpen" />
   </div>
 </template>
 
 <script setup lang="ts">
+import { useLeads } from '~/composables/useLeads';
+
+const { isCreateLeadModalOpen } = useLeads();
 /**
  * ================= Layout: Default =================
  * Layout principal que mantém a Sidebar persistente.
