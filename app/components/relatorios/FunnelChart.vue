@@ -85,7 +85,8 @@ const initChart = () => {
                 { label: 'Agendamentos', value: props.scheduled },
                 { label: 'Vendas/Conversão', value: props.converted },
               ];
-              const prevVal = (idx > 0 && currentSteps[idx - 1]) ? currentSteps[idx - 1].value : props.total;
+              const prevStep = idx > 0 ? currentSteps[idx - 1] : null;
+              const prevVal = prevStep ? prevStep.value : props.total;
               const rate = prevVal && prevVal > 0 ? ((val / prevVal) * 100).toFixed(1) : 0;
               return [
                 `Total: ${val}`,

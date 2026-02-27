@@ -237,10 +237,10 @@ const fetchDashboardData = async () => {
         labels: funilData.map((d: any) => d.status_nome),
         datasets: [{
           data: funilData.map((d: any) => d.lead_count),
-          // Avançado para a cor Indigo base (#6366f1) com gradiente de opacidade
-          backgroundColor: funilData.map((_: any, index: number) => {
-            const opacity = Math.max(0.3, 1 - (index * 0.12)); 
-            return hexToRgba('#6366f1', opacity);
+          // Cores dinâmicas (conforme a imagem) com gradiente invertido (suave encima, sólida embaixo)
+          backgroundColor: funilData.map((d: any, index: number) => {
+            const opacity = Math.min(1.0, 0.3 + (index * 0.12)); 
+            return hexToRgba(d.cor, opacity);
           }),
           borderRadius: 20,
           barThickness: 24,
