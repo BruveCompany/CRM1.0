@@ -27,7 +27,7 @@
         ]"
       >
         <ClientOnly>
-          <Icon :name="icon" class="w-6 h-6" />
+          <Icon :name="icon" class="w-6 h-6 custom-icon" />
           <template #fallback>
             <div class="w-6 h-6" />
           </template>
@@ -61,5 +61,9 @@ defineProps<Props>()
 
 .kpi-card {
   animation: scale-in-subtle 0.4s ease-out;
+}
+
+.custom-icon :deep(svg) {
+  stroke-width: 1.0px !important;
 }
 </style>

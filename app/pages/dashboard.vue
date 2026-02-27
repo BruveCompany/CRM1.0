@@ -30,22 +30,26 @@
       <UiKpiCard 
         title="Leads Ativos" 
         :value="leadsAtivosCount" 
-        icon="heroicons:user-group" 
+        icon="heroicons-outline:user-group" 
+        color-classes="bg-primary-50 text-primary-600"
       />
       <UiKpiCard 
         title="Próximas Ações" 
         :value="proximasAcoes.length" 
-        icon="heroicons:clock" 
+        icon="heroicons-outline:clock" 
+        color-classes="bg-blue-50 text-blue-600"
       />
       <UiKpiCard 
         title="Taxa de Conversão" 
         value="24.8%" 
-        icon="heroicons:arrow-trending-up" 
+        icon="heroicons-outline:presentation-chart-line" 
+        color-classes="bg-emerald-50 text-emerald-600"
       />
       <UiKpiCard 
         title="Valor em Negociação" 
         value="R$ 158.400" 
-        icon="heroicons:currency-dollar" 
+        icon="heroicons-outline:currency-dollar" 
+        color-classes="bg-amber-50 text-amber-600"
       />
     </section>
 
@@ -55,7 +59,7 @@
       <!-- Minha Agenda (Funcional) -->
       <section class="lg:col-span-2 flex flex-col h-[450px]">
         <div class="flex items-center justify-between mb-4 px-1">
-          <h2 class="text-xl font-bold text-neutral-900 flex items-center gap-2">
+          <h2 class="text-xl font-semibold text-neutral-900 flex items-center gap-2">
             <ClientOnly>
               <Icon name="heroicons:calendar-days" class="w-5 h-5 text-primary-500" />
             </ClientOnly>
@@ -74,7 +78,7 @@
       <!-- Funil de Vendas (Dinâmico) -->
       <section class="flex flex-col h-[450px]">
         <div class="flex flex-col mb-4 px-1">
-          <h2 class="text-xl font-bold text-neutral-900 flex items-center gap-2">
+          <h2 class="text-xl font-semibold text-neutral-900 flex items-center gap-2">
             <ClientOnly>
               <Icon name="heroicons:funnel" class="w-5 h-5 text-indigo-500" />
             </ClientOnly>
@@ -103,7 +107,7 @@
       <!-- Atividades Recentes (Dinâmico) -->
       <section class="lg:col-span-3 flex flex-col">
         <div class="flex items-center justify-between mb-4 px-1">
-          <h2 class="text-xl font-bold text-neutral-900 flex items-center gap-2">
+          <h2 class="text-xl font-semibold text-neutral-900 flex items-center gap-2">
             <ClientOnly>
               <Icon name="heroicons:rocket-launch" class="w-5 h-5 text-warning-500" />
             </ClientOnly>

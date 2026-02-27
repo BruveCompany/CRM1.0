@@ -31,18 +31,18 @@
         <!-- Conteúdo -->
         <div class="flex-1 min-w-0">
           <div class="flex items-center justify-between mb-0.5">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+            <span class="text-[9px] font-semibold uppercase tracking-wider text-neutral-400">
               {{ item.tipo_atividade === 'nota' ? 'Nota Interna' : 'Agendamento' }}
             </span>
             <span class="text-[10px] font-medium text-neutral-400">
               {{ formatRelativeTime(item.data_criacao) }}
             </span>
           </div>
-          <h4 class="text-sm font-bold text-neutral-800 truncate mb-1 leading-tight">
+          <h4 class="text-sm font-semibold text-neutral-800 truncate mb-1 leading-tight">
              {{ item.descricao || 'Sem descrição' }}
           </h4>
           <p class="text-[11px] text-neutral-500 font-medium">
-            Lead: <span class="text-primary-600 font-bold">{{ item.lead_nome }}</span>
+            Lead: <span class="text-primary-600 font-semibold">{{ item.lead_nome }}</span>
           </p>
         </div>
 

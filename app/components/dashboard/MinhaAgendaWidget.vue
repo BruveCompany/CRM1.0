@@ -27,10 +27,10 @@
         </div>
         <div class="flex-1 min-w-0">
           <div class="flex items-center justify-between gap-2">
-            <h4 class="text-sm font-bold text-neutral-900 truncate tracking-tight group-hover:text-primary-600 transition-colors">
+            <h4 class="text-sm font-semibold text-neutral-900 truncate tracking-tight group-hover:text-primary-600 transition-colors">
               {{ item.titulo }}
             </h4>
-            <span class="text-[10px] font-bold uppercase py-0.5 px-2 rounded-full whitespace-nowrap" :class="[
+            <span class="text-[9px] font-semibold uppercase py-0.5 px-2 rounded-full whitespace-nowrap" :class="[
               item.tipo === 'tarefa' ? 'bg-amber-50 text-amber-600' : 'bg-indigo-50 text-indigo-600'
             ]">
               {{ item.tipo }}
@@ -45,7 +45,7 @@
             
             <div class="flex items-center gap-1.5 shrink-0">
               <Icon name="heroicons:clock" class="w-3 h-3 text-neutral-400" />
-              <p class="text-[11px] font-bold" :class="isOverdue(item.data) ? 'text-rose-500' : 'text-neutral-500'">
+              <p class="text-[11px] font-semibold" :class="isOverdue(item.data) ? 'text-rose-500' : 'text-neutral-500'">
                 {{ formatDateTime(item.data, item.hora_fim) }}
               </p>
             </div>
