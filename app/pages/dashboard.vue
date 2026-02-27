@@ -1,76 +1,58 @@
 <template>
   <div class="p-6 lg:p-8 space-y-6 animate-fade-in max-w-[1600px] mx-auto">
-    <!-- Cabeçalho da Página -->
-    <header class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div>
-        <h1 class="text-3xl font-bold text-neutral-900 tracking-tight">Dashboard</h1>
-        <p class="text-neutral-500 mt-1 font-medium">Bem-vindo {{ userNameDisplay }}! Aqui está o resumo do seu CRM hoje.</p>
-      </div>
-      <div class="flex items-center gap-3">
-        <!-- Filtro de Período -->
-        <div class="relative">
-          <button 
-            @click="showPeriodPopover = !showPeriodPopover"
-            class="px-4 py-2 bg-white border border-neutral-200 rounded-lg text-sm font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors shadow-sm flex items-center gap-2"
-          >
-            <ClientOnly>
-              <Icon name="heroicons:calendar" class="w-4 h-4 text-neutral-400" />
-            </ClientOnly>
-            {{ periods.find(p => p.value === selectedPeriod)?.label }}
-          </button>
-
-          <div v-if="showPeriodPopover" class="absolute right-0 mt-2 w-48 bg-white border border-neutral-100 rounded-xl shadow-xl z-50 p-2 space-y-1">
-            <button 
-              v-for="p in periods" 
-              :key="p.value"
-              @click="selectedPeriod = p.value; showPeriodPopover = false"
-              class="w-full text-left px-3 py-2 text-sm font-medium rounded-lg transition-colors"
-              :class="selectedPeriod === p.value ? 'bg-primary-50 text-primary-600' : 'text-neutral-600 hover:bg-neutral-50'"
-            >
-              {{ p.label }}
-            </button>
-          </div>
+    <!-- Cabeçalho e KPIs (Blindagem ClientOnly) -->
+    <ClientOnly>
+      <header class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 class="text-3xl font-bold text-neutral-900 tracking-tight">Dashboard</h1>
+          <p class="text-neutral-500 mt-1 font-medium">Bem-vindo {{ userNameDisplay }}! Aqui está o resumo do seu CRM hoje.</p>
         </div>
-
-        <button 
-          @click="isCreateLeadModalOpen = true"
-          class="px-4 py-2 bg-primary-600 rounded-lg text-sm font-semibold text-white hover:bg-primary-700 transition-colors shadow-sm flex items-center gap-2"
-        >
-          <ClientOnly>
+        <div class="flex items-center gap-3">
+          <!-- Filtro de Período -->
+          <div class="relative">
+            <button 
+              @click="showPeriodPopover = !showPeriodPopover"
+              class="px-4 py-2 bg-white border border-neutral-200 rounded-lg text-sm font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors shadow-sm flex items-center gap-2"
+            >
+              <Icon name="heroicons:calendar" class="w-4 h-4 text-neutral-400" />
+              <span>{{ periods.find(p => p.value === selectedPeriod)?.label || 'Calendário' }}</span>
+            </button>
+            <div v-if="showPeriodPopover" class="absolute right-0 mt-2 w-48 bg-white border border-neutral-100 rounded-xl shadow-xl z-50 p-2 space-y-1">
+              <button 
+                v-for="p in periods" :key="p.value"
+                @click="selectedPeriod = p.value; showPeriodPopover = false"
+                class="w-full text-left px-3 py-2 text-sm font-medium rounded-lg transition-colors"
+                :class="selectedPeriod === p.value ? 'bg-primary-50 text-primary-600' : 'text-neutral-600 hover:bg-neutral-50'"
+              >
+                {{ p.label }}
+              </button>
+              <div class="border-t border-neutral-50 my-1"></div>
+              <button @click="showCustomDateModal = true; showPeriodPopover = false" class="w-full text-left px-3 py-2 text-sm font-medium rounded-lg text-primary-600 hover:bg-primary-50 transition-colors flex items-center gap-2">
+                <Icon name="heroicons:adjustments-horizontal" class="w-4 h-4" />
+                Personalizado...
+              </button>
+            </div>
+          </div>
+          <button @click="isCreateLeadModalOpen = true" class="px-4 py-2 bg-primary-600 rounded-lg text-sm font-semibold text-white hover:bg-primary-700 transition-colors shadow-sm flex items-center gap-2">
             <Icon name="heroicons:plus" class="w-4 h-4" />
-          </ClientOnly>
-          Novo Lead
-        </button>
-      </div>
-    </header>
+            Novo Lead
+          </button>
+        </div>
+      </header>
 
-    <!-- Grade de KPIs -->
-    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-      <UiKpiCard 
-        title="Leads Ativos" 
-        :value="leadsAtivosCount" 
-        icon="heroicons-outline:user-group" 
-        color-classes="bg-primary-50 text-primary-600"
-      />
-      <UiKpiCard 
-        title="Próximas Ações" 
-        :value="proximasAcoes.length" 
-        icon="heroicons-outline:clock" 
-        color-classes="bg-blue-50 text-blue-600"
-      />
-      <UiKpiCard 
-        title="Taxa de Conversão" 
-        value="24.8%" 
-        icon="heroicons-outline:presentation-chart-line" 
-        color-classes="bg-emerald-50 text-emerald-600"
-      />
-      <UiKpiCard 
-        title="Valor em Negociação" 
-        value="R$ 158.400" 
-        icon="heroicons-outline:currency-dollar" 
-        color-classes="bg-amber-50 text-amber-600"
-      />
-    </section>
+      <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <UiKpiCard title="Leads Ativos" :value="metricsLoading ? '...' : leadsAtivos" icon="heroicons-outline:user-group" color-classes="bg-primary-50 text-primary-600" />
+        <UiKpiCard title="Próximas Ações" :value="metricsLoading ? '...' : proximasAcoesCount" icon="heroicons-outline:clock" color-classes="bg-blue-50 text-blue-600" />
+        <UiKpiCard title="Taxa de Conversão" :value="metricsLoading ? '...' : formatarPercentual(taxaConversao)" icon="heroicons-outline:presentation-chart-line" color-classes="bg-emerald-50 text-emerald-600" />
+        <UiKpiCard title="Valor em Negociação" :value="metricsLoading ? '...' : formatarMoeda(valorEmNegociacao)" icon="heroicons-outline:currency-dollar" color-classes="bg-amber-50 text-amber-600" />
+      </section>
+
+      <template #fallback>
+        <div class="h-[200px] flex items-center justify-center bg-white border border-neutral-100 rounded-2xl animate-pulse text-neutral-400">
+          Carregando dashboard...
+        </div>
+      </template>
+    </ClientOnly>
 
     <!-- Layout em Grade Principal -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -148,6 +130,12 @@
       </section>
 
     </div>
+
+    <!-- Modais -->
+    <CustomPeriodModal 
+      v-model="showCustomDateModal" 
+      @apply="handleCustomDateApply"
+    />
   </div>
 </template>
 
@@ -155,9 +143,16 @@
 /**
  * Página: Dashboard
  */
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { useAuth } from '~/composables/useAuth';
 import { useLeads } from '~/composables/useLeads';
+import { useTarefas } from '~/composables/useTarefas';
+import { useDashboardMetrics } from '~/composables/useDashboardMetrics';
+import CustomPeriodModal from '~/components/modals/CustomPeriodModal.vue';
+import DashboardMinhaAgendaWidget from '~/components/dashboard/MinhaAgendaWidget.vue';
+import DashboardFunilVendasWidget from '~/components/dashboard/FunilVendasWidget.vue';
+import DashboardAtividadesRecentesWidget from '~/components/dashboard/AtividadesRecentesWidget.vue';
+import UiKpiCard from '~/components/ui/KpiCard.vue';
 
 definePageMeta({
   layout: 'default'
@@ -181,10 +176,20 @@ const agendamentos = ref<any[]>([]);
 const atividadesRecentes = ref<any[]>([]);
 const funnelResult = ref<any[]>([]);
 const funilChartData = ref<any>(null);
-const leadsAtivosCount = ref(0);
 const loading = ref(true);
 const showPeriodPopover = ref(false);
-const selectedPeriod = ref(30);
+const showCustomDateModal = ref(false);
+const selectedPeriod = ref<number | string>(30);
+
+// --- MÉTRICAS REAIS ---
+const { 
+    leadsAtivos, 
+    proximasAcoes: proximasAcoesCount, 
+    taxaConversao, 
+    valorEmNegociacao, 
+    loading: metricsLoading,
+    fetchDashboardData: fetchMetrics
+} = useDashboardMetrics();
 
 const periods = [
   { label: 'Últimos 7 dias', value: 7 },
@@ -219,6 +224,23 @@ const hexToRgba = (hex: string, opacity: number = 1) => {
   return hex;
 };
 
+const formatarMoeda = (valor: number) => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(valor);
+};
+
+const formatarPercentual = (valor: number) => {
+  return `${valor.toFixed(1)}%`;
+};
+
+const handleCustomDateApply = (dates: { start: string, end: string }) => {
+  console.log('Período personalizado aplicado:', dates);
+  selectedPeriod.value = 'custom';
+  fetchMetrics('365'); // Exemplo
+};
+
 // 4. Função carregarAgenda (Renomeada conforme pedido)
 const fetchDashboardData = async () => {
   if (!profile.value?.id) return;
@@ -236,7 +258,8 @@ const fetchDashboardData = async () => {
 
     // Calcular data de início baseada no período
     const startDate = new Date();
-    startDate.setDate(startDate.getDate() - selectedPeriod.value);
+    const dias = typeof selectedPeriod.value === 'number' ? selectedPeriod.value : 30;
+    startDate.setDate(startDate.getDate() - dias);
     const startDateISO = startDate.toISOString();
 
     if (profId) {
@@ -259,13 +282,8 @@ const fetchDashboardData = async () => {
     agendamentos.value = agData || [];
 
     // 4. Buscar KPI (Filtrado por Período)
-    const { count } = await supabase
-      .from('ag_leads')
-      .select('*', { count: 'exact', head: true })
-      .eq('vendedor_id', profile.value.id)
-      .gte('criado_em', startDateISO);
-    
-    leadsAtivosCount.value = count || 0;
+    // Agora usando o novo composable unificado
+    await fetchMetrics(selectedPeriod.value);
 
     // 5. Buscar Dados do Funil via RPC (Por Status)
     const { data: funilData, error: funilError } = await (supabase.rpc as any)('get_funil_vendas_dashboard', { 
