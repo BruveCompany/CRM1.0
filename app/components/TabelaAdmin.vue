@@ -1,19 +1,30 @@
 <template>
   <div class="bg-white rounded-lg shadow overflow-hidden">
-    <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+    <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
       <h3 class="text-base font-semibold text-gray-900">Usuários do Sistema</h3>
-      <BaseButton
-        variant="primary"
-        size="sm"
-        @click="showModal = true"
-      >
-        <UserPlusIcon class="w-4 h-4 mr-2" />
-        Novo Usuário
-      </BaseButton>
+      <div class="flex items-center gap-2">
+        <BaseButton
+          variant="secondary"
+          size="sm"
+          @click="loadData"
+          :loading="loading"
+          title="Atualizar lista"
+        >
+          <ArrowPathIcon :class="['w-4 h-4', loading ? 'animate-spin' : '']" />
+        </BaseButton>
+        <BaseButton
+          variant="primary"
+          size="sm"
+          @click="showModal = true"
+        >
+          <UserPlusIcon class="w-4 h-4 mr-2" />
+          Novo Usuário
+        </BaseButton>
+      </div>
     </div>
 
     <!-- Modal Novo Usuário -->
-    <ModalNovoUsuario v-model="showModal" />
+    <ModalNovoUsuario v-model="showModal" @success="loadData" />
     
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-gray-200">
@@ -92,7 +103,7 @@
 </template>
 
 <script setup lang="ts">
-import { UserPlusIcon } from '@heroicons/vue/24/outline'
+import { UserPlusIcon, ArrowPathIcon } from '@heroicons/vue/24/outline'
 import type { AgPerfil } from '../../shared/types/database'
 
 const { fetchPerfis } = useProfissionais()
@@ -114,11 +125,5 @@ const loadData = async () => {
 
 onMounted(async () => {
   await loadData()
-  // Refresh a cada 10 segundos
-  refreshInterval = setInterval(loadData, 10000)
-})
-
-onUnmounted(() => {
-  if (refreshInterval) clearInterval(refreshInterval)
 })
 </script>

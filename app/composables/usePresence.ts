@@ -21,7 +21,7 @@ export const usePresence = () => {
                 console.log('🛑 Autenticação perdida, parando heartbeat.')
                 stopHeartbeat()
             }
-        }, 30000)
+        }, 120000)
     }
 
     const stopHeartbeat = () => {

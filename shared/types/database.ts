@@ -42,6 +42,7 @@ export interface AgProfile {
   created_at: string
   user_id: string | null
   nome: string | null
+  email: string | null
   role: string | null
   is_online?: boolean
   last_activity?: string

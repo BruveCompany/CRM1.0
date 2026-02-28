@@ -64,6 +64,8 @@
       <BaseButton
         variant="primary"
         @click="handleCreate"
+        :loading="loading"
+        :disabled="loading"
       >
         Criar Usuário
       </BaseButton>
@@ -72,6 +74,8 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
+import { useToast } from 'vue-toastification'
 import InputPassword from './InputPassword.vue'
 
 const props = defineProps<{
@@ -79,17 +83,66 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits(['update:modelValue', 'success'])
+const toast = useToast()
+const loading = ref(false)
 
 const form = ref({
   nome: '',
   email: '',
   senha: '',
   confirmarSenha: '',
-  role: ''
+  role: 'user'
 })
 
-const handleCreate = () => {
-  // Ação será implementada posteriormente
-  console.log('Criar usuário:', form.value)
+const handleCreate = async () => {
+  // Validações básicas
+  if (!form.value.nome || !form.value.email || !form.value.senha || !form.value.role) {
+    toast.error('Preencha todos os campos obrigatórios')
+    return
+  }
+
+  if (form.value.senha !== form.value.confirmarSenha) {
+    toast.error('As senhas não coincidem')
+    return
+  }
+
+  if (form.value.senha.length < 6) {
+    toast.error('A senha deve ter pelo menos 6 caracteres')
+    return
+  }
+
+  loading.value = true
+  try {
+    const response = await $fetch('/api/admin/create-user', {
+      method: 'POST',
+      body: {
+        email: form.value.email,
+        password: form.value.senha,
+        nome: form.value.nome,
+        role: form.value.role
+      }
+    })
+
+    if (response.success) {
+      toast.success('Usuário criado com sucesso!')
+      emit('success')
+      emit('update:modelValue', false)
+      
+      // Limpar formulário
+      form.value = {
+        nome: '',
+        email: '',
+        senha: '',
+        confirmarSenha: '',
+        role: 'user'
+      }
+    }
+  } catch (error: any) {
+    console.error('Erro ao criar usuário:', error)
+    const message = error.data?.statusMessage || 'Erro ao criar usuário. Tente novamente.'
+    toast.error(message)
+  } finally {
+    loading.value = false
+  }
 }
 </script>
