@@ -19,8 +19,12 @@
         <div class="w-11 h-11 bg-neutral-200 rounded-full flex items-center justify-center font-bold text-neutral-500 text-sm overflow-hidden">
           {{ getAvatarLetters(conversa.lead?.nome || conversa.cliente?.nome) }}
         </div>
-        <!-- Status Online (Simulado) -->
-        <span v-if="conversa.lead?.vendedor_id || conversa.cliente?.id" class="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></span>
+        <!-- Status Online Realtime (CRM Prime) -->
+        <span 
+          v-if="isVendedorOnline(conversa.lead?.vendedor_id)" 
+          class="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full shadow-sm"
+          title="Online"
+        ></span>
       </div>
 
       <div class="flex-1 min-w-0">
@@ -49,11 +53,17 @@
 import { ref, onMounted, computed, onUnmounted } from 'vue';
 
 const props = defineProps<{ activeId: number | null }>();
-defineEmits(['select']);
+const emit = defineEmits(['select']);
 
 const supabase = useSupabaseClient();
+const { onlineUsers: socketOnlineUsers } = usePresence(); // CRM Prime
 const conversations = ref<any[]>([]);
 const loadingConversations = ref(true);
+
+const isVendedorOnline = (vId: number | string | null) => {
+  if (!vId) return false;
+  return !!socketOnlineUsers.value[String(vId)];
+};
 
 const fetchConversations = async () => {
   try {
