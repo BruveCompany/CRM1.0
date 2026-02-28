@@ -81,7 +81,7 @@ function setFilter(filterName: string) {
 // --- LÓGICA DE FILTRAGEM ---
 const filteredActivities = computed(() => {
   if (activeFilter.value === 'NOTAS') {
-    return props.activities.filter(a => a.type === 'note');
+    return props.activities.filter(a => a.type === 'note' || a.type === 'nota');
   }
   if (activeFilter.value === 'MENSAGENS') {
     return props.activities.filter(a => a.type === 'message');

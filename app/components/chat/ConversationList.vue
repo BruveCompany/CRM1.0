@@ -57,12 +57,21 @@ const loadingConversations = ref(true);
 
 const fetchConversations = async () => {
   try {
-    const { data, error } = await (supabase
-      .from('ag_conversas') as any)
+    const { data, error } = await supabase
+      .from('ag_conversas')
       .select(`
         *,
-        lead:ag_leads(id, nome, vendedor_id, status),
-        cliente:ag_clientes(id, nome, telefone)
+        lead:ag_leads (
+          id, 
+          nome, 
+          status,
+          score
+        ),
+        cliente:ag_clientes (
+          id, 
+          nome, 
+          telefone
+        )
       `)
       .order('ultima_mensagem_em', { ascending: false });
 
@@ -125,4 +134,6 @@ onMounted(() => {
 onUnmounted(() => {
   if (conversationSubscription.value) conversationSubscription.value.unsubscribe();
 });
+
+defineExpose({ fetchConversations, sortedConversations });
 </script>

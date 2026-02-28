@@ -1,6 +1,6 @@
 <template>
   <div class="flex h-full overflow-hidden bg-transparent">
-    <!-- Lista de Conversas (Esquerda) -->
+    <!-- Coluna 1: Lista de Conversas (Esquerda) -->
     <div class="w-80 border-r border-neutral-100 flex flex-col bg-neutral-50/30">
       <div class="p-4 border-b border-neutral-100 bg-white">
         <h1 class="text-xl font-bold text-neutral-900">Chat</h1>
@@ -16,22 +16,24 @@
       
       <div class="flex-1 overflow-y-auto">
         <ConversationList 
+          ref="conversationListRef"
           :active-id="selectedConversaId" 
           @select="selectConversa" 
         />
       </div>
     </div>
 
-    <!-- Área do Chat (Direita) - Removendo bg-white para permitir que o MessageArea controle o fundo -->
-    <div class="flex-1 flex flex-col relative">
+    <!-- Area Principal (Coluna 2 e 3 integradas via MessageArea) -->
+    <div class="flex-1 flex flex-col min-w-0 bg-[#efeae2] relative overflow-hidden">
       <MessageArea 
-        v-if="selectedConversaId" 
-        :conversa-id="selectedConversaId" 
+        v-if="selectedConversaId"
+        :conversa-id="selectedConversaId"
         :contact-data="selectedContact"
+        @updated="handleLeadUpdate"
       />
       
       <!-- Estado Vazio -->
-      <div v-else class="flex-1 flex flex-col items-center justify-center p-12 text-center">
+      <div v-else class="flex-1 flex flex-col items-center justify-center p-12 text-center bg-white">
         <div class="w-20 h-20 bg-primary-50 rounded-full flex items-center justify-center mb-4">
           <Icon name="heroicons:chat-bubble-left-right" class="w-10 h-10 text-primary-500" />
         </div>
@@ -57,10 +59,22 @@ useHead({
 
 const selectedConversaId = ref<number | null>(null);
 const selectedContact = ref<any>(null);
+const conversationListRef = ref<any>(null);
 
 const selectConversa = (conversa: any) => {
   selectedConversaId.value = conversa.id;
   selectedContact.value = conversa.lead || conversa.cliente;
+};
+
+const handleLeadUpdate = async () => {
+  if (conversationListRef.value) {
+    await conversationListRef.value.fetchConversations();
+    // Re-seleciona o contato para atualizar o objeto local reativo (incluindo o score atualizado)
+    const updatedConversa = conversationListRef.value.sortedConversations.find((c: any) => c.id === selectedConversaId.value);
+    if (updatedConversa) {
+      selectedContact.value = updatedConversa.lead || updatedConversa.cliente;
+    }
+  }
 };
 </script>
 
