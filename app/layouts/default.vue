@@ -5,8 +5,8 @@
 
     <!-- Conteúdo Principal -->
     <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
-      <!-- Scroll independente para o conteúdo da página -->
-      <div class="flex-1 overflow-y-auto hover-scrollbar">
+      <!-- Área de Conteúdo principal ajustada para permitir componentes de altura total -->
+      <div class="flex-1 flex flex-col min-h-0 overflow-hidden">
         <slot />
       </div>
     </main>

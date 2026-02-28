@@ -1,5 +1,5 @@
 <template>
-  <div class="flex h-[calc(100vh-theme(spacing.20))] overflow-hidden bg-white rounded-2xl border border-neutral-100 shadow-soft m-4">
+  <div class="flex h-full overflow-hidden bg-transparent">
     <!-- Lista de Conversas (Esquerda) -->
     <div class="w-80 border-r border-neutral-100 flex flex-col bg-neutral-50/30">
       <div class="p-4 border-b border-neutral-100 bg-white">
@@ -22,8 +22,8 @@
       </div>
     </div>
 
-    <!-- Área do Chat (Direita) -->
-    <div class="flex-1 flex flex-col bg-white">
+    <!-- Área do Chat (Direita) - Removendo bg-white para permitir que o MessageArea controle o fundo -->
+    <div class="flex-1 flex flex-col relative">
       <MessageArea 
         v-if="selectedConversaId" 
         :conversa-id="selectedConversaId" 

@@ -1,12 +1,47 @@
 <template>
-  <div class="flex flex-col h-full bg-[#e5ddd5] relative chat-container">
+  <div class="flex flex-col h-full relative chat-area-root">
     <!-- Header do Chat -->
     <header class="p-4 border-b border-neutral-100 flex items-center gap-3 bg-[#f0f2f5] z-10 shadow-sm chat-header">
       <div class="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center font-bold text-primary-600 text-sm">
         {{ getAvatarLetters(contactData?.nome) }}
       </div>
-      <div class="flex-1">
-        <h2 class="font-bold text-neutral-900 leading-none mb-1">{{ contactData?.nome || 'Conversa Ativa' }}</h2>
+        <div class="flex items-center gap-2">
+          <h2 class="font-bold text-neutral-900 leading-none">{{ contactData?.nome || 'Conversa Ativa' }}</h2>
+          <!-- Seletor de Etapa (Apenas se for um Lead) -->
+          <div v-if="contactData?.status" class="stage-selector-container">
+            <div 
+              class="stage-badge"
+              :style="{ backgroundColor: currentStage?.color_bg || '#e2e8f0', color: currentStage?.color_text || '#64748b' }"
+              @click="showStageSelector = !showStageSelector"
+            >
+              <Icon v-if="updatingStage" name="svg-spinners:18-dots-indicator" class="w-3 h-3 mr-1" />
+              <span class="truncate max-w-[100px]">{{ currentStage?.display_name || 'Sem Etapa' }}</span>
+              <Icon name="heroicons:chevron-down" class="w-3 h-3 ml-1" />
+            </div>
+
+            <!-- Dropdown das Etapas -->
+            <div v-if="showStageSelector" class="stage-dropdown custom-scrollbar shadow-xl border border-neutral-100 animate-fade-in">
+              <div class="p-2 border-b border-neutral-50 bg-neutral-50/10 mb-1">
+                <p class="text-[10px] font-bold text-neutral-400 uppercase tracking-wider px-1">Mover para...</p>
+              </div>
+              <ul>
+                <li 
+                  v-for="stage in availableStages" 
+                  :key="stage.id"
+                  @click="updateLeadStage(stage)"
+                  class="flex items-center gap-2 px-3 py-2 hover:bg-neutral-50 transition-colors"
+                  :class="{ 'bg-primary-50/50': contactData?.status === stage.id }"
+                >
+                  <span class="w-2.5 h-2.5 rounded-full" :style="{ backgroundColor: stage.color_bg }"></span>
+                  <span class="text-sm font-medium flex-1" :style="{ color: stage.color_text }">{{ stage.display_name }}</span>
+                  <Icon v-if="contactData?.status === stage.id" name="heroicons:check" class="w-4 h-4 text-primary-600" />
+                </li>
+              </ul>
+            </div>
+            <!-- Overlay para fechar ao clicar fora -->
+            <div v-if="showStageSelector" class="fixed inset-0 z-10" @click="showStageSelector = false"></div>
+          </div>
+        </div>
         <div class="flex items-center gap-1.5 contact-status">
           <template v-if="isTyping">
             <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
@@ -17,7 +52,6 @@
             <span class="text-[11px] text-neutral-400 font-medium whitespace-nowrap overflow-hidden text-ellipsis">Online no WhatsApp</span>
           </template>
         </div>
-      </div>
       <div class="flex items-center gap-2">
         <button class="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 transition-colors">
           <Icon name="heroicons:phone" class="w-5 h-5" />
@@ -28,10 +62,10 @@
       </div>
     </header>
 
-    <!-- Área de Mensagens -->
+    <!-- 2. Área de Mensagens (Transparente para mostrar o papel de parede do fundo) -->
     <div 
       ref="messageContainer" 
-      class="flex-1 overflow-y-auto p-4 space-y-4 bg-neutral-50/50 flex flex-col custom-scrollbar scroll-smooth"
+      class="flex-1 overflow-y-auto p-4 space-y-4 bg-transparent flex flex-col custom-scrollbar scroll-smooth"
     >
       <div v-if="loadingMessages" class="flex flex-col gap-4 py-8 animate-pulse text-center text-neutral-300">
         Carregando histórico...
@@ -67,34 +101,45 @@
       </div>
     </div>
 
-    <!-- Barra de Input -->
-    <div class="p-4 border-t border-neutral-100 bg-[#f0f2f5] chat-footer">
-      <div class="flex items-center gap-3 w-full">
-        <div class="flex items-center">
-          <Icon name="heroicons:face-smile" class="footer-icon" />
+    <!-- Barra de Input (Pílula Única Estilo WhatsApp) -->
+    <div class="chat-footer">
+      <div class="chat-input-wrapper w-full">
+        <!-- Ícones da Esquerda -->
+        <div class="flex items-center gap-1 pl-1">
+          <button class="footer-btn">
+            <Icon name="heroicons:plus" class="w-6 h-6" />
+          </button>
+          <button class="footer-btn">
+            <Icon name="heroicons:face-smile" class="w-6 h-6" />
+          </button>
           <QuickReplies @select="insertQuickReply" />
         </div>
-        <div class="flex-1 relative chat-input-wrapper">
-          <textarea 
-            v-model="newMessage"
-            @keydown.enter.prevent="sendMessage"
-            @keydown="handleTyping"
-            rows="1"
-            placeholder="Digite uma mensagem"
-            class="chat-input"
-          ></textarea>
-          <button class="absolute right-3 bottom-2.5 p-1.5 text-neutral-400 hover:text-primary-500 transition-colors">
+
+        <!-- Área de Texto -->
+        <textarea 
+          v-model="newMessage"
+          @keydown.enter.prevent="sendMessage"
+          @keydown="handleTyping"
+          rows="1"
+          placeholder="Digite uma mensagem"
+          class="chat-input"
+        ></textarea>
+
+        <!-- Ícones da Direita -->
+        <div class="flex items-center gap-1 pr-1">
+          <button class="footer-btn">
             <Icon name="heroicons:paper-clip" class="w-5 h-5" />
           </button>
+          <button 
+            @click="sendMessage"
+            :disabled="sending"
+            class="footer-btn"
+            :class="newMessage.trim() ? 'text-primary-600' : 'text-[#54656f]'"
+          >
+            <Icon v-if="sending" name="svg-spinners:18-dots-indicator" class="w-6 h-6" />
+            <Icon v-else :name="newMessage.trim() ? 'heroicons:paper-airplane' : 'heroicons:microphone'" class="w-6 h-6" />
+          </button>
         </div>
-        <button 
-          @click="sendMessage"
-          :disabled="!newMessage.trim() || sending"
-          class="p-2 text-[#54656f] hover:text-primary-600 transition-all"
-        >
-          <Icon v-if="sending" name="svg-spinners:18-dots-indicator" class="w-6 h-6" />
-          <Icon v-else :name="newMessage.trim() ? 'heroicons:paper-airplane' : 'heroicons:microphone'" class="w-7 h-7" />
-        </button>
       </div>
     </div>
   </div>
@@ -118,10 +163,66 @@ const loadingMessages = ref(true);
 const sending = ref(false);
 const messageContainer = ref<HTMLElement | null>(null);
 
+// Estados para Funil de Vendas (Kanban no Chat)
+const availableStages = ref<any[]>([]);
+const showStageSelector = ref(false);
+const updatingStage = ref(false);
+
 // Estados para Digitando...
 const isTyping = ref(false);
 let typingTimer: any = null;
 const currentProfileId = userStore.profile?.id;
+
+// Busca Etapas do Funil
+const fetchStages = async () => {
+  try {
+    const { data, error } = await (supabase
+      .from('ag_lead_statuses') as any)
+      .select('id, display_name, color_bg, color_text')
+      .order('order_index', { ascending: true });
+
+    if (!error && data) {
+      availableStages.value = data;
+    }
+  } catch (err) {
+    console.error('Erro ao buscar etapas do funil:', err);
+  }
+};
+
+// Atualiza a Etapa do Lead
+const updateLeadStage = async (stage: any) => {
+  if (!props.contactData?.id || updatingStage.value) return;
+  if (props.contactData.status === stage.id) {
+    showStageSelector.value = false;
+    return;
+  }
+
+  updatingStage.value = true;
+  try {
+    const { error } = await (supabase
+      .from('ag_leads') as any)
+      .update({ status: stage.id })
+      .eq('id', props.contactData.id);
+
+    if (error) throw error;
+
+    // Atualiza localmente para feedback instantâneo
+    props.contactData.status = stage.id;
+    
+    // Opcional: Notificar sucesso?
+  } catch (err) {
+    console.error('Erro ao atualizar etapa do lead:', err);
+  } finally {
+    updatingStage.value = false;
+    showStageSelector.value = false;
+  }
+};
+
+// Computado para a etapa atual
+const currentStage = computed(() => {
+  if (!props.contactData?.status) return null;
+  return availableStages.value.find(s => s.id === props.contactData.status);
+});
 
 const fetchMessages = async () => {
   loadingMessages.value = true;
@@ -293,6 +394,7 @@ const subscribeToStatusUpdates = () => {
 
 onMounted(() => {
   fetchMessages();
+  fetchStages(); // Carrega as etapas logo ao abrir o chat
   chatSubscription.value = subscribeToChat();
   subscribeToStatusUpdates();
 });
@@ -304,23 +406,33 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* Estilo WhatsApp Web */
-.chat-container {
-  background-color: #e5ddd5;
-  background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d05f5395bb.png');
-  background-repeat: repeat;
+/* --- ESTILO WHATSAPP WEB UNIFICADO --- */
+
+.chat-area-root {
+  background-color: #e5ddd5 !important;
+  background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d05f5395bb.png') !important;
+  background-repeat: repeat !important;
+  background-attachment: local !important;
   height: 100%;
-  overflow-y: auto;
+  width: 100%;
   display: flex;
   flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
 }
 
-.chat-header, .chat-footer {
-  background-color: #f0f2f5;
-  padding: 10px 16px;
+.chat-footer {
+  background-color: transparent !important;
+  background-image: none !important;
+  border: none !important;
+  padding: 8px 16px 12px 16px; /* Ajuste para encostar mais na base */
   display: flex;
   align-items: center;
   flex-shrink: 0;
+  z-index: 10;
+  margin-top: auto; /* Garante que fique no final do container flex */
 }
 
 .chat-header {
@@ -379,6 +491,53 @@ onUnmounted(() => {
   color: #34b7f1;
 }
 
+/* Seletor de Etapa (Funil) */
+.stage-selector-container {
+  position: relative;
+  z-index: 20;
+}
+
+.stage-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  max-width: 140px;
+}
+
+.stage-badge:hover {
+  filter: brightness(0.95);
+  transform: translateY(-1px);
+}
+
+.stage-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  background: white;
+  min-width: 180px;
+  border-radius: 12px;
+  padding: 4px;
+  z-index: 50;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* Indicador de Digitando */
 .contact-status {
   font-size: 11px;
@@ -408,23 +567,41 @@ onUnmounted(() => {
 }
 
 .chat-input-wrapper {
-  flex-grow: 1;
   background-color: #ffffff;
-  border-radius: 8px;
-  padding: 8px 12px;
+  border-radius: 24px;
+  padding: 4px 8px;
   display: flex;
   align-items: center;
+  gap: 8px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  min-height: 48px;
 }
 
 .chat-input {
   border: none;
-  width: 100%;
+  flex: 1;
   font-size: 0.95rem;
   background-color: transparent;
   outline: none;
   resize: none;
   max-height: 120px;
+  padding: 10px 4px;
   color: #41525d;
+  line-height: 1.2;
+}
+
+.footer-btn {
+  padding: 8px;
+  color: #54656f;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.footer-btn:hover {
+  background-color: #f0f2f5;
 }
 
 .chat-input:focus {

@@ -61,7 +61,7 @@ const fetchConversations = async () => {
       .from('ag_conversas') as any)
       .select(`
         *,
-        lead:ag_leads(id, nome, vendedor_id),
+        lead:ag_leads(id, nome, vendedor_id, status),
         cliente:ag_clientes(id, nome, telefone)
       `)
       .order('ultima_mensagem_em', { ascending: false });
