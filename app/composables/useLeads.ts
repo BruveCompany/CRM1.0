@@ -430,38 +430,30 @@ export const useLeads = () => {
 
     // NOVO: Propriedade computada para enriquecer os leads com dados de UI e presença
     const enrichedLeadsList = computed(() => {
+        // Acessa o estado global de presença (socket)
+        const { onlineUsers: socketOnlineUsers } = usePresence()
+
         return allLeads.value.map(l => {
             const vId = l.vendedor_id;
 
             // Busca informações do vendedor (seja o próprio ou outro)
             const vendedorOnline = (() => {
-                if (!vId && !l.vendedor_nome) return false;
+                if (!vId) return false;
 
-                // 1. Tenta pelo perfil logado (velocidade instantânea)
-                // Usamos ID, UserID ou Nome (Full) como fallback caso o ID venha nulo da view
-                if (profile.value && (
-                    (vId && String(profile.value.id) === String(vId)) ||
-                    (vId && String(profile.value.user_id) === String(vId)) ||
-                    (l.vendedor_nome_full && profile.value.nome &&
-                        l.vendedor_nome_full.trim().toLowerCase() === profile.value.nome.trim().toLowerCase())
-                )) {
-                    return isOnlineCalculated.value;
+                // 1. Checagem Principal: Socket Presence (CRM Prime)
+                // Se o ID do vendedor está no mapa de sockets online, ele está 100% online agora.
+                if (socketOnlineUsers.value[String(vId)]) return true;
+
+                // 2. Fallback: Verificação do Banco de Dados (Usuários em outras abas ou polling antigo)
+                const vInfo = vendedores.value.find(v => String(v.id) === String(vId));
+                if (vInfo) {
+                    const isOnlineDB = vInfo.is_online === true;
+                    const lastActivity = vInfo.last_activity ? new Date(vInfo.last_activity).getTime() : 0;
+                    const now = new Date().getTime();
+                    return isOnlineDB && (now - lastActivity < 300000); // 5 minutos
                 }
 
-                // 2. Tenta pela lista de vendedores (outros usuários)
-                const vInfo = vendedores.value.find(v =>
-                    (vId && String(v.id) === String(vId)) ||
-                    (vId && String(v.user_id) === String(vId)) ||
-                    (l.vendedor_nome_full && v.nome &&
-                        l.vendedor_nome_full.trim().toLowerCase() === v.nome.trim().toLowerCase())
-                );
-
-                if (!vInfo) return false;
-
-                const isOnline = vInfo.is_online === true;
-                const lastActivity = vInfo.last_activity ? new Date(vInfo.last_activity).getTime() : 0;
-                const now = new Date().getTime();
-                return isOnline && (now - lastActivity < 300000); // 5 minutos
+                return false;
             })();
 
             const vendedorLastSeenText = (() => {

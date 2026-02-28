@@ -85,6 +85,12 @@ export const useAuth = () => {
 
   const isOnlineCalculated = computed(() => {
     if (!profile.value) return false;
+
+    // Prioridade Prime: Socket Presence
+    const { onlineUsers: socketUsers } = usePresence()
+    if (socketUsers.value[String(profile.value.id)]) return true;
+
+    // Fallback: Banco de Dados (Polling/Heartbeat)
     const isOnline = profile.value.is_online === true;
     const lastActivity = profile.value.last_activity ? new Date(profile.value.last_activity).getTime() : 0;
     const now = new Date().getTime();

@@ -188,7 +188,9 @@ const {
     taxaConversao, 
     valorEmNegociacao, 
     loading: metricsLoading,
-    fetchDashboardData: fetchMetrics
+    fetchDashboardData: fetchMetrics,
+    subscribeToDashboardChanges,
+    unsubscribeFromDashboardChanges
 } = useDashboardMetrics();
 
 const periods = [
@@ -362,6 +364,11 @@ const proximasAcoes = computed(() => {
 // Executa ao montar o componente
 onMounted(() => {
   fetchDashboardData();
+  subscribeToDashboardChanges(); // Ativa Realtime
+});
+
+onUnmounted(() => {
+  unsubscribeFromDashboardChanges(); // Remove Realtime
 });
 
 // Watch para recarregar se o profile mudar (ex: login tardio)

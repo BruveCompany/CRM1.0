@@ -74,6 +74,7 @@ import type { AgCliente, AgProfissional, AgViewAgendamentoCompleto } from '../..
 const agendamentoStore = useAgendamentoStore()
 const { fetchClientes, fetchProfissionais } = useProfissionais()
 const { fetchVendedores } = useLeads()
+const supabase = useSupabaseClient()
 
 const clientes = ref<AgCliente[]>([])
 const profissionais = ref<AgProfissional[]>([])
@@ -81,6 +82,34 @@ const loadingProfissionais = ref(true)
 const modalNovoAgendamentoAberto = ref(false)
 const modalEditarAgendamentoAberto = ref(false)
 const agendamentoSelecionado = ref<AgViewAgendamentoCompleto | null>(null)
+
+// --- Lógica Realtime Prime ---
+let agendaChannel: any = null
+
+function setupRealtime() {
+  console.log('🔌 Agenda: Configurando Realtime...')
+  
+  agendaChannel = supabase
+    .channel('agenda-realtime')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'ag_agendamentos' },
+      (payload: any) => {
+        console.log('✨ Agenda: Mudança detectada no banco!', payload.eventType)
+        
+        // Limpa todo o cache de agendamentos para garantir que nada antigo seja exibido
+        agendamentoStore.cacheAgendamentos = {}
+        
+        // Recarrega os agendamentos da visão atual
+        agendamentoStore.carregarAgendamentos()
+      }
+    )
+    .subscribe((status) => {
+      console.log('📡 Agenda: Status da conexão Realtime:', status)
+    })
+}
+
+// --- Fim da Lógica Realtime ---
 
 // Lista de vendedores (quem cria agendamentos) vindo do estado global
 const { vendedores: vendedoresGlobal } = useLeads()
@@ -90,7 +119,7 @@ const agendamentos = computed(() => agendamentoStore.agendamentos)
 
 const profissionalAtualObj = computed(() => {
   if (!agendamentoStore.profissionalId) return null
-  return profissionais.value.find((p) => String(p.profissional_id) === String(agendamentoStore.profissionalId)) || null
+  return profissionais.value.find((p: AgProfissional) => String(p.profissional_id) === String(agendamentoStore.profissionalId)) || null
 })
 
 const profissionalAtualNome = computed(() => {
@@ -117,6 +146,8 @@ watch(() => agendamentoStore.diasSemana, async (novos, antigos) => {
 
 onMounted(async () => {
   console.log('🚀 Agenda: Iniciando montagem...')
+  setupRealtime() // Ativa o Realtime na montagem
+  
   try {
     loadingProfissionais.value = true
     
@@ -141,13 +172,21 @@ onMounted(async () => {
   }
 })
 
+onUnmounted(() => {
+  if (agendaChannel) {
+    console.log('🔌 Agenda: Desconectando Realtime...')
+    supabase.removeChannel(agendaChannel)
+  }
+})
+
 function handleNovoAgendamento() {
   modalNovoAgendamentoAberto.value = true
 }
 
 function handleSalvarAgendamento() {
   modalNovoAgendamentoAberto.value = false
-  agendamentoStore.carregarAgendamentos()
+  // Não precisamos mais chamar carregarAgendamentos manualmente aqui
+  // pois o Realtime já vai detectar o INSERT e recarregar
 }
 
 function handleAbrirEdicao(ag: AgViewAgendamentoCompleto) {
@@ -158,7 +197,8 @@ function handleAbrirEdicao(ag: AgViewAgendamentoCompleto) {
 function handleAgendamentoAtualizado() {
   modalEditarAgendamentoAberto.value = false
   agendamentoSelecionado.value = null
-  agendamentoStore.carregarAgendamentos()
+  // Não precisamos mais chamar carregarAgendamentos manualmente aqui
+  // pois o Realtime já vai detectar o UPDATE/DELETE e recarregar
 }
 
 // Expõe funções para componentes pais

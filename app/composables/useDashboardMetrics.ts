@@ -1,5 +1,4 @@
-import { ref } from 'vue';
-// useSupabaseClient e useAuth serão resolvidos via auto-import do Nuxt
+import { ref, onUnmounted } from 'vue';
 
 export const useDashboardMetrics = () => {
     const supabase = useSupabaseClient();
@@ -11,17 +10,20 @@ export const useDashboardMetrics = () => {
     const taxaConversao = ref(0);
     const valorEmNegociacao = ref(0);
     const loading = ref(false);
+    const currentPeriod = ref<number | string>(30);
 
-    const fetchDashboardData = async (periodoEmDias: number | string) => {
+    const fetchDashboardData = async (periodoEmDias?: number | string) => {
         if (!profile.value?.id) return;
+        if (periodoEmDias !== undefined) currentPeriod.value = periodoEmDias;
+
         loading.value = true;
 
         let startDate: Date;
-        if (periodoEmDias === 'all') {
+        if (currentPeriod.value === 'all') {
             startDate = new Date(0);
         } else {
             startDate = new Date();
-            startDate.setDate(startDate.getDate() - Number(periodoEmDias));
+            startDate.setDate(startDate.getDate() - Number(currentPeriod.value));
         }
         const startDateISO = startDate.toISOString();
 
@@ -108,12 +110,50 @@ export const useDashboardMetrics = () => {
         }
     };
 
+    // --- Lógica Realtime Prime para Dashboard ---
+    let dashboardChannel: any = null;
+
+    const subscribeToDashboardChanges = () => {
+        if (!profile.value?.id || dashboardChannel) return;
+
+        console.log('🔌 Dashboard: Ativando monitoramento em tempo real...');
+
+        dashboardChannel = supabase
+            .channel('dashboard-realtime')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'ag_leads' },
+                () => {
+                    console.log('📈 Dashboard: Atualizando métricas de Leads...');
+                    fetchDashboardData();
+                }
+            )
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'ag_tarefas' },
+                () => {
+                    console.log('📈 Dashboard: Atualizando métricas de Tarefas...');
+                    fetchDashboardData();
+                }
+            )
+            .subscribe();
+    };
+
+    const unsubscribeFromDashboardChanges = () => {
+        if (dashboardChannel) {
+            supabase.removeChannel(dashboardChannel);
+            dashboardChannel = null;
+        }
+    };
+
     return {
         leadsAtivos,
         proximasAcoes,
         taxaConversao,
         valorEmNegociacao,
         loading,
-        fetchDashboardData
+        fetchDashboardData,
+        subscribeToDashboardChanges,
+        unsubscribeFromDashboardChanges
     };
 };
