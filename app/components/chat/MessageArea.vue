@@ -59,6 +59,9 @@
     <!-- Barra de Input -->
     <div class="p-4 border-t border-neutral-100 bg-white">
       <div class="flex items-end gap-3 max-w-4xl mx-auto">
+        <div class="flex items-center">
+          <QuickReplies @select="insertQuickReply" />
+        </div>
         <div class="flex-1 relative">
           <textarea 
             v-model="newMessage"
@@ -86,6 +89,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import QuickReplies from '~/components/chat/QuickReplies.vue';
 
 const props = defineProps<{ 
   conversaId: number; 
@@ -152,6 +156,10 @@ const sendMessage = async () => {
   } finally {
     sending.value = false;
   }
+};
+
+const insertQuickReply = (content: string) => {
+  newMessage.value = content;
 };
 
 const scrollToBottom = async () => {
