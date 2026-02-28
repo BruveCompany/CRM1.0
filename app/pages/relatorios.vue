@@ -270,7 +270,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useAuth } from '~/composables/useAuth';
 import { useLeads } from '~/composables/useLeads';
 
@@ -294,17 +294,6 @@ const showFilterPopover = ref(false);
 const showExportModal = ref(false);
 const isExporting = ref(false);
 
-// Lógica de Ranking no Frontend (Tarefa 1.1)
-const rankedSellers = computed(() => {
-  if (!reportData.value) return [];
-  // Ordena a lista em ordem decrescente pela taxa de conversão
-  return [...reportData.value].sort((a, b) => {
-    const taxaA = a.taxa_conversao || 0;
-    const taxaB = b.taxa_conversao || 0;
-    return taxaB - taxaA;
-  });
-});
-
 // Filtros
 const selectedPeriod = ref('30d');
 const vendedorFiltro = ref<number | null>(null);
@@ -321,17 +310,14 @@ const periods = [
 
 const dailyData = ref<any[]>([]);
 
-onMounted(async () => {
-  isAdmin.value = await checkIsAdmin();
-  if (isAdmin.value) await fetchVendedores();
-  await fetchReportData();
-  
-  // Dados do gráfico simulados apenas no cliente para evitar erro de hidratação
-  const days = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
-  dailyData.value = days.map(d => ({
-    label: d,
-    value: Math.floor(Math.random() * 30) + 5
-  }));
+// --- COMPUTADOS ---
+const rankedSellers = computed(() => {
+  if (!reportData.value) return [];
+  return [...reportData.value].sort((a, b) => {
+    const taxaA = a.taxa_conversao || 0;
+    const taxaB = b.taxa_conversao || 0;
+    return taxaB - taxaA;
+  });
 });
 
 const activeVendedorName = computed(() => {
@@ -356,14 +342,12 @@ const aggregatedStats = computed(() => {
     convertidos: acc.convertidos + (Number(curr.leads_convertidos) || 0),
     agendamentos: acc.agendamentos + (Number(curr.total_agendamentos) || 0),
     mensagens: acc.mensagens + (Number(curr.total_mensagens) || 0),
-    // Totais do período anterior para cálculo de variação global
     prevLeads: acc.prevLeads + (Number((curr as any).prev_leads) || 0),
-    prevConv: acc.prevConv + (Number((curr as any).prev_leads_convertidos) || 0), // Assumindo que esta coluna existe ou é calculada
+    prevConv: acc.prevConv + (Number((curr as any).prev_leads_convertidos) || 0),
     prevAgend: acc.prevAgend + (Number((curr as any).prev_agendamentos) || 0),
     prevMsg: acc.prevMsg + (Number((curr as any).prev_mensagens) || 0)
   }), { leads: 0, convertidos: 0, agendamentos: 0, mensagens: 0, prevLeads: 0, prevConv: 0, prevAgend: 0, prevMsg: 0 });
 
-  // Função auxiliar para variação %
   const calcVar = (curr: number, prev: number) => {
     if (prev > 0) return ((curr - prev) / prev) * 100;
     return curr > 0 ? 100 : 0;
@@ -372,13 +356,12 @@ const aggregatedStats = computed(() => {
   const currConvRate = totals.leads > 0 ? (totals.convertidos / totals.leads) * 100 : 0;
   const prevConvRate = totals.prevLeads > 0 ? (totals.prevConv / totals.prevLeads) * 100 : 0;
 
-  const result = {
+  return {
     totalLeads: totals.leads,
     totalLeadsConvertidos: totals.convertidos,
     avgConversion: Number(currConvRate.toFixed(1)),
     totalAppointments: totals.agendamentos,
     totalMessages: totals.mensagens,
-    // Valores de demonstração para métricas de tempo (até termos dados reais suficientes)
     avgResponseTime: 4.5,
     avgConversionTime: 7.2,
     totalLeadsVariacao: calcVar(totals.leads, totals.prevLeads),
@@ -386,17 +369,15 @@ const aggregatedStats = computed(() => {
     totalAppointmentsVariacao: calcVar(totals.agendamentos, totals.prevAgend),
     totalMessagesVariacao: calcVar(totals.mensagens, totals.prevMsg)
   };
-
-  return result;
 });
 
+// --- FUNÇÕES ---
 const fetchReportData = async () => {
   loading.value = true;
   try {
     const dates = getDatesFromPeriod();
     let filterId = vendedorFiltro.value;
     
-    // Se não for admin, forçar o filtro do próprio vendedor
     if (!isAdmin.value && profile.value?.id) {
       filterId = Number(profile.value.id);
     }
@@ -407,15 +388,12 @@ const fetchReportData = async () => {
       p_vendedor: filterId ? Number(filterId) : null
     };
 
-    console.log('📡 Chamando RPC com:', params);
-
     const { data, error } = await (supabase as any).rpc('fn_relatorio_vendedores_prime', params);
 
     if (error) {
       console.error('❌ Erro Supabase RPC:', error);
       reportData.value = [];
     } else {
-      // Calcular as taxas de conversão individualmente no frontend para garantir precisão
       reportData.value = (data || []).map((item: any) => ({
         ...item,
         taxa_conversao: item.total_leads > 0 
@@ -424,7 +402,7 @@ const fetchReportData = async () => {
       }));
     }
   } catch (err: any) {
-    console.error('⚠️ Falha crítica ao buscar dados do dashboard:', err.message || err);
+    console.error('⚠️ Falha crítica ao buscar dados:', err);
   } finally {
     setTimeout(() => { loading.value = false; }, 400);
   }
@@ -453,16 +431,11 @@ const applyFilters = () => {
   fetchReportData();
 };
 
-// Função para exportar os dados da tabela para CSV
 const exportToCSV = () => {
   if (reportData.value.length === 0) return;
-
-  // 1. Definir Cabeçalhos
   const headers = ["Consultor", "Leads", "Conversão", "Taxa %", "Score", "Tempo Resp. (h)", "Agend."];
-  
-  // 2. Mapear os dados para as linhas do CSV
   const rows = reportData.value.map(item => [
-    `"${item.vendedor_nome || 'N/A'}"`, // Aspas duplas para evitar erro com nomes que tenham vírgula
+    `"${item.vendedor_nome || 'N/A'}"`,
     item.total_leads || 0,
     item.leads_convertidos || 0,
     (item.taxa_conversao || 0).toFixed(2),
@@ -470,38 +443,19 @@ const exportToCSV = () => {
     (Number(item.tempo_medio_resposta) || 0).toFixed(2),
     item.total_agendamentos || 0
   ]);
-
-  // 3. Unir cabeçalhos e linhas com quebras de linha (\n)
-  const csvContent = [
-    headers.join(","),
-    ...rows.map(r => r.join(","))
-  ].join("\n");
-
-  // 4. Criar o arquivo (Blob) e acionar o download
+  const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-  
-  // Nome do arquivo com data atual
-  const dateStr = new Date().toISOString().split('T')[0];
   link.setAttribute("href", url);
-  link.setAttribute("download", `relatorio_desempenho_${dateStr}.csv`);
-  link.style.visibility = "hidden";
-  
-  document.body.appendChild(link);
+  link.setAttribute("download", `relatorio_desempenho_${new Date().toISOString().split('T')[0]}.csv`);
   link.click();
-  document.body.removeChild(link);
 };
 
-// Função robusta para exportar para Excel (.xlsx)
 const exportToXLSX = async () => {
   if (reportData.value.length === 0) return;
-
   try {
-    // Carregamento dinâmico da biblioteca padrão xlsx
     const XLSX = await import('xlsx');
-
-    // 1. Preparar os dados
     const headers = ["Consultor", "Leads", "Conversão", "Taxa %", "Score", "Tempo Resp. (h)", "Agend."];
     const rows = reportData.value.map(item => [
       item.vendedor_nome || 'N/A',
@@ -512,81 +466,35 @@ const exportToXLSX = async () => {
       Number((Number(item.tempo_medio_resposta) || 0).toFixed(2)),
       item.total_agendamentos || 0
     ]);
-
-    // 2. Criar a Worksheet
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-
-    // 3. Ajustar largura das colunas
-    ws['!cols'] = [
-      { wch: 25 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 15 }, { wch: 10 }
-    ];
-
-    // 4. Criar o Workbook e anexar a aba
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Desempenho");
-    
-    // 5. Gerar o arquivo e disparar download
-    const dateStr = new Date().toISOString().split('T')[0];
-    XLSX.writeFile(wb, `relatorio_desempenho_${dateStr}.xlsx`);
-    
-  } catch (err: any) {
-    console.error('❌ Erro na exportação Excel:', err);
-    alert('Erro ao gerar Excel. Por favor, use o formato CSV por enquanto.');
+    XLSX.writeFile(wb, `relatorio_desempenho_${new Date().toISOString().split('T')[0]}.xlsx`);
+  } catch (err) {
+    console.error('❌ Erro Excel:', err);
   }
 };
 
-// Função definitiva para salvar o Relatório Formal em PDF
 const exportToPDF = async () => {
-  if (!process.client) return;
-  if (!reportData.value || reportData.value.length === 0) {
-    alert('Não há dados para exportar.');
-    return;
-  }
-  
+  if (!process.client || reportData.value.length === 0) return;
   try {
-    // 1. Ativar modo de exportação e aguardar renderização
     isExporting.value = true;
-    
-    // Pequeno delay e nextTick para garantir que o Vue montou o DOM do relatório
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
+    await new Promise(resolve => setTimeout(resolve, 200));
     const element = document.getElementById('formal-report-content');
-    if (!element) {
-      isExporting.value = false;
-      return;
-    }
-
+    if (!element) return;
     const Lib = await import('html2pdf.js');
     const html2pdf = Lib.default || Lib;
-    
-    const dateStr = new Date().toISOString().split('T')[0];
-    
     const opt = {
       margin: 0.5,
-      filename: `Relatorio_Operacional_${dateStr}.pdf`,
-      image: { type: 'jpeg' as const, quality: 0.98 },
-      html2canvas: { 
-        scale: 2, 
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff'
-      },
-      jsPDF: { 
-        unit: 'in', 
-        format: 'a4', 
-        orientation: 'portrait' as const
-      }
+      filename: `Relatorio_Operacional_${new Date().toISOString().split('T')[0]}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
     };
-
-    // 2. Gerar o PDF
     await html2pdf().set(opt).from(element).save();
-    
-    // 3. Limpar estado
     isExporting.value = false;
-    
   } catch (err) {
-    console.error('❌ Erro no relatório PDF:', err);
-    alert('Erro ao gerar relatório formal.');
+    console.error('❌ Erro PDF:', err);
     isExporting.value = false;
   }
 };
@@ -608,8 +516,35 @@ const closeOnEsc = (e: KeyboardEvent) => {
   }
 };
 
-onMounted(() => {
+// --- REALTIME ---
+let reportsChannel: any = null;
+const subscribeToReportsChanges = () => {
+  if (reportsChannel) return;
+  reportsChannel = supabase
+    .channel('reports-realtime')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'ag_leads' }, () => fetchReportData())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'ag_tarefas' }, () => fetchReportData())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'ag_agendamentos' }, () => fetchReportData())
+    .subscribe();
+};
+
+onMounted(async () => {
+  isAdmin.value = await checkIsAdmin();
+  if (isAdmin.value) await fetchVendedores();
+  await fetchReportData();
+  subscribeToReportsChanges();
+  
+  const days = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
+  dailyData.value = days.map(d => ({
+    label: d,
+    value: Math.floor(Math.random() * 30) + 5
+  }));
   window.addEventListener('keydown', closeOnEsc);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', closeOnEsc);
+  if (reportsChannel) supabase.removeChannel(reportsChannel);
 });
 </script>
 

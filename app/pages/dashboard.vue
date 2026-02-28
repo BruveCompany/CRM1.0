@@ -364,7 +364,7 @@ const proximasAcoes = computed(() => {
 // Executa ao montar o componente
 onMounted(() => {
   fetchDashboardData();
-  subscribeToDashboardChanges(); // Ativa Realtime
+  subscribeToDashboardChanges(fetchDashboardData); // Ativa Realtime com refresh total
 });
 
 onUnmounted(() => {

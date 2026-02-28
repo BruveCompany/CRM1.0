@@ -113,7 +113,11 @@ export const useDashboardMetrics = () => {
     // --- Lógica Realtime Prime para Dashboard ---
     let dashboardChannel: any = null;
 
-    const subscribeToDashboardChanges = () => {
+    /**
+     * Inscreve para mudanças no banco que afetam o Dashboard.
+     * @param onUpdate Callback opcional para atualizar dados extras na página (ex: tarefas, funil)
+     */
+    const subscribeToDashboardChanges = (onUpdate?: () => void) => {
         if (!profile.value?.id || dashboardChannel) return;
 
         console.log('🔌 Dashboard: Ativando monitoramento em tempo real...');
@@ -126,6 +130,7 @@ export const useDashboardMetrics = () => {
                 () => {
                     console.log('📈 Dashboard: Atualizando métricas de Leads...');
                     fetchDashboardData();
+                    if (onUpdate) onUpdate();
                 }
             )
             .on(
@@ -134,6 +139,16 @@ export const useDashboardMetrics = () => {
                 () => {
                     console.log('📈 Dashboard: Atualizando métricas de Tarefas...');
                     fetchDashboardData();
+                    if (onUpdate) onUpdate();
+                }
+            )
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'ag_agendamentos' },
+                () => {
+                    console.log('📈 Dashboard: Atualizando métricas de Agendamentos...');
+                    fetchDashboardData();
+                    if (onUpdate) onUpdate();
                 }
             )
             .subscribe();
