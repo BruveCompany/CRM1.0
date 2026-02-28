@@ -151,7 +151,7 @@ const isConfigOpen = ref(false)
 const navItems = computed(() => {
   return [
     { label: 'Dashboard', to: '/dashboard', icon: HomeIcon },
-    { label: 'Mensagens', to: '/mensagens', icon: ChatBubbleLeftRightIcon },
+    { label: 'Chat', to: '/chat', icon: ChatBubbleLeftRightIcon },
     { label: 'Leads', to: '/leads', icon: IdentificationIcon },
     { label: 'Relatórios', to: '/relatorios', icon: ChartBarIcon },
     { label: 'Agenda', to: '/agenda', icon: CalendarIcon },
