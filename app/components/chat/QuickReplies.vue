@@ -20,8 +20,8 @@
           leave-from-class="transform scale-100 opacity-100"
           leave-to-class="transform scale-95 opacity-0"
         >
-          <MenuItems class="absolute bottom-full left-0 mb-2 w-56 origin-bottom-left divide-y divide-neutral-100 rounded-2xl bg-white shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none z-50 overflow-hidden border border-neutral-100">
-            <div class="px-1 py-1 max-h-60 overflow-y-auto custom-scrollbar">
+          <MenuItems class="absolute bottom-full left-0 mb-2 w-96 origin-bottom-left divide-y divide-neutral-100 rounded-2xl bg-white shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none z-50 overflow-hidden border border-neutral-100">
+            <div class="px-1 py-1 max-h-80 overflow-y-auto custom-scrollbar">
               <div v-if="respostas.length === 0" class="px-3 py-4 text-center ">
                 <p class="text-xs text-neutral-400">Nenhuma resposta rápida cadastrada.</p>
               </div>
@@ -33,12 +33,16 @@
                 <button
                   @click="$emit('select', item.conteudo)"
                   :class="[
-                    active ? 'bg-primary-50 text-primary-700' : 'text-neutral-700',
-                    'group flex w-full items-center rounded-xl px-3 py-2.5 text-xs transition-colors'
+                    active ? 'bg-primary-50' : '',
+                    'group flex w-full flex-col items-start gap-1 rounded-xl px-4 py-3 text-left transition-colors border-b border-neutral-50 last:border-none'
                   ]"
                 >
-                  <span class="font-bold text-primary-500 mr-2 min-w-[30px]">/{{ item.atalho }}</span>
-                  <span class="truncate">{{ item.conteudo }}</span>
+                  <span class="font-mono font-bold text-primary-600 text-[10px] uppercase tracking-wider">
+                    /{{ item.atalho }}
+                  </span>
+                  <span class="text-neutral-600 text-xs line-clamp-2">
+                    {{ item.conteudo }}
+                  </span>
                 </button>
               </MenuItem>
             </div>
@@ -56,20 +60,29 @@ import { useUserStore } from '~/stores/user';
 
 const emit = defineEmits(['select']);
 const supabase = useSupabaseClient();
+
+// Estado da lista e controle de carregamento
 const respostas = ref<any[]>([]);
 const loading = ref(true);
 
+/**
+ * Busca Respostas Rápidas personalizadas do profissional logado.
+ * Os dados são filtrados pelo ID do perfil no Supabase.
+ */
 const fetchRespostas = async () => {
   try {
     const userStore = useUserStore();
     const profileId = userStore.profile?.id;
 
+    // Constrói a query básica
     let query = (supabase.from('ag_respostas_rapidas') as any).select('atalho, conteudo');
     
+    // Aplica filtro se o usuário estiver autenticado e com perfil carregado
     if (profileId) {
       query = query.eq('profissional_id', profileId);
     }
 
+    // Executa busca ordenada por atalho
     const { data, error } = await query.order('atalho');
 
     if (error) throw error;
@@ -81,6 +94,7 @@ const fetchRespostas = async () => {
   }
 };
 
+// Carrega as respostas assim que o componente é montado
 onMounted(() => {
   fetchRespostas();
 });
