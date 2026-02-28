@@ -4,8 +4,9 @@ export type Database = {
     Tables: {
       ag_profiles: {
         Row: AgProfile
-        Insert: Omit<AgProfile, 'id' | 'created_at'> & { id?: number; created_at?: string }
-        Update: Partial<Omit<AgProfile, 'id' | 'created_at'>>
+        Insert: Partial<AgProfile>
+        Update: Partial<AgProfile>
+        Relationships: []
       }
       ag_especialidades: {
         Row: AgEspecialidade
@@ -33,11 +34,17 @@ export type Database = {
         Row: AgViewAgendamentoCompleto
       }
     }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
   }
 }
 
 // Tipos da base de dados Supabase
-export interface AgProfile {
+export type AgProfile = {
   id: number
   created_at: string
   user_id: string | null

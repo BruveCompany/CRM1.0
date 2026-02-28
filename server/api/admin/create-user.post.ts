@@ -1,4 +1,5 @@
 import { serverSupabaseServiceRole } from '#supabase/server'
+import { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '../../../shared/types/database'
 
 export default defineEventHandler(async (event) => {
@@ -13,7 +14,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Cliente Supabase com privilégios de administrador (serviço)
-    const client = serverSupabaseServiceRole<Database>(event)
+    const client = serverSupabaseServiceRole(event) as SupabaseClient<Database>
 
     // 1. Criar o usuário no Supabase Auth usando as APIs de admin
     const { data: authData, error: authError } = await client.auth.admin.createUser({
@@ -40,12 +41,12 @@ export default defineEventHandler(async (event) => {
 
     // 2. Inserir os dados na tabela public.ag_profiles
     const { data: profileData, error: profileError } = await client
-        .from('ag_profiles')
+        .from('ag_profiles' as any)
         .insert({
             user_id: user.id,
-            email: user.email,
-            nome: nome,
-            role: role
+            email: user.email ?? null,
+            nome: nome as string,
+            role: role as string
         })
         .select()
         .single()
