@@ -156,7 +156,7 @@ const navItems = computed(() => {
     { label: 'Relatórios', to: '/relatorios', icon: ChartBarIcon },
     { label: 'Agenda', to: '/agenda', icon: CalendarIcon },
     { label: 'Clientes', to: '/clientes', icon: UserIcon },
-    { label: 'Configurações', to: '/configuracoes', icon: Cog6ToothIcon },
+    { label: 'Templates', to: '/configuracoes', icon: Cog6ToothIcon },
   ]
 })
 

@@ -29,7 +29,7 @@
       </div>
 
       <!-- Loading State -->
-      <div v-if="loading" class="h-[60vh] flex items-center justify-center">
+      <div v-if="loading && !lead" class="h-[60vh] flex items-center justify-center">
         <div class="flex flex-col items-center gap-4">
           <Icon name="svg-spinners:18-dots-indicator" class="w-12 h-12 text-primary-600" />
           <p class="text-gray-400 font-normal animate-pulse text-[10px] uppercase tracking-[0.2em]">Sincronizando dados estratégicos...</p>
@@ -37,7 +37,7 @@
       </div>
 
       <!-- Not Found State -->
-      <div v-else-if="!lead" class="h-[60vh] flex items-center justify-center">
+      <div v-else-if="!loading && !lead" class="h-[60vh] flex items-center justify-center">
         <div class="text-center">
           <Icon name="heroicons:exclamation-triangle" class="w-16 h-16 text-gray-200 mx-auto mb-4" />
           <h2 class="text-lg font-semibold text-gray-900 uppercase tracking-wider">Lead não encontrado</h2>
@@ -46,7 +46,7 @@
       </div>
 
       <!-- Main Content (The Orchestration) -->
-      <div v-if="!loading && lead" class="max-w-[1600px] mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div v-if="lead" class="max-w-[1600px] mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
         
         <!-- 1. Header Component -->
         <LeadDetailHeader 
@@ -295,8 +295,6 @@ const handleClickOutside = (event: MouseEvent) => {
     showStageMenu.value = false;
   }
 };
-onMounted(() => document.addEventListener('mousedown', handleClickOutside));
-onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside));
 
 // --- STATE ---
 const lead = ref<any>(null);
@@ -343,89 +341,110 @@ const carregarArquivosDoLead = async (leadId: string) => {
   }
 };
 
-const fetchData = async () => {
-  loading.value = true;
-  console.log(`[DIAGNÓSTICO] Iniciando busca unificada para o Lead ID: ${id}`);
+const fetchData = async (silent = false) => {
+  if (!silent) loading.value = true;
+  console.log(`[REALTIME] ${silent ? 'Atualização silenciosa' : 'Carga total'} iniciada para o Lead ID: ${id}`);
 
   try {
     // 1. Validação de UUID
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
     if (!isUuid) {
       console.warn('[AVISO] O ID fornecido não é um UUID válido.');
-      loading.value = false;
+      if (!silent) loading.value = false;
       return;
     }
 
-    // 2. Busca Dados Principais do Lead
-    const { data: leadDataArray, error: leadError } = await supabase
-      .from('ag_leads')
-      .select('*, ag_profiles(nome)')
-      .eq('id', id)
-      .limit(1);
-
-    if (leadError) throw leadError;
+    // 2. Disparar buscas em paralelo
+    const today = new Date().toISOString().split('T')[0];
     
-    const leadData = (leadDataArray as any[])?.[0];
+    const [leadRes, agRes, timelineRes]: any = await Promise.all([
+      supabase.from('ag_leads').select('*, ag_profiles(nome)').eq('id', id).limit(1),
+      supabase.from('ag_view_agendamentos_completo').select('data, hora_inicio, hora_fim, titulo, categoria').eq('lead_id', id).eq('cancelado', false).gte('data', today).order('data').order('hora_inicio').limit(1),
+      (supabase.rpc as any)('get_lead_timeline', { lead_id_param: id })
+    ]);
+
+    if (leadRes.error) throw leadRes.error;
+    
+    const leadData = leadRes.data?.[0];
     if (leadData) {
       lead.value = {
-        ...(leadData as any),
-        vendedor_nome: (leadData as any).ag_profiles?.nome
+        ...leadData,
+        vendedor_nome: leadData.ag_profiles?.nome
       };
-      
-      // Carrega os arquivos associados
-      carregarArquivosDoLead(id as string);
+      carregarArquivosDoLead(id);
     }
 
-    // 3. Busca o próximo agendamento do lead (hora_inicio + hora_fim)
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      
-      // Usamos a VIEW (mesma da agenda) para garantir consistência total
-      const { data: agData, error: agError } = await supabase
-        .from('ag_view_agendamentos_completo')
-        .select('data, hora_inicio, hora_fim, titulo, categoria')
-        .eq('lead_id', id)
-        .eq('cancelado', false)
-        .gte('data', today)
-        .order('data', { ascending: true })
-        .order('hora_inicio', { ascending: true })
-        .limit(1);
-
-      if (!agError && agData && agData.length > 0) {
-        // Só atualiza se o fetch retornou algo, para não sobrescrever o dado do modal
-        proximoAgendamento.value = agData[0];
-      }
-    } catch (agErr: any) {
-      console.warn('[360] Aviso na busca de agendamento:', agErr.message);
+    if (!agRes.error && agRes.data?.length > 0) {
+      proximoAgendamento.value = agRes.data[0];
     }
 
-    // 4. Busca Timeline via RPC (Envolvida em try-catch isolado para não travar a página)
-    try {
-      console.log(`[RPC] Chamando get_lead_timeline com parâmetro lead_id_param: ${id}`);
-      const { data: timelineData, error: timelineError } = await (supabase as any)
-        .rpc('get_lead_timeline', { lead_id_param: id });
-
-      if (timelineError) {
-        console.error('[RPC ERRO] Falha ao carregar timeline:', timelineError.message);
-      } else {
-        console.log('[RPC SUCESSO] Dados da timeline recebidos:', (timelineData as any[])?.length || 0, 'itens');
-        timelineActivities.value = (timelineData as any[]) || [];
-      }
-    } catch (rpcErr: any) {
-      console.error('[RPC FALHA CRÍTICA] Erro ao tentar acessar a função da timeline:', rpcErr.message);
+    if (!timelineRes.error) {
+      timelineActivities.value = timelineRes.data || [];
     }
 
   } catch (error: any) {
-    console.error('[FALHA CRÍTICA] Erro durante o carregamento dos dados:', error.message);
-  } finally {
-    // Pequeno atraso para suavizar a transição visual
-    setTimeout(() => { loading.value = false; }, 500);
+    console.error('[FALHA CRÍTICA] Erro no carregamento:', error.message);
+    } finally {
+    if (!silent) {
+       // Atraso mínimo apenas para evitar flicker
+       setTimeout(() => { loading.value = false; }, 50);
+    }
   }
 };
 
+// --- REALTIME PRIME (Lead Detail) ---
+let leadChannel: any = null;
+
+const subscribeToLeadChanges = () => {
+  if (!id || leadChannel) return;
+
+  console.log(`🔌 Realtime: Monitorando Lead ${id}...`);
+
+  leadChannel = supabase
+    .channel(`lead-detail-${id}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'ag_leads', filter: `id=eq.${id}` },
+      () => fetchData(true) // Atualização silenciosa
+    )
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'ag_labels', filter: `lead_id=eq.${id}` },
+      () => fetchData(true)
+    )
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'ag_notas_internas', filter: `lead_id=eq.${id}` },
+      () => fetchData(true)
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'ag_tarefas', filter: `lead_id=eq.${id}` },
+      () => fetchData(true)
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'attachments', filter: `lead_id=eq.${id}` },
+      () => {
+        carregarArquivosDoLead(id);
+        fetchData(true);
+      }
+    )
+    .subscribe();
+};
+
+// Monitora o carregamento do perfil para buscar dados assim que a identidade for confirmada (Tarefa: Sincronismo 360)
+watch(() => profile.value?.id, (newId) => {
+  if (newId && !lead.value?.id) {
+    console.log('[360] Perfil identificado, buscando dados do lead...');
+    fetchData();
+  }
+});
+
 // --- LIFECYCLE HOOKS ---
 onMounted(async () => {
-  await fetchData();
+  fetchData();
+  subscribeToLeadChanges(); // Ativa Realtime
   
   // Busca lista de profissionais para o modal de agendamento
   const profs = await fetchProfissionais();
@@ -439,6 +458,16 @@ onMounted(async () => {
   // Carrega os status do Kanban se ainda não estiverem disponíveis
   if (leadStatuses.value.length === 0) {
     await fetchStatuses();
+  }
+
+  document.addEventListener('mousedown', handleClickOutside);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('mousedown', handleClickOutside);
+  if (leadChannel) {
+    console.log('🔌 Lead Detail: Desconectando Realtime...');
+    supabase.removeChannel(leadChannel);
   }
 });
 

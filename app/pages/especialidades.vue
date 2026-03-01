@@ -126,6 +126,7 @@ onMounted(async () => {
 })
 
 definePageMeta({
+  middleware: 'admin',
   layout: 'default'
 })
 

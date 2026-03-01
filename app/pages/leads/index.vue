@@ -13,7 +13,13 @@
       </div>
 
       <!-- Renderização Condicional: Kanban vs Tabela -->
-      <div class="view-wrapper">
+      <div class="view-wrapper relative">
+        <!-- Indicador de Carregamento Centralizado (Tarefa: Feedback Visual) -->
+        <div v-if="isLoadingLeads && filteredLeadsList.length === 0" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-50/50 backdrop-blur-[2px] py-32">
+          <Icon name="svg-spinners:18-dots-indicator" class="w-12 h-12 mb-4 text-primary-600" />
+          <p class="text-sm font-bold text-slate-500 uppercase tracking-widest animate-pulse">Sincronizando Pipeline...</p>
+        </div>
+
         <ClientOnly>
           <Transition name="fade" mode="out-in">
             <LeadsKanban v-if="showKanbanView" />
@@ -78,7 +84,9 @@ const {
   fetchStatuses, 
   showKanbanView, 
   filteredLeadsList,
+  isLoadingLeads,
   subscribeToStatusChanges,
+  subscribeToLeadChanges, // Adicionado (Tarefa: Sincronismo Realtime)
   subscribeToAppointmentChanges,
   isEditingStatuses,
   isCreateLeadModalOpen
@@ -246,22 +254,23 @@ const handleSave = async (formData: any) => {
 };
 
 let statusSub: any = null;
+let leadSub: any = null; // Adicionado (Tarefa: Sincronismo Realtime)
 let appointSub: any = null;
 
 onMounted(async () => {
-  // Carregamento inicial de dados
-  await Promise.all([
-    fetchStatuses(),
-    fetchLeads()
-  ]);
+  // Carregamento inicial (Fetch imediato)
+  fetchStatuses();
+  fetchLeads();
 
-  // Inscricões Realtime
+  // Inscrições Realtime unificadas (Tarefa: Sincronismo Realtime)
   statusSub = subscribeToStatusChanges();
+  leadSub = subscribeToLeadChanges(); 
   appointSub = subscribeToAppointmentChanges();
 });
 
 onUnmounted(() => {
   if (statusSub) statusSub.unsubscribe();
+  if (leadSub) leadSub.unsubscribe(); // Adicionado
   if (appointSub) appointSub.unsubscribe();
 });
 

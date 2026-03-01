@@ -48,6 +48,9 @@
             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Última Ativ.
             </th>
+            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Ações
+            </th>
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
@@ -61,7 +64,7 @@
               Nenhum usuário encontrado.
             </td>
           </tr>
-          <tr v-for="perfil in perfis" :key="perfil.id">
+          <tr v-for="perfil in perfisEnriched" :key="perfil.id">
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
               {{ String(perfil.id).substring(0, 8) }}...
             </td>
@@ -95,24 +98,94 @@
               </div>
               <span v-else>-</span>
             </td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+              <button 
+                @click="confirmDelete(perfil)"
+                class="text-error-600 hover:text-error-900 transition-colors p-1 rounded-md hover:bg-error-50"
+                title="Excluir Usuário"
+              >
+                <TrashIcon class="w-5 h-5" />
+              </button>
+            </td>
           </tr>
         </tbody>
       </table>
     </div>
+
+    <!-- Modal de Confirmação -->
+    <ModalConfirmacao
+      v-model="showDeleteModal"
+      titulo="Excluir Usuário"
+      :mensagem="`Tem certeza que deseja excluir o usuário <b>${userToDelete?.nome}</b>? <br/> Esta ação removerá o acesso ao sistema e todos os dados de perfil vinculados.`"
+      :loading="isDeleting"
+      variant="danger"
+      @confirmar="handleDeleteUser"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { UserPlusIcon, ArrowPathIcon } from '@heroicons/vue/24/outline'
+import { UserPlusIcon, ArrowPathIcon, TrashIcon } from '@heroicons/vue/24/outline'
 import type { AgPerfil } from '../../shared/types/database'
+import ModalConfirmacao from './ModalConfirmacao.vue'
 
 const { fetchPerfis } = useProfissionais()
+const { notifySuccess, notifyError } = useNotification()
 const perfis = ref<AgPerfil[]>([])
 const loading = ref(true)
 const showModal = ref(false)
-let refreshInterval: any = null
+
+// --- DELEÇÃO ---
+const showDeleteModal = ref(false)
+const isDeleting = ref(false)
+const userToDelete = ref<AgPerfil | null>(null)
+
+const confirmDelete = (perfil: AgPerfil) => {
+  userToDelete.value = perfil
+  showDeleteModal.value = true
+}
+
+const handleDeleteUser = async () => {
+  if (!userToDelete.value?.user_id) {
+    notifyError('ID de autenticação não encontrado para este usuário. Recarregue a página.')
+    return
+  }
+
+  isDeleting.value = true
+  try {
+    const response = await $fetch('/api/admin/delete-user', {
+      method: 'POST',
+      body: { userId: userToDelete.value.user_id }
+    })
+
+    if (response) {
+      notifySuccess('Usuário excluído com sucesso')
+      showDeleteModal.value = false
+      await loadData()
+    }
+  } catch (error: any) {
+    console.error('Erro ao excluir usuário:', error)
+    notifyError(error.statusMessage || 'Erro ao excluir usuário')
+  } finally {
+    isDeleting.value = false
+    userToDelete.value = null
+  }
+}
+
+// --- PRESENÇA PRIME (Realtime) ---
+const { onlineUsers } = usePresence()
+
+const perfisEnriched = computed(() => {
+  return perfis.value.map(p => ({
+    ...p,
+    // Se o ID do usuário está no mapa de sockets online, ele está online.
+    // Senão, cai no fallback do banco de dados ( Heartbeat/Polling antigo)
+    is_online_calculated: !!onlineUsers.value[String(p.id)] || (p as any).is_online === true
+  }))
+})
 
 const loadData = async () => {
+  loading.value = true;
   try {
     const data = await fetchPerfis()
     perfis.value = data

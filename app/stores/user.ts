@@ -7,52 +7,24 @@ export const useUserStore = defineStore('user', () => {
   const supabase = useSupabaseClient<Database>()
   const supabaseUser = useSupabaseUser()
 
-  // State
-  const profile = ref<AgProfile | null>(null)
+  const { profile: authProfile, fetchProfile: authFetch } = useAuth()
+
+  // State sincronizado com useAuth para evitar fetch duplo
+  const profile = computed(() => authProfile.value)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
   // Getters
   const user = computed(() => supabaseUser.value)
   const isAuthenticated = computed(() => !!supabaseUser.value)
-  const userName = computed(() => profile.value?.nome || 'Usuário')
-  const userRole = computed(() => profile.value?.role || 'user')
+  const userName = computed(() => (authProfile.value as any)?.nome || 'Usuário')
+  const userRole = computed(() => (authProfile.value as any)?.role || 'user')
 
   // Actions
   async function fetchProfile() {
-    console.log('fetchProfile chamado')
-    console.log('supabaseUser.value:', supabaseUser.value)
-    console.log('supabaseUser.value.sub:', supabaseUser.value?.sub)
-    if (!supabaseUser.value || !supabaseUser.value.sub) {
-      profile.value = null
-      return
-    }
-
     loading.value = true
-    error.value = null
-
-    try {
-      const targetId = supabaseUser.value.sub || supabaseUser.value.id
-      console.log('user_id buscado:', targetId)
-
-      if (!targetId) {
-        throw new Error('ID do usuário não localizado no objeto de autenticação')
-      }
-
-      const { data, error: fetchError } = await supabase
-        .from('ag_profiles')
-        .select('*')
-        .eq('user_id', targetId)
-        .single()
-      console.log('Resultado da busca:', { data, fetchError })
-      if (fetchError) throw fetchError
-      profile.value = data as AgProfile
-    } catch (err: any) {
-      error.value = err.message || 'Erro ao buscar perfil'
-      console.error('Erro ao buscar perfil:', err)
-    } finally {
-      loading.value = false
-    }
+    await authFetch()
+    loading.value = false
   }
 
   async function updateProfile(updates: Partial<AgProfile>) {
@@ -89,7 +61,7 @@ export const useUserStore = defineStore('user', () => {
       if (updateError) throw updateError
 
       if (data) {
-        profile.value = data as AgProfile
+        authProfile.value = data
       }
     } catch (err: any) {
       error.value = err.message || 'Erro ao atualizar perfil'
@@ -101,7 +73,7 @@ export const useUserStore = defineStore('user', () => {
   }
 
   function clearProfile() {
-    profile.value = null
+    authProfile.value = null
     error.value = null
   }
 

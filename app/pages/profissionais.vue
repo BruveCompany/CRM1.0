@@ -198,6 +198,7 @@ async function salvarProfissional(dados: { profile_id: number; especialidade_id:
 }
 
 definePageMeta({
+  middleware: 'admin',
   layout: 'default'
 })
 

@@ -1,15 +1,14 @@
-import { ref, onMounted, onUnmounted, watch } from 'vue'
-import { useAuth } from './useAuth'
-
-// Estado global de usuários online via WebSocket (Presença Realtime)
-// Chave: Profile ID, Valor: Dados do usuário
-export const onlineUsers = useState<Record<string, any>>('presence-online-users', () => ({}))
+// Estado compartilhado fora da função para persistir entre chamadas do composable
+const onlineUsers = () => useState<Record<string, any>>('presence-online-users', () => ({}))
+let presenceChannel: any = null
+let heartbeatInterval: any = null
 
 export const usePresence = () => {
     const supabase = useSupabaseClient()
     const { profile, isAuthenticated, updateHeartbeat } = useAuth()
-    let presenceChannel: any = null
-    let heartbeatInterval: any = null
+
+    // Estado global de usuários online via WebSocket (Presença Realtime)
+    const socketOnlineUsers = onlineUsers()
 
     const setupPresence = () => {
         if (!profile.value || presenceChannel) return
@@ -33,8 +32,8 @@ export const usePresence = () => {
                     onlineMap[key] = state[key][0]
                 })
 
-                onlineUsers.value = onlineMap
-                console.log('👥 Presença: Usuários online sincronizados:', Object.keys(onlineMap).length)
+                socketOnlineUsers.value = onlineMap
+                console.log('👥 Presença: Usuários online sincronizados:', Object.keys(onlineMap))
             })
             .on('presence', { event: 'join' }, ({ key, newPresences }: any) => {
                 console.log('🟢 Presença: Usuário entrou:', key)
@@ -53,14 +52,13 @@ export const usePresence = () => {
                 }
             })
 
-        // Mantemos um heartbeat longo (10 minutos) apenas para registro histórico no banco
-        // mas a UI agora usará o Socket para o "ao vivo".
+        // Heartbeat longo (10 minutos) para o banco de dados
         heartbeatInterval = setInterval(() => {
             if (isAuthenticated.value) {
                 console.log('💓 Presença: Atualizando registro histórico (Last Seen)...')
                 updateHeartbeat()
             }
-        }, 600000) // 10 minutos
+        }, 600000)
     }
 
     const cleanupPresence = () => {
@@ -73,6 +71,7 @@ export const usePresence = () => {
             clearInterval(heartbeatInterval)
             heartbeatInterval = null
         }
+        socketOnlineUsers.value = {}
     }
 
     const initPresence = () => {
@@ -85,7 +84,6 @@ export const usePresence = () => {
                 }
             }, { immediate: true })
 
-            // Caso o perfil demore a carregar
             watch(profile, (p) => {
                 if (p && isAuthenticated.value) {
                     setupPresence()
@@ -94,12 +92,12 @@ export const usePresence = () => {
         })
 
         onUnmounted(() => {
-            cleanupPresence()
+            // No root (app.vue) o cleanup é importante ao fazer logout
         })
     }
 
     return {
         initPresence,
-        onlineUsers
+        onlineUsers: socketOnlineUsers
     }
 }

@@ -77,14 +77,21 @@ export const useLeads = () => {
     const showMyLeads = useState<boolean>('leads-show-my-leads', () => false)
     const isEditingStatuses = useState<boolean>('leads-is-editing-statuses', () => false)
     const isCreateLeadModalOpen = useState<boolean>('leads-create-modal-open', () => false)
+    const isLoadingLeads = useState<boolean>('leads-is-loading', () => false)
+    const isFetching = useState<boolean>('leads-is-fetching-global', () => false)
+    const lastFetchTime = useState<number>('leads-last-fetch-time', () => 0)
 
     const openDetails = (id: string) => {
         selectedLeadId.value = id
         showDetailsModal.value = true
     }
 
-    // Busca de status no banco de dados
     const fetchStatuses = async () => {
+        // Cache de 5 minutos para os status
+        const now = Date.now();
+        const lastStatusFetch = useState<number>('leads-last-status-fetch', () => 0);
+        if (leadStatuses.value.length > 0 && now - lastStatusFetch.value < 300000) return;
+
         const { data, error } = await supabase
             .from('ag_lead_statuses')
             .select('*')
@@ -92,18 +99,36 @@ export const useLeads = () => {
 
         if (!error && data) {
             leadStatuses.value = data
+            lastStatusFetch.value = now;
         }
     }
 
     /**
      * SUBSCRIPÇÃO REALTIME PARA STATUS
-     * Mantém o Kanban atualizado em tempo real quando um administrador faz alterações.
      */
     const subscribeToStatusChanges = () => {
         return (supabase as any)
             .channel('public:ag_lead_statuses')
             .on('postgres_changes', { event: '*', table: 'ag_lead_statuses', schema: 'public' }, () => {
                 fetchStatuses()
+            })
+            .subscribe()
+    }
+
+    /**
+     * SUBSCRIPÇÃO REALTIME PARA LEADS
+     * Essencial para que o Kanban e a Lista atualizem sozinhos.
+     */
+    const subscribeToLeadChanges = () => {
+        return (supabase as any)
+            .channel('public:ag_leads_changes')
+            .on('postgres_changes', {
+                event: '*',
+                table: 'ag_leads',
+                schema: 'public'
+            }, (payload: any) => {
+                console.log('Realtime Lead Change:', payload.event)
+                fetchLeads()
             })
             .subscribe()
     }
@@ -135,12 +160,19 @@ export const useLeads = () => {
         const { data, error } = await supabase
             .from('ag_profiles')
             .select('id, user_id, nome, role, is_online, last_activity')
-            .order('nome')
+            .order('nome');
 
-        if (!error && data) {
-            vendedores.value = data
+        if (error) {
+            console.error('Erro ao buscar vendedores:', error);
+            return;
         }
-    }
+
+        if (data) {
+            vendedores.value = data;
+            const lastVendedoresFetch = useState<number>('leads-last-vendedores-fetch', () => 0);
+            lastVendedoresFetch.value = Date.now();
+        }
+    };
 
     /**
      * Busca o próximo agendamento futuro para todos os leads carregados.
@@ -164,36 +196,9 @@ export const useLeads = () => {
             }
         });
 
-        // 2. Buscar vínculos faltantes na ag_clientes
+        // 2. Simplificação drástica: Não fazer buscas pesadas por ILIKE de telefone em todas as consultas.
+        // O vínculo deve ser feito na criação do lead ou em um processo separado.
         const autoClientIds: Record<string, number> = {};
-        if (phonesToSearch.length > 0) {
-            console.log(`🔍 [fetchNextAppointments] Tentando vincular ${phonesToSearch.length} leads via telefone...`);
-
-            // Busca em blocos se necessário, mas aqui faremos direto (in)
-            // Nota: O ideal é que o telefone no ag_clientes também esteja limpo, 
-            // mas buscaremos de forma ampla se possível.
-            const { data: clients, error: cErr } = await supabase
-                .from('ag_clientes')
-                .select('id, telefone')
-                .or(phonesToSearch.map(p => `telefone.ilike.%${p}%`).join(','));
-
-            if (!cErr && clients) {
-                (clients as { id: number; telefone: string }[]).forEach(c => {
-                    const cleanCPhone = String(c.telefone || '').replace(/\D/g, '');
-                    // Se o telefone do cliente contém nossos dígitos ou vice-versa
-                    for (const leadPhone in phoneToLeadMap) {
-                        if (cleanCPhone.includes(leadPhone) || leadPhone.includes(cleanCPhone)) {
-                            const matchingLeadIds = phoneToLeadMap[leadPhone];
-                            if (matchingLeadIds) {
-                                matchingLeadIds.forEach(lid => {
-                                    autoClientIds[lid] = c.id;
-                                });
-                            }
-                        }
-                    }
-                });
-            }
-        }
 
         // 3. Montar mapa final de LeadID -> ClienteID e lista de ClientIDs únicos
         const leadToClientMapping: Record<string, number> = {};
@@ -343,169 +348,154 @@ export const useLeads = () => {
             .subscribe();
     }
 
-    const fetchLeads = async () => {
-        // Sempre atualiza a lista de vendedores para garantir que o status online esteja fresco
-        await fetchVendedores()
+    const fetchLeads = async (silent = false) => {
+        if (isFetching.value) return;
 
-        // Voltamos para a busca simples para garantir que nenhum lead suma
-        let query = supabase.from('view_leads_crm').select('*')
+        // Estratégia de Cache: Se buscou nos últimos 0.5 segundos em modo não-silencioso, pula
+        const now = Date.now();
+        if (!silent && now - lastFetchTime.value < 500) return;
 
-        if (showMyLeads.value) {
-            if (profile.value && profile.value.id) {
+        isFetching.value = true;
+        if (!silent) isLoadingLeads.value = true;
+
+        try {
+            // 1. Dispara buscas em paralelo
+            const fetchProfilesTask = fetchVendedores();
+
+            // 2. Busca leads da tabela ag_leads com JOIN explícito para garantir o nome do vendedor
+            let query = supabase
+                .from('ag_leads')
+                .select(`
+                    *,
+                    vendedor:vendedor_id (id, nome)
+                `)
+
+            if (showMyLeads.value && profile.value?.id) {
                 query = query.eq('vendedor_id', profile.value.id)
-            } else {
-                // Se o perfil não está carregado, buscamos na hora para garantir a filtragem
-                const user = useSupabaseUser()
-                if (user.value?.id) {
-                    const { data: profileData } = await supabase
-                        .from('ag_profiles')
-                        .select('id')
-                        .eq('user_id', user.value.id)
-                        .maybeSingle() as { data: { id: number } | null }
+            } else if (selectedVendedorId.value && selectedVendedorId.value !== 'all') {
+                query = query.eq('vendedor_id', selectedVendedorId.value)
+            }
 
-                    if (profileData) {
-                        query = query.eq('vendedor_id', profileData.id)
-                    } else {
-                        // Se não encontrar de jeito nenhum, forçamos um filtro que não retorne nada 
-                        // em vez de mostrar tudo, para manter a privacidade do filtro
-                        query = query.eq('vendedor_id', -1)
+            // Executa a Query principal e a busca de vendedores em paralelo
+            const [leadsResult] = await Promise.all([
+                query.order('criado_em', { ascending: false }),
+                fetchProfilesTask
+            ]);
+
+            if (leadsResult.error) throw leadsResult.error;
+
+            if (leadsResult.data) {
+                // 3. Normalização dos Leads
+                allLeads.value = (leadsResult.data as any[]).map(lead => {
+                    const leadId = lead.id ? String(lead.id) : '';
+                    let statusFinal = lead.status || 'leads_novos';
+
+                    if (leadId && pendingStatusUpdates.value[leadId]) {
+                        const targetStatus = pendingStatusUpdates.value[leadId]
+                        if (String(statusFinal).toLowerCase().trim().replace(/\s+/g, '_') === String(targetStatus).toLowerCase().trim().replace(/\s+/g, '_')) {
+                            delete pendingStatusUpdates.value[leadId]
+                        } else {
+                            statusFinal = targetStatus
+                        }
                     }
-                }
+
+                    // Tenta obter o nome do vendedor DIRETAMENTE do objeto (do JOIN vendedor)
+                    const vIdRaw = lead.vendedor_id || lead.vendedor?.id;
+                    const vNomeRaw = lead.vendedor?.nome || lead.vendedor_nome || lead.profissional_nome || 'Não Atribuído';
+
+                    // Normalização do vendedor_id: trata 0 ou '0' como null (Não Atribuído)
+                    const normalizedVendedorId = (vIdRaw && vIdRaw !== 0 && vIdRaw !== '0') ? String(vIdRaw) : null;
+
+                    return {
+                        ...lead,
+                        id: leadId,
+                        status: statusFinal,
+                        vendedor_id: normalizedVendedorId,
+                        vendedor_nome: (() => {
+                            if (!vNomeRaw || vNomeRaw === 'Não Atribuído' || vNomeRaw === 'Sem Vendedor') return 'Não Atribuído';
+                            // Limpeza básica do nome
+                            const parts = String(vNomeRaw).trim().split(/\s+/).filter(p => !['de', 'da', 'do', 'das', 'dos', 'e'].includes(p.toLowerCase()));
+                            return parts.length >= 2 ? `${parts[0]} ${parts[1]}` : parts[0] || vNomeRaw;
+                        })()
+                    }
+                });
+
+                lastFetchTime.value = now;
+                // Busca agendamentos logo após ter os leads (depende dos IDs)
+                await fetchNextAppointments();
             }
-        } else if (selectedVendedorId.value && selectedVendedorId.value !== 'all' && selectedVendedorId.value !== 'undefined') {
-            query = query.eq('vendedor_id', selectedVendedorId.value)
+        } catch (error) {
+            console.error('[fetchLeads] Falha:', error);
+        } finally {
+            isFetching.value = false;
+            if (!silent) isLoadingLeads.value = false; // Removido setTimeout de 300ms
         }
-
-        const { data: leadsData, error } = await query
-            .order('criado_em', { ascending: false })
-
-        if (error || !leadsData) {
-            allLeads.value = []
-            return
-        }
-
-        allLeads.value = (leadsData as any[]).map(lead => {
-            const leadId = lead.id ? String(lead.id) : '';
-            let statusFinal = lead.status || 'leads_novos';
-
-            if (leadId && pendingStatusUpdates.value[leadId]) {
-                const targetStatus = pendingStatusUpdates.value[leadId]
-                const normalizedCurrent = String(statusFinal).toLowerCase().trim().replace(/\s+/g, '_')
-                const normalizedTarget = String(targetStatus).toLowerCase().trim().replace(/\s+/g, '_')
-
-                if (normalizedCurrent === normalizedTarget) {
-                    delete pendingStatusUpdates.value[leadId]
-                } else {
-                    statusFinal = targetStatus
-                }
-            }
-
-            const rawNomeVendedor = lead.vendedor_nome ||
-                lead.vendedor_nome_display ||
-                lead.nome_vendedor ||
-                lead.profissional_nome ||
-                lead.vendedor ||
-                'Não Atribuído';
-
-            const preposicoes = ['de', 'da', 'do', 'das', 'dos', 'e'];
-            const allParts = String(rawNomeVendedor).trim().split(/\s+/);
-            const filteredParts = allParts.filter((part: string) => !preposicoes.includes(part.toLowerCase()));
-
-            const nomeVendedor = filteredParts.length >= 2
-                ? `${filteredParts[0]} ${filteredParts[1]}`
-                : filteredParts[0] || rawNomeVendedor;
-
-            return {
-                ...lead,
-                id: leadId,
-                status: statusFinal,
-                vendedor_id: lead.vendedor_id || lead.profissional_id || null,
-                vendedor_nome: nomeVendedor,
-                vendedor_nome_full: rawNomeVendedor
-            }
-        })
-
-        await fetchNextAppointments();
     }
 
-    // NOVO: Propriedade computada para enriquecer os leads com dados de UI e presença
+    // Monitora o carregamento do perfil para buscar leads assim que a identidade for confirmada
+    if (import.meta.client) {
+        watch(() => profile.value?.id, (newId) => {
+            if (newId) fetchLeads();
+        }, { immediate: true });
+    }
+
+    // VERSÃO OTIMIZADA: Propriedade computada para enriquecer os leads com dados de UI e presença
     const enrichedLeadsList = computed(() => {
-        // Acessa o estado global de presença (socket)
         const { onlineUsers: socketOnlineUsers } = usePresence()
+        const currentVendedores = vendedores.value || [];
+        const currentLeads = allLeads.value || [];
+        const presence = socketOnlineUsers.value || {};
+        const myProfile = profile.value;
 
-        return allLeads.value.map(l => {
-            const vId = l.vendedor_id;
+        // Pré-cache de vendedores para busca O(1)
+        const vMap = new Map();
+        currentVendedores.forEach(v => {
+            if (v.id) vMap.set(String(v.id), v);
+        });
 
-            // Busca informações do vendedor (seja o próprio ou outro)
-            const vendedorOnline = (() => {
-                if (!vId) return false;
+        return currentLeads.map(l => {
+            const vId = l.vendedor_id ? String(l.vendedor_id) : null;
+            const lid = String(l.id);
 
-                // 1. Checagem Principal: Socket Presence (CRM Prime)
-                // Se o ID do vendedor está no mapa de sockets online, ele está 100% online agora.
-                if (socketOnlineUsers.value[String(vId)]) return true;
+            // Busca no mapa por ID (string) ou por user_id se vId for um UUID
+            // Adicionamos redundância para garantir o match do ID
+            let vInfo = vId ? (vMap.get(vId) || currentVendedores.find(v => String(v.user_id) === vId || String(v.id) === vId)) : null;
 
-                // 2. Fallback: Verificação do Banco de Dados (Usuários em outras abas ou polling antigo)
-                const vInfo = vendedores.value.find(v => String(v.id) === String(vId));
-                if (vInfo) {
-                    const isOnlineDB = vInfo.is_online === true;
-                    const lastActivity = vInfo.last_activity ? new Date(vInfo.last_activity).getTime() : 0;
-                    const now = new Date().getTime();
-                    return isOnlineDB && (now - lastActivity < 300000); // 5 minutos
+            // Se não encontrou no mapa global, mas vId coincide com o perfil logado, usa o perfil logado
+            if (!vInfo && vId && myProfile) {
+                if (String(myProfile.id) === vId || String(myProfile.user_id) === vId) {
+                    vInfo = myProfile;
                 }
+            }
 
-                return false;
-            })();
+            // Presença (Socket > DB)
+            const isOnline = !!(vId && presence[vId]);
+            const nextApp = appointmentsMap.value[lid];
 
-            const vendedorLastSeenText = (() => {
-                const isMe = profile.value && (
-                    (vId && String(profile.value.id) === String(vId)) ||
-                    (l.vendedor_nome_full && profile.value.nome === l.vendedor_nome_full)
-                );
+            // Tenta obter o nome do vendedor de forma mais robusta possível
+            const dbNome = l.vendedor_nome === 'Não Atribuído' ? null : l.vendedor_nome;
+            let vNome = vInfo?.nome || dbNome || l.vendedor_nome_display || 'Livre';
 
-                if (isMe) return undefined; // Se sou eu, não precisa de "visto há..."
-
-                const vInfo = vendedores.value.find(v =>
-                    (vId && String(v.id) === String(vId)) ||
-                    (l.vendedor_nome_full && v.nome === l.vendedor_nome_full)
-                );
-
-                if (vInfo?.last_activity) {
-                    const time = formatRelativeTime(String(vInfo.last_activity));
-                    return time ? `visto ${time}` : undefined;
-                }
-                return undefined;
-            })();
-
-            // Abreviação para o Avatar (JC para José Carlos)
-            const avatarText = (() => {
-                const vName = l.vendedor_nome || '';
-                if (!vName || vName === 'Não Atribuído') return '??';
-
-                const preposicoes = ['de', 'da', 'do', 'das', 'dos', 'e', 'para', 'com'];
-                const ns = String(vName).trim().split(/\s+/)
-                    .filter(part => !preposicoes.includes(part.toLowerCase()));
-
-                const f = ns[0];
-                const s = ns[1];
-                if (ns.length >= 2 && f && s && f[0] && s[0]) {
-                    return (f[0] + s[0]).toUpperCase();
-                }
-                return vName.substring(0, 2).toUpperCase() || '??';
-            })();
+            // Limpeza final para exibição curta no card
+            if (vNome !== 'Livre') {
+                const parts = vNome.split(' ').filter((p: string) => p.length > 2 || p.match(/[A-Z]/));
+                if (parts.length >= 2) vNome = `${parts[0]} ${parts[1]}`;
+                else vNome = parts[0] || vNome;
+            }
 
             return {
                 ...l,
                 leadName: l.nome,
                 phone: l.telefone,
-                vendedorNome: l.vendedor_nome,
-                vendedorOnline,
-                vendedorLastSeenText,
-                avatarText,
+                vendedorOnline: isOnline,
+                vendedorNome: vNome,
                 lastActivityText: formatRelativeTime(l.ultima_mensagem_data),
                 unreadMessages: (l.mensagens_nao_lidas || 0) > 0 ? l.mensagens_nao_lidas : undefined,
                 statusIcon: getStatusIcon(l.status, l.mensagens_nao_lidas || 0),
-                nextAppointment: appointmentsMap.value[String(l.id)]?.next || null,
-                appointmentsCount: appointmentsMap.value[String(l.id)]?.count || 0
+                nextAppointment: nextApp?.next || null,
+                appointmentsCount: nextApp?.count || 0,
+                // Texto do avatar (JC) - Calculado apenas uma vez
+                avatarText: vNome === 'Livre' ? '??' : vNome.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
             } as LeadTask;
         });
     });
@@ -615,8 +605,10 @@ export const useLeads = () => {
         columnsWithTotals,
         filteredLeadsList,
         fetchLeads,
+        isLoadingLeads,
         fetchStatuses,
         subscribeToStatusChanges,
+        subscribeToLeadChanges,
         fetchVendedores,
         addStatus,
         updateStatus,

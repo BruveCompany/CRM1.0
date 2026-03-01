@@ -40,8 +40,8 @@ export default defineEventHandler(async (event) => {
     }
 
     // 2. Inserir os dados na tabela public.ag_profiles
-    const { data: profileData, error: profileError } = await client
-        .from('ag_profiles' as any)
+    const { data: profileData, error: profileError } = await (client
+        .from('ag_profiles' as any) as any)
         .insert({
             user_id: user.id,
             email: user.email ?? null,

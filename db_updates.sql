@@ -27,6 +27,7 @@ DROP FUNCTION IF EXISTS public.ag_get_all_profiles_if_admin();
 CREATE OR REPLACE FUNCTION public.ag_get_all_profiles_if_admin()
 RETURNS TABLE (
     id BIGINT,
+    user_id UUID,
     nome TEXT,
     email TEXT,
     role TEXT,
@@ -41,7 +42,7 @@ BEGIN
     IF (SELECT public.ag_isadmin()) THEN
         RETURN QUERY
         SELECT 
-            p.id, p.nome, p.email, p.role, p.created_at,
+            p.id, p.user_id, p.nome, p.email, p.role, p.created_at,
             p.is_online, p.last_activity, p.last_login, p.last_logout,
             (COALESCE(p.is_online, FALSE) AND (p.last_activity IS NOT NULL) AND (now() - p.last_activity < interval '5 minutes')) as is_online_calculated
         FROM public.ag_profiles p
@@ -62,6 +63,7 @@ ALTER TABLE public.ag_profiles ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Usuários podem ver o próprio perfil" ON public.ag_profiles;
 DROP POLICY IF EXISTS "Usuários podem atualizar a própria presença" ON public.ag_profiles;
 DROP POLICY IF EXISTS "Admins podem ver todos os perfis" ON public.ag_profiles;
+DROP POLICY IF EXISTS "Todos podem ver perfis" ON public.ag_profiles;
 
 -- Política 1: Todos os usuários autenticados podem ver perfis (necessário para status online)
 CREATE POLICY "Todos podem ver perfis" 
@@ -89,6 +91,7 @@ ALTER TABLE public.ag_agendamentos ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Todos podem ver agendamentos" ON public.ag_agendamentos;
 DROP POLICY IF EXISTS "Admins podem ver todos os agendamentos" ON public.ag_agendamentos;
 DROP POLICY IF EXISTS "Usuários podem ver seus próprios agendamentos" ON public.ag_agendamentos;
+DROP POLICY IF EXISTS "Visibilidade global de agendamentos" ON public.ag_agendamentos;
 
 CREATE POLICY "Visibilidade global de agendamentos" 
 ON public.ag_agendamentos 
@@ -98,6 +101,7 @@ USING (auth.role() = 'authenticated');
 -- 2. Políticas para Inserção (Todos podem criar)
 DROP POLICY IF EXISTS "Admins e Donos podem inserir agendamentos" ON public.ag_agendamentos;
 DROP POLICY IF EXISTS "Usuários podem criar agendamentos" ON public.ag_agendamentos;
+DROP POLICY IF EXISTS "Usuários autenticados podem criar agendamentos" ON public.ag_agendamentos;
 
 CREATE POLICY "Usuários autenticados podem criar agendamentos" 
 ON public.ag_agendamentos 
@@ -106,6 +110,7 @@ WITH CHECK (auth.role() = 'authenticated');
 
 -- 3. Políticas para Atualização/Cancelamento (Apenas Admin ou Dono)
 DROP POLICY IF EXISTS "Admins e Donos podem atualizar agendamentos" ON public.ag_agendamentos;
+DROP POLICY IF EXISTS "Apenas admins e donos podem editar agendamentos" ON public.ag_agendamentos;
 
 CREATE POLICY "Apenas admins e donos podem editar agendamentos" 
 ON public.ag_agendamentos 

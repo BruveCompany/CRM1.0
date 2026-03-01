@@ -165,6 +165,15 @@ const handleDelete = async (item: any) => {
 
 // Carga inicial dos dados
 onMounted(() => {
-  fetchRespostas();
+  if (userStore.profile?.id) {
+    fetchRespostas();
+  }
 });
+
+// Assiste mudanças no perfil (importante se o perfil for carregado após o mount)
+watch(() => userStore.profile?.id, (newId) => {
+  if (newId) {
+    fetchRespostas();
+  }
+}, { immediate: true });
 </script>

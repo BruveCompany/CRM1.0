@@ -154,10 +154,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { useSupabaseClient } from '#imports';
 import { useUserStore } from '~/stores/user';
 import { useProfissionais } from '~/composables/useProfissionais';
+import { useNotification } from '~/composables/useNotification';
 import NovaTarefaModal from '~/components/lead/NovaTarefaModal.vue';
 import ModalNovoAgendamento from '~/components/agendamentos/ModalNovoAgendamento.vue';
 
@@ -170,6 +171,7 @@ const emit = defineEmits(['close', 'updated']);
 const supabase = useSupabaseClient();
 const userStore = useUserStore();
 const { fetchProfissionais } = useProfissionais();
+const { notifySuccess, notifyError } = useNotification();
 
 // --- ESTADOS CRM ---
 const showNewTaskForm = ref(false);
@@ -241,12 +243,17 @@ async function updateLeadStage(stage: any) {
 
     if (error) {
       console.error('[STATUS ERRO] Erro ao atualizar no Supabase:', error.message);
+      notifyError('Erro ao atualizar etapa do lead');
       throw error;
     }
     
     console.log('[STATUS SUCESSO] Lead atualizado no banco.');
+    notifySuccess(`Etapa alterada para: ${stage.display_name}`);
     emit('updated');
-  } catch (err) { console.error('Erro stage update:', err); }
+  } catch (err) { 
+    console.error('Erro stage update:', err);
+    notifyError('Não foi possível mudar a etapa');
+  }
   finally {
     updatingStage.value = false;
     showStageSelector.value = false;
@@ -314,10 +321,14 @@ async function addNote() {
       });
     
     if (error) throw error;
+    notifySuccess('Anotação salva com sucesso!');
     newNoteContent.value = '';
     await fetchNotes();
     emit('updated');
-  } catch (error: any) { console.error("Erro nota:", error.message); }
+  } catch (error: any) { 
+    console.error("Erro nota:", error.message);
+    notifyError('Erro ao salvar anotação');
+  }
   finally { isSavingNote.value = false; }
 }
 
@@ -339,17 +350,45 @@ function getInitials(name: string | null | undefined) {
   return (parts[0]?.charAt(0) || 'L').toUpperCase();
 }
 
+let leadDetailChannel: any = null;
+
+const setupRealtime = () => {
+    if (!props.lead?.id) return;
+    if (leadDetailChannel) supabase.removeChannel(leadDetailChannel);
+
+    leadDetailChannel = supabase.channel(`sidebar-lead-${props.lead.id}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'ag_leads', filter: `id=eq.${props.lead.id}` }, () => {
+            // Emite evento para o pai atualizar os dados do lead, se necessário
+            emit('updated');
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'ag_tarefas', filter: `lead_id=eq.${props.lead.id}` }, () => {
+            fetchTasks();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'ag_notas_internas', filter: `lead_id=eq.${props.lead.id}` }, () => {
+            fetchNotes();
+        })
+        .subscribe();
+}
+
 onMounted(async () => {
   fetchStages();
   fetchTasks();
   fetchNotes();
+  setupRealtime();
   const profs = await fetchProfissionais();
   if (profs) profissionais.value = profs;
 });
 
-watch(() => props.lead?.id, () => {
-  fetchTasks();
-  fetchNotes();
+onUnmounted(() => {
+  if (leadDetailChannel) supabase.removeChannel(leadDetailChannel);
+});
+
+watch(() => props.lead?.id, (newId) => {
+  if (newId) {
+    fetchTasks();
+    fetchNotes();
+    setupRealtime();
+  }
 });
 </script>
 

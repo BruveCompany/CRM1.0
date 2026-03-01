@@ -240,65 +240,50 @@ const formatarPercentual = (valor: number) => {
 const handleCustomDateApply = (dates: { start: string, end: string }) => {
   console.log('Período personalizado aplicado:', dates);
   selectedPeriod.value = 'custom';
-  fetchMetrics('365'); // Exemplo
+  fetchDashboardData(); 
 };
 
 // 4. Função carregarAgenda (Renomeada conforme pedido)
-const fetchDashboardData = async () => {
+const fetchDashboardData = async (silent = false) => {
   if (!profile.value?.id) return;
   
-  loading.value = true;
+  if (!silent) loading.value = true;
   try {
     // 1. Buscar ID do profissional logado
-    const { data: profissionalData }: any = await supabase
+    const fetchProf = supabase
       .from('ag_profissionais')
       .select('id')
       .eq('profile_id', profile.value.id)
-      .maybeSingle();
+      .maybeSingle() as any;
     
-    const profId = profissionalData?.id;
-
     // Calcular data de início baseada no período
     const startDate = new Date();
     const dias = typeof selectedPeriod.value === 'number' ? selectedPeriod.value : 30;
     startDate.setDate(startDate.getDate() - dias);
     const startDateISO = startDate.toISOString();
 
+    // 2. Disparar TODAS as buscas em paralelo
+    const [profRes, agRes, metricsRes, funilRes, actRes]: any = await Promise.all([
+      fetchProf,
+      supabase.from('ag_view_agendamentos_completo').select('*').eq('cancelado', false).gte('data', new Date().toLocaleDateString('en-CA')).order('data').order('hora_inicio').limit(10),
+      fetchMetrics(selectedPeriod.value),
+      (supabase.rpc as any)('get_funil_vendas_dashboard', { user_id_param: profile.value.user_id }),
+      supabase.from('view_atividades_recentes').select('*').gte('data_criacao', startDateISO).order('data_criacao', { ascending: false }).limit(10)
+    ]);
+
+    const profId = profRes.data?.id;
     if (profId) {
-      // 2. Chamar a função do composable (Passo 4 do seu pedido)
       tarefas.value = await getProximasTarefas(profId, 5);
-      console.log('Dashboard: Tarefas carregadas');
     }
 
-    // 3. Buscar Agendamentos (Visão Geral da Empresa - Próximos, não filtrados por passado)
-    const today = new Date().toLocaleDateString('en-CA');
-    const { data: agData } = await supabase
-      .from('ag_view_agendamentos_completo')
-      .select('*')
-      .eq('cancelado', false)
-      .gte('data', today)
-      .order('data', { ascending: true })
-      .order('hora_inicio', { ascending: true })
-      .limit(10);
-    
-    agendamentos.value = agData || [];
+    agendamentos.value = agRes.data || [];
 
-    // 4. Buscar KPI (Filtrado por Período)
-    // Agora usando o novo composable unificado
-    await fetchMetrics(selectedPeriod.value);
-
-    // 5. Buscar Dados do Funil via RPC (Por Status)
-    const { data: funilData, error: funilError } = await (supabase.rpc as any)('get_funil_vendas_dashboard', { 
-      user_id_param: profile.value.user_id 
-    });
-
-    if (!funilError && funilData) {
+    if (!funilRes.error && funilRes.data) {
       funilChartData.value = {
-        labels: funilData.map((d: any) => d.status_nome),
+        labels: (funilRes.data as any[]).map((d: any) => d.status_nome),
         datasets: [{
-          data: funilData.map((d: any) => d.lead_count),
-          // Cores dinâmicas (conforme a imagem) com gradiente invertido (suave encima, sólida embaixo)
-          backgroundColor: funilData.map((d: any, index: number) => {
+          data: (funilRes.data as any[]).map((d: any) => d.lead_count),
+          backgroundColor: (funilRes.data as any[]).map((d: any, index: number) => {
             const opacity = Math.min(1.0, 0.3 + (index * 0.12)); 
             return hexToRgba(d.cor, opacity);
           }),
@@ -309,20 +294,12 @@ const fetchDashboardData = async () => {
       };
     }
 
-    // 6. Buscar Atividades Recentes (Nova View - Filtrada por Período)
-    const { data: actData } = await supabase
-      .from('view_atividades_recentes')
-      .select('*')
-      .gte('data_criacao', startDateISO)
-      .order('data_criacao', { ascending: false })
-      .limit(10);
-    
-    atividadesRecentes.value = actData || [];
+    atividadesRecentes.value = actRes.data || [];
 
   } catch (err) {
     console.error('Erro ao carregar dashboard:', err);
   } finally {
-    loading.value = false;
+    if (!silent) loading.value = false;
   }
 };
 
@@ -364,7 +341,7 @@ const proximasAcoes = computed(() => {
 // Executa ao montar o componente
 onMounted(() => {
   fetchDashboardData();
-  subscribeToDashboardChanges(fetchDashboardData); // Ativa Realtime com refresh total
+  subscribeToDashboardChanges(() => fetchDashboardData(true)); 
 });
 
 onUnmounted(() => {

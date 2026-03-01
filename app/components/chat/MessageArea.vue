@@ -125,6 +125,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import QuickReplies from '~/components/chat/QuickReplies.vue';
 import BaseModal from '~/components/BaseModal.vue';
 import ModalNovoAgendamento from '~/components/agendamentos/ModalNovoAgendamento.vue';
@@ -143,20 +144,47 @@ const emit = defineEmits(['updated', 'refresh']);
 
 const supabase = useSupabaseClient();
 const userStore = useUserStore();
+
+// Estados do Chat
 const messages = ref<any[]>([]);
 const newMessage = ref('');
 const loadingMessages = ref(true);
 const sending = ref(false);
 const messageContainer = ref<HTMLElement | null>(null);
-
 const isLeadPanelVisible = ref(true);
-
-const currentProfileId = userStore.profile?.id;
 const isTyping = ref(false);
 let typingTimer: any = null;
 
+const currentProfileId = computed(() => userStore.profile?.id);
+
 function toggleLeadPanel() {
   isLeadPanelVisible.value = !isLeadPanelVisible.value;
+}
+
+const messagesChannel = ref<any>(null);
+
+function scrollToBottom() {
+  nextTick(() => {
+    if (messageContainer.value) {
+      messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
+    }
+  });
+}
+
+const addMessageToList = (msg: any) => {
+  if (!msg.id) return;
+  const exists = messages.value.some(m => String(m.id) === String(msg.id));
+  if (!exists) {
+    messages.value.push(msg);
+    scrollToBottom();
+  }
+}
+
+const updateMessageInList = (msg: any) => {
+  const index = messages.value.findIndex(m => String(m.id) === String(msg.id));
+  if (index !== -1) {
+    messages.value[index] = { ...messages.value[index], ...msg };
+  }
 }
 
 async function fetchMessages() {
@@ -170,7 +198,7 @@ async function fetchMessages() {
 
     if (error) throw error;
     messages.value = data || [];
-    await scrollToBottom();
+    scrollToBottom();
   } catch (err) {
     console.error('Erro ao buscar mensagens:', err);
   } finally {
@@ -192,7 +220,7 @@ async function sendMessage() {
         conversa_id: props.conversaId,
         conteudo: contentText,
         direcao: 'out',
-        status: 'sent'
+        status: 'sending'
       })
       .select()
       .single();
@@ -200,8 +228,9 @@ async function sendMessage() {
     if (insertError) throw insertError;
 
     if (insertData) {
-      messages.value.push(insertData);
-      scrollToBottom();
+      // Marcamos como 'sent' localmente após o sucesso do insert
+      const sentMsg = { ...insertData, status: 'sent' };
+      addMessageToList(sentMsg);
     }
 
     await (supabase
@@ -210,55 +239,75 @@ async function sendMessage() {
       .eq('id', props.conversaId);
   } catch (err) {
     console.error('Erro ao enviar mensagem:', err);
-    newMessage.value = contentText;
+    newMessage.value = contentText; // Devolve o texto em caso de erro
   } finally {
     sending.value = false;
   }
 }
 
-function insertQuickReply(content: string) {
-  newMessage.value = content;
-}
-
 function handleTyping() {
-  if (!messagesChannel.value || !currentProfileId) return;
+  if (!messagesChannel.value || !currentProfileId.value) return;
   if (typingTimer) clearTimeout(typingTimer);
   
   messagesChannel.value.send({
     type: 'broadcast',
     event: 'TYPING_START',
-    payload: { userId: currentProfileId }
+    payload: { userId: currentProfileId.value }
   });
 
   typingTimer = setTimeout(() => {
     messagesChannel.value.send({
       type: 'broadcast',
       event: 'TYPING_STOP',
-      payload: { userId: currentProfileId }
+      payload: { userId: currentProfileId.value }
     });
   }, 2000);
 }
 
-async function scrollToBottom() {
-  await nextTick();
-  if (messageContainer.value) {
-    messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
+function setupSubscription() {
+  if (messagesChannel.value) {
+    supabase.removeChannel(messagesChannel.value);
   }
-}
 
-function subscribeToChat() {
-  return (supabase as any)
-    .channel(`chat-${props.conversaId}`)
+  messagesChannel.value = supabase.channel(`chat-room-${props.conversaId}`);
+
+  messagesChannel.value
     .on(
       'postgres_changes', 
-      { event: 'INSERT', schema: 'public', table: 'ag_chat', filter: `conversa_id=eq.${props.conversaId}` }, 
+      { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'ag_chat', 
+        filter: `conversa_id=eq.${props.conversaId}` 
+      }, 
       (payload: any) => {
-        messages.value.push(payload.new);
+        addMessageToList(payload.new);
         isTyping.value = false;
-        scrollToBottom();
       }
     )
+    .on(
+      'postgres_changes',
+      { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'ag_chat',
+        filter: `conversa_id=eq.${props.conversaId}` 
+      },
+      (payload: any) => {
+        updateMessageInList(payload.new);
+      }
+    )
+    .on('broadcast', { event: 'TYPING_START' }, (payload: any) => {
+      if (payload.payload.userId !== currentProfileId.value) isTyping.value = true;
+    })
+    .on('broadcast', { event: 'TYPING_STOP' }, (payload: any) => {
+      if (payload.payload.userId !== currentProfileId.value) isTyping.value = false;
+    })
     .subscribe();
+}
+
+function insertQuickReply(content: string) {
+  newMessage.value = content;
 }
 
 function getAvatarLetters(nome?: string) {
@@ -274,44 +323,21 @@ function formatTime(dateStr: string) {
   return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
-watch(() => props.conversaId, () => {
-  fetchMessages();
-});
-
-const chatSubscription = ref<any>(null);
-const messagesChannel = ref<any>(null);
-
-function subscribeToStatusUpdates() {
-  messagesChannel.value = (supabase as any)
-    .channel('message-status-updates')
-    .on(
-      'postgres_changes',
-      { event: 'UPDATE', schema: 'public', table: 'ag_chat' },
-      (payload: any) => {
-        const index = messages.value.findIndex(m => m.id === payload.new.id);
-        if (index !== -1) {
-          messages.value[index].status = payload.new.status;
-        }
-      }
-    )
-    .on('broadcast', { event: 'TYPING_START' }, (payload: any) => {
-      if (payload.payload.userId !== currentProfileId) isTyping.value = true;
-    })
-    .on('broadcast', { event: 'TYPING_STOP' }, (payload: any) => {
-      if (payload.payload.userId !== currentProfileId) isTyping.value = false;
-    })
-    .subscribe();
-}
+watch(() => props.conversaId, (newId) => {
+  if (newId) {
+    fetchMessages();
+    setupSubscription();
+  }
+}, { immediate: true });
 
 onMounted(() => {
-  fetchMessages();
-  chatSubscription.value = subscribeToChat();
-  subscribeToStatusUpdates();
+  // O watch imediato já cuida da carga inicial
 });
 
 onUnmounted(() => {
-  if (chatSubscription.value) chatSubscription.value.unsubscribe();
-  if (messagesChannel.value) supabase.removeChannel(messagesChannel.value);
+  if (messagesChannel.value) {
+    supabase.removeChannel(messagesChannel.value);
+  }
 });
 </script>
 

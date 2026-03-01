@@ -1,11 +1,11 @@
 export default defineNuxtRouteMiddleware(async (to, from) => {
-    const { checkIsAdmin } = useAuth()
+    const { checkIsAdmin, profile } = useAuth()
 
-    // Verifica se é admin
+    if (profile.value?.role === 'admin' || profile.value?.role === 'administrador') return
+
     const isAdmin = await checkIsAdmin()
 
     if (!isAdmin) {
-        // Se não for admin, redireciona para a home
         return navigateTo('/')
     }
 })

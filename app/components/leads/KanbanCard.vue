@@ -45,7 +45,7 @@
               </button>
 
               <button 
-                v-if="!task.vendedor_id" 
+                v-if="!isAssignedToMe || task.vendedorNome === 'Livre' || task.vendedorNome === 'Não Atribuído'" 
                 class="action-item" 
                 @click.stop="assignToMe"
               >
@@ -236,7 +236,7 @@ const props = defineProps<{
 
 const { openDetails, vendedores, fetchLeads } = useLeads();
 const { notifySuccess, notifyError } = useNotification();
-const { checkIsAdmin } = useAuth();
+const { checkIsAdmin, profile } = useAuth();
 const supabase = useSupabaseClient();
 
 const showActionsMenu = ref(false);
@@ -259,6 +259,12 @@ const isCold = computed(() => {
   const diffTime = Math.abs(new Date().getTime() - lastDate.getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   return diffDays > 7;
+});
+
+// Verifica se o lead já está atribuído ao usuário atual
+const isAssignedToMe = computed(() => {
+  if (!props.task.vendedor_id || !profile.value?.id) return false;
+  return String(props.task.vendedor_id) === String(profile.value.id);
 });
 
 // --- LÓGICA DE AGENDAMENTOS ---

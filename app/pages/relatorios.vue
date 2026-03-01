@@ -128,7 +128,7 @@
                 </div>
               </div>
 
-              <button @click="fetchReportData" :disabled="loading" class="p-2 bg-slate-50 rounded-xl border border-slate-100">
+              <button @click="fetchReportData(false)" :disabled="loading" class="p-2 bg-slate-50 rounded-xl border border-slate-100">
                 <Icon name="heroicons:outline:arrow-path" class="w-5 h-5 text-slate-400" :class="{ 'animate-spin': loading }" />
               </button>
             </div>
@@ -372,8 +372,8 @@ const aggregatedStats = computed(() => {
 });
 
 // --- FUNÇÕES ---
-const fetchReportData = async () => {
-  loading.value = true;
+const fetchReportData = async (silent = false) => {
+  if (!silent) loading.value = true;
   try {
     const dates = getDatesFromPeriod();
     let filterId = vendedorFiltro.value;
@@ -392,7 +392,7 @@ const fetchReportData = async () => {
 
     if (error) {
       console.error('❌ Erro Supabase RPC:', error);
-      reportData.value = [];
+      if (!silent) reportData.value = [];
     } else {
       reportData.value = (data || []).map((item: any) => ({
         ...item,
@@ -404,7 +404,9 @@ const fetchReportData = async () => {
   } catch (err: any) {
     console.error('⚠️ Falha crítica ao buscar dados:', err);
   } finally {
-    setTimeout(() => { loading.value = false; }, 400);
+    if (!silent) {
+       loading.value = false; // Removido setTimeout de 400ms para resposta instantânea
+    }
   }
 };
 
@@ -522,16 +524,20 @@ const subscribeToReportsChanges = () => {
   if (reportsChannel) return;
   reportsChannel = supabase
     .channel('reports-realtime')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'ag_leads' }, () => fetchReportData())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'ag_tarefas' }, () => fetchReportData())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'ag_agendamentos' }, () => fetchReportData())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'ag_leads' }, () => fetchReportData(true))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'ag_tarefas' }, () => fetchReportData(true))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'ag_agendamentos' }, () => fetchReportData(true))
     .subscribe();
 };
 
 onMounted(async () => {
+  // 1. Primeiro verifica se é admin (necessário para o filtro de fetchReportData)
   isAdmin.value = await checkIsAdmin();
-  if (isAdmin.value) await fetchVendedores();
+  
+  // 2. Busca os dados do relatório já com o status de admin correto
   await fetchReportData();
+  if (isAdmin.value) fetchVendedores(); // Busca vendedora em background se for admin
+
   subscribeToReportsChanges();
   
   const days = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
@@ -540,6 +546,19 @@ onMounted(async () => {
     value: Math.floor(Math.random() * 30) + 5
   }));
   window.addEventListener('keydown', closeOnEsc);
+});
+
+// Re-busca dados quando o perfil for carregado (importante para o primeiro acesso)
+watch(() => profile.value?.id, async (newId) => {
+  if (newId) {
+    isAdmin.value = await checkIsAdmin();
+    fetchReportData();
+  }
+});
+
+// Re-busca dados quando o período mudar
+watch(selectedPeriod, () => {
+  fetchReportData();
 });
 
 onUnmounted(() => {

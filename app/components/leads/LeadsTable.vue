@@ -4,32 +4,32 @@
       <table>
         <thead>
           <tr class="bg-gray-50">
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[25%]">
               Nome do Lead
             </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[20%]">
               Contato
             </th>
-            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[12%]">
               Status
             </th>
-            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">
               Score
             </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%]">
               Vendedor
             </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">
               Atividade
             </th>
-            <th v-if="isAdmin" scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[100px]">
               Ações
             </th>
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
           <tr v-if="filteredLeadsList.length === 0">
-            <td :colspan="isAdmin ? 7 : 6" class="px-6 py-12 text-center text-sm text-gray-500 font-medium">
+            <td colspan="7" class="px-6 py-12 text-center text-sm text-gray-500 font-medium">
               Nenhum lead encontrado estrategicamente.
             </td>
           </tr>
@@ -77,7 +77,7 @@
                 {{ lead.ultima_mensagem_data ? formatRelativeTime(lead.ultima_mensagem_data) : 'N/A' }}
               </span>
             </td>
-            <td v-if="isAdmin" class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
               <div class="flex items-center justify-end gap-2">
                 <NuxtLink 
                   :to="`/leads/${lead.id}`" 
@@ -96,6 +96,7 @@
                 </button>
 
                 <button 
+                  v-if="isAdmin"
                   class="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
                   @click.stop="confirmDeleteLead(lead)"
                   title="Arquivar Lead"
@@ -158,15 +159,28 @@ import BaseModal from '../BaseModal.vue';
 
 const { filteredLeadsList, formatRelativeTime, openDetails, fetchLeads } = useLeads();
 const { notifySuccess, notifyError } = useNotification();
-const { checkIsAdmin } = useAuth();
+const { profile, checkIsAdmin } = useAuth();
 const supabase = useSupabaseClient();
 
 const isAdmin = ref(false);
 const showConfirmDeleteModal = ref(false);
 const leadToDelete = ref<LeadTask | null>(null);
 
+// Monitora o perfil para atualizar admin status reativamente (Tarefa: Sincronismo de Permissões)
+watch(() => profile.value, (newProf) => {
+  if (newProf) {
+    const role = newProf.role?.toLowerCase();
+    if (role === 'admin' || role === 'administrador') {
+      isAdmin.value = true;
+    }
+  }
+}, { immediate: true });
+
 onMounted(async () => {
+  // 1. Tenta via RPC (mais seguro)
   isAdmin.value = await checkIsAdmin();
+  
+  // 2. Se falhar, o watch acima já cuidará da reatividade via profile
 });
 
 // Helper para obter a cor do status (usado na tabela de lista)

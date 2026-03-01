@@ -13,9 +13,10 @@ export const useDashboardMetrics = () => {
     const currentPeriod = ref<number | string>(30);
 
     const fetchDashboardData = async (periodoEmDias?: number | string) => {
-        if (!profile.value?.id) return;
-        if (periodoEmDias !== undefined) currentPeriod.value = periodoEmDias;
+        const profileId = profile.value?.id;
+        if (!profileId) return;
 
+        if (periodoEmDias !== undefined) currentPeriod.value = periodoEmDias;
         loading.value = true;
 
         let startDate: Date;
@@ -28,11 +29,20 @@ export const useDashboardMetrics = () => {
         const startDateISO = startDate.toISOString();
 
         try {
+            // Busca o profId uma única vez para as métricas que dependem dele (Ex: Tarefas)
+            const { data: profData } = await (supabase
+                .from('ag_profissionais') as any)
+                .select('id')
+                .eq('profile_id', profileId)
+                .maybeSingle();
+
+            const profId = (profData as any)?.id;
+
             await Promise.all([
-                _fetchLeadsAtivos(startDateISO),
-                _fetchProximasAcoes(),
-                _fetchTaxaConversao(startDateISO),
-                _fetchValorEmNegociacao(startDateISO)
+                _fetchLeadsAtivos(profileId, startDateISO),
+                _fetchProximasAcoes(profId),
+                _fetchTaxaConversao(profileId, startDateISO),
+                _fetchValorEmNegociacao(profileId, startDateISO)
             ]);
         } catch (error) {
             console.error('[useDashboardMetrics] Erro:', error);
@@ -41,12 +51,12 @@ export const useDashboardMetrics = () => {
         }
     };
 
-    const _fetchLeadsAtivos = async (startDate: string) => {
+    const _fetchLeadsAtivos = async (pId: string | number, startDate: string) => {
         try {
             const { count } = await supabase
                 .from('ag_leads')
                 .select('*', { count: 'exact', head: true })
-                .eq('vendedor_id', profile.value?.id)
+                .eq('vendedor_id', pId)
                 .gte('criado_em', startDate)
                 .not('status', 'in', '("Ganho","Perdido","Arquivado")');
             leadsAtivos.value = count || 0;
@@ -55,13 +65,17 @@ export const useDashboardMetrics = () => {
         }
     };
 
-    const _fetchProximasAcoes = async () => {
+    const _fetchProximasAcoes = async (profId?: number | string) => {
+        if (!profId) {
+            proximasAcoes.value = 0;
+            return;
+        }
         try {
             const agora = new Date().toISOString();
             const { count } = await supabase
                 .from('ag_tarefas')
                 .select('*', { count: 'exact', head: true })
-                .eq('profissional_id', profile.value?.id)
+                .eq('profissional_id', profId)
                 .eq('concluida', false)
                 .gte('data_vencimento', agora);
             proximasAcoes.value = count || 0;
@@ -70,33 +84,28 @@ export const useDashboardMetrics = () => {
         }
     };
 
-    const _fetchTaxaConversao = async (startDate: string) => {
+    const _fetchTaxaConversao = async (pId: string | number, startDate: string) => {
         try {
-            const { count: ganhos } = await supabase
-                .from('ag_leads')
-                .select('*', { count: 'exact', head: true })
-                .eq('vendedor_id', profile.value?.id)
+            const { data } = await (supabase
+                .from('ag_leads') as any)
+                .select('status')
+                .eq('vendedor_id', pId)
                 .gte('criado_em', startDate)
-                .eq('status', 'Ganho');
+                .in('status', ['Ganho', 'Perdido']);
 
-            const { count: perdidos } = await supabase
-                .from('ag_leads')
-                .select('*', { count: 'exact', head: true })
-                .eq('vendedor_id', profile.value?.id)
-                .gte('criado_em', startDate)
-                .eq('status', 'Perdido');
-
-            const total = (ganhos || 0) + (perdidos || 0);
-            taxaConversao.value = total > 0 ? ((ganhos || 0) / total) * 100 : 0;
+            const ganhos = (data as any[])?.filter(l => l.status === 'Ganho').length || 0;
+            const perdidos = (data as any[])?.filter(l => l.status === 'Perdido').length || 0;
+            const total = ganhos + perdidos;
+            taxaConversao.value = total > 0 ? (ganhos / total) * 100 : 0;
         } catch (e) {
             console.error('Erro ao buscar taxa de conversão:', e);
         }
     };
 
-    const _fetchValorEmNegociacao = async (startDate: string) => {
+    const _fetchValorEmNegociacao = async (pId: string | number, startDate: string) => {
         try {
             const { data, error } = await (supabase as any).rpc('get_valor_total_negociacao', {
-                p_profile_id: profile.value?.id,
+                p_profile_id: pId,
                 p_start_date: startDate
             });
             if (error) {

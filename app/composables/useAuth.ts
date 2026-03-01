@@ -6,6 +6,8 @@ export const useAuth = () => {
   const toast = useToast()
   const router = useRouter()
   const profile = useState<any>('auth-user-profile', () => null)
+  const isAdminStore = useState<boolean | null>('auth-is-admin', () => null)
+  const fetchPromise = ref<Promise<void> | null>(null)
 
   const fetchProfile = async () => {
     if (!user.value) {
@@ -13,74 +15,46 @@ export const useAuth = () => {
       return
     }
 
-    try {
-      const userId = user.value.id
-      const userSub = (user.value as any).sub
+    // Se já existe uma busca em andamento, aguarda ela em vez de disparar outra
+    if (fetchPromise.value) return fetchPromise.value;
 
-      if (!userId && !userSub) {
-        console.warn('⚠️ userId e userSub são indefinidos, abortando busca de perfil.')
-        return
-      }
+    const currentUser = user.value;
+    if (!currentUser) return;
 
-      console.log('🔄 Iniciando busca de perfil:', { id: userId, sub: userSub })
+    fetchPromise.value = (async () => {
+      try {
+        const userId = currentUser.id
+        const userSub = (currentUser as any).sub
+        const email = currentUser.email
 
-      // Tenta pelo ID primeiro
-      let data: any = null
-      let error: any = null
+        // Busca em paralelo por diferentes identificadores para robustez
+        // A prioridade é: user_id (UUID) > sub (UUID legado) > email
+        const [idRes, subRes, emailRes]: any = await Promise.all([
+          userId ? (supabase.from('ag_profiles').select('*').eq('user_id', userId).maybeSingle()) : Promise.resolve({ data: null }),
+          (userSub && userSub !== userId) ? (supabase.from('ag_profiles').select('*').eq('user_id', userSub).maybeSingle()) : Promise.resolve({ data: null }),
+          email ? (supabase.from('ag_profiles').select('*').eq('email', email).maybeSingle()) : Promise.resolve({ data: null })
+        ]);
 
-      if (userId) {
-        const { data: idData, error: idError } = await (supabase
-          .from('ag_profiles') as any)
-          .select('*')
-          .eq('user_id', userId)
-          .maybeSingle()
-        data = idData
-        error = idError
-      }
+        const data = idRes.data || subRes.data || emailRes.data;
 
-      // Se não achar pelo ID e o SUB for diferente, tenta pelo SUB
-      if (!data && userSub && userSub !== userId) {
-        console.log('🔍 Tentando busca alternativa pelo SUB...')
-        const { data: subData, error: subError } = await (supabase
-          .from('ag_profiles') as any)
-          .select('*')
-          .eq('user_id', userSub)
-          .maybeSingle()
-
-        if (subData) data = subData
-      }
-
-      // NOVO: Se ainda não achar, tenta buscar pelo EMAIL como último recurso
-      if (!data && user.value.email) {
-        console.log('🔍 Tentando busca alternativa pelo EMAIL...')
-        const { data: emailData } = await (supabase
-          .from('ag_profiles') as any)
-          .select('*')
-          .eq('email', user.value.email)
-          .maybeSingle()
-
-        if (emailData) {
-          console.log('✅ Perfil localizado via email!')
-          data = emailData
-
-          // OPORTUNIDADE: Se achou por email mas o user_id estava errado/vazio, corrige no banco
-          if (!data.user_id || data.user_id !== userId) {
-            await (supabase.from('ag_profiles') as any)
-              .update({ user_id: userId })
-              .eq('id', data.id)
+        if (data) {
+          profile.value = data
+          // Se achou mas não tinha user_id vinculado, vincula em background
+          if (!(data as any).user_id && userId) {
+            (supabase.from('ag_profiles') as any).update({ user_id: userId }).eq('id', (data as any).id).then();
           }
+          // Atualiza cache de admin se a role estiver presente
+          const isAdm = (data as any).role === 'admin' || (data as any).role === 'administrador';
+          isAdminStore.value = isAdm;
         }
+      } catch (err) {
+        console.error('❌ Erro no fetchProfile:', err)
+      } finally {
+        fetchPromise.value = null;
       }
+    })();
 
-      if (data) {
-        console.log('✅ Perfil localizado:', data.nome)
-        profile.value = data
-      } else {
-        console.warn('❌ Perfil não encontrado após todas as tentativas.')
-      }
-    } catch (err) {
-      console.error('❌ Falha crítica ao buscar perfil:', err)
-    }
+    return fetchPromise.value;
   }
 
   const isOnlineCalculated = computed(() => {
@@ -121,27 +95,29 @@ export const useAuth = () => {
       if (data.user) {
         if (!data.user.id) return { success: true, user: data.user }
 
-        // Atualiza status para Online
-        const { data: pData } = await (supabase
-          .from('ag_profiles') as any)
-          .select('id')
-          .eq('user_id', data.user.id)
-          .maybeSingle();
+        // 1. Atualizar status Online em paralelo (Não-bloqueante)
+        const updatePresenca = async () => {
+          try {
+            const { data: pData } = await (supabase.from('ag_profiles') as any).select('id').eq('user_id', data.user.id).maybeSingle();
+            if (pData) {
+              await (supabase.from('ag_profiles') as any).update({
+                is_online: true,
+                last_login: new Date().toISOString(),
+                last_activity: new Date().toISOString()
+              }).eq('id', (pData as any).id);
+            }
+          } catch (e) { console.warn('Pós-login (status):', e); }
+        };
 
-        if (pData) {
-          await (supabase
-            .from('ag_profiles') as any)
-            .update({
-              is_online: true,
-              last_login: new Date().toISOString(),
-              last_activity: new Date().toISOString()
-            })
-            .eq('id', (pData as any).id);
-        }
+        // 2. Carrega Perfil de forma GARANTIDA
+        updatePresenca();
+        await fetchProfile(); // Await crítico para o próximo passo
 
-        await fetchProfile() // Carrega o perfil completo
+        // 3. Navegação: No Nuxt 3, o navigateTo SEM await inicia a transição imediatamente,
+        // liberando o fluxo da função login e permitindo limpar o estado de carregamento no formulário.
+        navigateTo('/dashboard');
+
         toast.success('Login realizado com sucesso!')
-        await navigateTo('/')
         return { success: true, user: data.user }
       }
 
@@ -282,35 +258,41 @@ export const useAuth = () => {
    * @returns {Promise<boolean>} True se for admin, false caso contrário
    */
   const checkIsAdmin = async () => {
+    // 1. Atalho: Se já temos o perfil carregado
+    if (profile.value) {
+      const isAdm = profile.value.role === 'admin' || profile.value.role === 'administrador';
+      isAdminStore.value = isAdm;
+      return isAdm;
+    }
+
+    // 2. Se o perfil está sendo buscado, aguarda a busca terminar
+    if (fetchPromise.value) {
+      await fetchPromise.value;
+      if (profile.value) {
+        const isAdm = profile.value.role === 'admin' || profile.value.role === 'administrador';
+        isAdminStore.value = isAdm;
+        return isAdm;
+      }
+    }
+
+    // 3. Fallback: Se já verificamos nesta sessão
+    if (isAdminStore.value !== null) return isAdminStore.value
+
     try {
-      // @ts-ignore - Tipagem da função RPC pode estar desatualizada
-      const { data, error } = await supabase.rpc('ag_isadmin')
+      const { data, error } = await (supabase.rpc as any)('ag_isadmin')
+      if (error) return false
 
-      if (error) {
-        console.error('Erro ao verificar status de admin:', error)
-        return false
+      let result = false
+      if (typeof data === 'boolean') result = data
+      else if (data && typeof data === 'object' && 'isadmin' in data) {
+        result = (data as any).isadmin === true
+      } else if (Array.isArray(data) && data.length > 0) {
+        result = !!(data[0]?.isadmin || data[0] === true)
       }
 
-      // Verifica diferentes formatos possíveis de retorno
-      if (typeof data === 'boolean') return data
-      if (data && typeof data === 'object' && 'isadmin' in data) {
-        return (data as any).isadmin === true
-      }
-      if (Array.isArray(data) && (data as any[]).length > 0) {
-        // Caso retorne um array de objetos
-        if ('isadmin' in data[0]) {
-          return (data[0] as any).isadmin === true
-        }
-        // Caso retorne array de booleans (menos provável, mas possível)
-        if (typeof data[0] === 'boolean') {
-          return data[0]
-        }
-      }
-
-      console.log('Retorno desconhecido da função ag_isadmin:', data)
-      return false
+      isAdminStore.value = result
+      return result
     } catch (err) {
-      console.error('Erro inesperado ao verificar admin:', err)
       return false
     }
   }
