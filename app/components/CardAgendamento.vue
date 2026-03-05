@@ -130,8 +130,10 @@
  * ========================================================
  */
 
+import { computed, onMounted } from 'vue'
 import { CalendarIcon, UserIcon, UserCircleIcon, EllipsisVerticalIcon, CheckCircleIcon, XCircleIcon, ClipboardDocumentListIcon } from '@heroicons/vue/24/outline'
 import type { AgViewAgendamentoCompleto } from '../../shared/types/database'
+import { useLeads } from '../composables/useLeads'
 
 interface Props {
   agendamento: AgViewAgendamentoCompleto
@@ -140,13 +142,25 @@ interface Props {
 const props = defineProps<Props>()
 
 // Busca lista de vendedores da store global (definida no useLeads.ts)
-const vendedores = useState<any[]>('leads-vendedores', () => [])
+const { vendedores: vendedoresGlobal, fetchVendedores } = useLeads()
+const vendedores = computed(() => vendedoresGlobal.value)
 
 // Computa o nome do vendedor que criou o agendamento
 const vendedorNome = computed(() => {
+  // 1. Preferência total pelo campo vindo da VIEW (mais performático e confiável entre páginas)
+  if (props.agendamento.criador_nome) return props.agendamento.criador_nome
+
+  // 2. Fallback: Procura no estado global de vendedores pelo user_id
   if (!props.agendamento.user_id) return null
   const v = vendedores.value.find(v => String(v.user_id) === String(props.agendamento.user_id))
   return v?.nome || null
+})
+
+// Melhora: Garante que os vendedores estejam carregados (necessário para a página Agenda)
+onMounted(async () => {
+  if (vendedores.value.length === 0) {
+    await fetchVendedores()
+  }
 })
 
 /**

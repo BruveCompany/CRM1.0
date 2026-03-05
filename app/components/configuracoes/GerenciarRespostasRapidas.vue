@@ -16,10 +16,10 @@
     <div class="overflow-x-auto">
       <table class="w-full text-left border-collapse">
         <thead>
-          <tr class="bg-neutral-50/50">
-            <th class="px-6 py-4 text-xs font-bold text-neutral-400 uppercase tracking-widest">Atalho</th>
-            <th class="px-6 py-4 text-xs font-bold text-neutral-400 uppercase tracking-widest">Conteúdo</th>
-            <th class="px-6 py-4 text-[1px] invisible w-20">Ações</th>
+          <tr class="bg-neutral-50/50 border-y border-neutral-100">
+            <th class="px-6 py-4 text-[11px] font-bold text-neutral-500 uppercase tracking-widest w-64">Atalho</th>
+            <th class="px-6 py-4 text-[11px] font-bold text-neutral-500 uppercase tracking-widest">Conteúdo</th>
+            <th class="px-6 py-4 text-[11px] font-bold text-neutral-500 uppercase tracking-widest text-right w-32">Ações</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-neutral-50">
@@ -36,18 +36,18 @@
           </tr>
 
           <tr v-for="row in respostas" :key="row.id" class="hover:bg-neutral-50/40 transition-colors group text-neutral-700">
-            <td class="px-6 py-4">
-              <span class="font-mono text-primary-600 font-bold bg-primary-50 px-2 py-1 rounded text-xs transition-colors hover:bg-primary-100">
+            <td class="px-6 py-4 w-64 align-top">
+              <span class="inline-block font-mono text-primary-600 font-bold bg-primary-50 px-2.5 py-1 rounded-lg text-[13px] transition-colors hover:bg-primary-100 border border-primary-100">
                 /{{ row.atalho }}
               </span>
             </td>
-            <td class="px-6 py-4">
-              <p class="text-sm text-neutral-600 line-clamp-1 group-hover:line-clamp-none transition-all duration-300">
+            <td class="px-6 py-4 align-top">
+              <p class="text-[13px] text-neutral-600 line-clamp-2 max-w-3xl leading-relaxed">
                 {{ row.conteudo }}
               </p>
             </td>
-            <td class="px-6 py-4 text-right">
-              <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <td class="px-6 py-4 text-right align-top w-32">
+              <div class="flex items-start justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button 
                   @click="handleEdit(row)"
                   class="p-2 text-neutral-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all"
@@ -87,6 +87,8 @@ import ModalRespostaRapida from './ModalRespostaRapida.vue';
 const supabase = useSupabaseClient();
 const userStore = useUserStore();
 
+const { waitForProfile } = useAuth();
+
 // Estado reativo da lista e carregamento
 const respostas = ref<any[]>([]);
 const loading = ref(true);
@@ -102,18 +104,29 @@ const editingItem = ref<any | null>(null);
 const fetchRespostas = async () => {
   loading.value = true;
   try {
-    const profileId = userStore.profile?.id;
-    if (!profileId) return;
+    // 1. ESPERA PELO PERFIL (GARANTIA DATABASE SYNC)
+    const profile = await waitForProfile();
+    const profileId = profile?.id;
+    
+    if (!profileId) {
+      console.warn('[TEMPLATES] Perfil não identificado no tempo limite.');
+      return;
+    }
 
-    // Busca ordenada por atalho para facilitar localização visual
-    const { data, error } = await (supabase
-      .from('ag_respostas_rapidas') as any)
-      .select('*')
-      .eq('profissional_id', profileId)
-      .order('atalho');
+    const performFetch = async (retryCount = 0): Promise<any[]> => {
+      // Busca ordenada por atalho para facilitar localização visual
+      const { data, error } = await (supabase
+        .from('ag_respostas_rapidas') as any)
+        .select('*')
+        .eq('profissional_id', profileId)
+        .order('atalho');
 
-    if (error) throw error;
-    respostas.value = data || [];
+      if (error) throw error;
+
+      return data || [];
+    };
+
+    respostas.value = await performFetch();
   } catch (err) {
     console.error('Erro ao buscar respostas:', err);
   } finally {

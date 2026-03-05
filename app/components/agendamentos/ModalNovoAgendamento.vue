@@ -77,27 +77,33 @@
           <!-- Horários Lado a Lado -->
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-sm font-semibold text-neutral-700 mb-1">Início</label>
+              <label class="text-sm font-semibold text-neutral-700 mb-1 flex items-center gap-1.5">
+                Início
+                <Icon v-if="loadingAvailability" name="lucide:loader-2" class="w-3 h-3 animate-spin text-primary-500" />
+              </label>
               <div class="relative">
                 <select 
                   v-model="formData.horaInicio"
-                  :disabled="!formData.data"
+                  :disabled="!formData.data || loadingAvailability"
                   class="w-full px-3 py-1.5 border border-neutral-300 rounded-lg text-sm hover:border-primary-700 focus:outline-none focus:ring-1 focus:ring-primary-700 focus:border-primary-700 transition-all disabled:bg-neutral-50 disabled:text-neutral-400 bg-white"
                 >
-                  <option value="">--:--</option>
+                  <option value="">{{ loadingAvailability ? 'Buscando...' : '--:--' }}</option>
                   <option v-for="hora in availableSlots" :key="hora" :value="hora">{{ hora }}</option>
                 </select>
               </div>
             </div>
             <div>
-              <label class="block text-sm font-semibold text-neutral-700 mb-1">Fim</label>
+              <label class="text-sm font-semibold text-neutral-700 mb-1 flex items-center gap-1.5">
+                Fim
+                <Icon v-if="loadingAvailability" name="lucide:loader-2" class="w-3 h-3 animate-spin text-primary-500" />
+              </label>
               <div class="relative">
                 <select 
                   v-model="formData.horaFim"
-                  :disabled="!formData.horaInicio"
+                  :disabled="!formData.horaInicio || loadingAvailability"
                   class="w-full px-3 py-1.5 border border-neutral-300 rounded-lg text-sm hover:border-primary-700 focus:outline-none focus:ring-1 focus:ring-primary-700 focus:border-primary-700 transition-all disabled:bg-neutral-50 disabled:text-neutral-400 bg-white"
                 >
-                  <option value="">--:--</option>
+                  <option value="">{{ loadingAvailability ? 'Buscando...' : '--:--' }}</option>
                   <option v-for="hora in horariosFimDisponiveis" :key="'fim-' + hora" :value="hora">{{ hora }}</option>
                 </select>
               </div>
@@ -194,7 +200,7 @@ import {
 } from '@heroicons/vue/24/outline'
 import { ref, computed, watch, toRef } from 'vue'
 import { useAuth } from '~/composables/useAuth'
-import type { AgCliente, AgAgendamento } from '../../../shared/types/database'
+import type { AgCliente, AgAgendamento, AgProfissional } from '../../../shared/types/database'
 import { useValidacaoHorario } from '~/composables/useValidacaoHorario'
 import { useAgendamento } from '~/composables/useAgendamento'
 import { useNotification } from '~/composables/useNotification'
@@ -274,7 +280,7 @@ const salvando = ref(false)
 // --- Lógica de Disponibilidade em Tempo Real ---
 const bookedSlots = ref<string[]>([])
 const fetchedAgendamentos = ref<AgAgendamento[]>([])
-const supabaseClient = useSupabaseClient()
+const loadingAvailability = ref(false)
 
 // Computed para todos os horários possíveis (08:00 às 22:00)
 const allPossibleSlots = computed(() => {
@@ -295,6 +301,9 @@ function horaParaMinutos(hora: string): number {
   return parseInt(partes[0] || '0', 10) * 60 + parseInt(partes[1] || '0', 10)
 }
 
+// Instância global do supabase para o componente
+const supabase = useSupabaseClient()
+
 // Busca horários ocupados do Supabase
 async function fetchBookedSlots() {
   if (!formData.value.profissionalId || !formData.value.data) {
@@ -303,8 +312,11 @@ async function fetchBookedSlots() {
     return
   }
 
+  loadingAvailability.value = true
   try {
-    const { data, error } = await supabaseClient
+    // Para conferência de disponibilidade, consultamos a tabela base (ag_agendamentos)
+    // por ser muito mais rápida que a view complexa de relatórios.
+    const { data, error } = await supabase
       .from('ag_agendamentos')
       .select('hora_inicio, hora_fim, data, profissional_id')
       .eq('profissional_id', formData.value.profissionalId)
@@ -336,6 +348,8 @@ async function fetchBookedSlots() {
     console.error('Erro ao buscar disponibilidade:', err)
     bookedSlots.value = []
     fetchedAgendamentos.value = []
+  } finally {
+    loadingAvailability.value = false
   }
 }
 
@@ -437,10 +451,19 @@ async function handleSalvar() {
     return
   }
 
-  const resultado = await inserirAgendamento({
+  const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+  
+  const leadIdValid = props.leadId && isUuid(props.leadId) ? props.leadId : null;
+  const targetClienteId = formData.value.clienteId ? Number(formData.value.clienteId) : (props.clienteId ? Number(props.clienteId) : null);
+
+  // IMPORTANTE: A tabela ag_agendamentos possui a constraint check_lead_or_client_not_both.
+  // Devemos enviar apenas um dos vínculos.
+  const finalClienteId = leadIdValid ? null : targetClienteId;
+
+  const payloadToInsert = {
     profissional_id: formData.value.profissionalId,
-    cliente_id: props.leadId ? null : Number(formData.value.clienteId),
-    lead_id: props.leadId || null,
+    cliente_id: finalClienteId,
+    lead_id: leadIdValid,
     data: formData.value.data,
     hora_inicio: formData.value.horaInicio,
     hora_fim: formData.value.horaFim,
@@ -448,15 +471,15 @@ async function handleSalvar() {
     descricao: formData.value.descricao?.trim() || null,
     cor: formData.value.cor || null,
     categoria: formData.value.categoria
-  })
+  };
+
+  console.log('Dados finais enviados ao inserirAgendamento:', payloadToInsert);
+
+  const resultado = await inserirAgendamento(payloadToInsert)
 
   salvando.value = false
 
   if (resultado) {
-    // Invalida cache da semana atual para forçar refetch
-    agendamentoStore.cacheAgendamentos = {}
-    await agendamentoStore.carregarAgendamentos()
-
     emit('salvar', resultado)
     isOpen.value = false
   }
@@ -515,6 +538,17 @@ watch(isOpen, (novoValor) => {
     // Seta o profissional inicial (visto na agenda) como opção padrão
     if (props.profissionalId) {
       formData.value.profissionalId = props.profissionalId
+    } else if (props.profissionalNome && props.profissionais?.length) {
+      // Tenta encontrar por nome caso o ID não tenha vindo (fallback vindo do Kanban)
+      const nomeProcurado = props.profissionalNome.toLowerCase()
+      const profEncontrado = props.profissionais.find(p => {
+        if (!p.nome) return false
+        const pNome = p.nome.toLowerCase()
+        return pNome === nomeProcurado || pNome.includes(nomeProcurado) || nomeProcurado.includes(pNome)
+      })
+      if (profEncontrado) {
+        formData.value.profissionalId = profEncontrado.profissional_id
+      }
     }
 
     // Se temos um clienteId, seta ele

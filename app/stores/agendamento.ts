@@ -191,9 +191,15 @@ export const useAgendamentoStore = defineStore('agendamento', () => {
    * @async
    * @returns Promise<void>
    */
-  async function carregarAgendamentos() {
-    // Validação 1: O profissionalId pode ser nulo (Visão "Todos")
-    // Se for nulo, o composable buscará de todos.
+  let fetchDebounceTimer: any = null
+  async function carregarAgendamentos(silent = false) {
+    if (loading.value) {
+      // Se já está buscando, agenda uma busca silenciosa para logo depois de terminar
+      if (fetchDebounceTimer) clearTimeout(fetchDebounceTimer)
+      fetchDebounceTimer = setTimeout(() => carregarAgendamentos(true), 1500)
+      return
+    }
+
     const idParaFiltro = profissionalId.value
 
     // Validação 2: Verificar se diasSemana está disponível (computed pode não estar pronto)
@@ -213,7 +219,9 @@ export const useAgendamentoStore = defineStore('agendamento', () => {
     console.log('🔑 Store: Chave cache =', chaveCache)
 
     // CACHE-FIRST STRATEGY: Verificar cache antes de fazer network request
-    if (cacheAgendamentos.value[chaveCache]) {
+    // No entanto, se for uma operação REALTIME (silent=true), o cache já foi invalidado
+    // pelo chamador (AgendamentoManager.vue), então não pulamos aqui.
+    if (!silent && cacheAgendamentos.value[chaveCache]) {
       console.log('💾 Store: Dados encontrados no cache! Usando cache.')
       console.log('📊 Store: Total no cache:', cacheAgendamentos.value[chaveCache].length)
       agendamentos.value = cacheAgendamentos.value[chaveCache]
@@ -229,7 +237,8 @@ export const useAgendamentoStore = defineStore('agendamento', () => {
       const agendamentosBanco = await buscarAgendamentosPorProfissional(
         profissionalId.value,
         dataInicio,
-        dataFim
+        dataFim,
+        silent
       )
 
       console.log('📦 Store: Dados recebidos do composable:', agendamentosBanco)

@@ -15,7 +15,8 @@
               range
               inline
               auto-apply
-              locale="pt-BR"
+              :locale="ptBR"
+              :format-locale="ptBR"
               :enable-time-picker="false"
               format="dd/MM/yyyy"
             />
@@ -41,6 +42,10 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { VueDatePicker } from '@vuepic/vue-datepicker';
+import '@vuepic/vue-datepicker/dist/main.css';
+
+import { ptBR } from 'date-fns/locale';
 
 const props = defineProps<{ modelValue: boolean }>();
 const emit = defineEmits(['update:modelValue', 'apply']);

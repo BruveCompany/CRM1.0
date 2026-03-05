@@ -7,7 +7,7 @@
       backgroundColor: agendamento.cor || '#B4A7F5',
       zIndex: isHovered ? 10 : 1
     }"
-    :title="`Título: ${agendamento.titulo}\nContato: ${agendamento.nome_contato || 'N/A'}\nResponsável: ${agendamento.profissional_nome || 'N/A'}\nAgendado por: ${agendamento.responsavel_agendamento || 'Sistema'}\nHorário: ${horarioFormatado}\nCategoria: ${agendamento.categoria || 'N/A'}${agendamento.descricao ? '\nDescrição: ' + agendamento.descricao : ''}`"
+    :title="`Título: ${agendamento.titulo}\nContato: ${agendamento.nome_contato || 'N/A'}\nResponsável: ${agendamento.profissional_nome || 'N/A'}\nAgendado por: ${vendedorNome || 'Sistema'}\nHorário: ${horarioFormatado}\nCategoria: ${agendamento.categoria || 'N/A'}${agendamento.descricao ? '\nDescrição: ' + agendamento.descricao : ''}`"
     class="absolute left-0 right-0 border border-black/10 text-neutral-900 rounded px-2 py-1.5 cursor-pointer transition-all duration-200 overflow-hidden hover:shadow-lg flex flex-col"
     @click="emit('click', agendamento)"
     @mouseenter="isHovered = true"
@@ -123,6 +123,11 @@ const iconeCategoria = computed(() => {
  * Resolve o nome do vendedor (quem criou)
  */
 const vendedorNome = computed(() => {
+  // 1. Preferência total pelo campo vindo da VIEW (mais performático e confiável)
+  if (props.agendamento.criador_nome) return props.agendamento.criador_nome
+  if (props.agendamento.responsavel_agendamento) return props.agendamento.responsavel_agendamento
+
+  // 2. Fallback: Procura no estado global de vendedores
   if (!props.agendamento.user_id) return null
   
   const searchId = String(props.agendamento.user_id).toLowerCase()

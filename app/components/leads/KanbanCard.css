@@ -1,0 +1,717 @@
+.kanban-card {
+    background-color: #ffffff;
+    border-radius: 10px;
+    padding: 0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    cursor: grab;
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    border: 1px solid #f1f5f9;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    user-select: none;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kanban-card.is-menu-open {
+    z-index: 50;
+}
+
+.kanban-card.card-hot {
+    border-left: 0;
+}
+
+.kanban-card.card-cold {
+    opacity: 0.9;
+}
+
+.card-info-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: -2px;
+    margin-bottom: 4px;
+}
+
+.inline-score-badge {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.temp-icon-inline {
+    width: 11px;
+    height: 11px;
+}
+
+.inline-cold-icon {
+    color: #3b82f6;
+    display: flex;
+    align-items: center;
+}
+
+.inline-cold-icon :deep(svg) {
+    width: 14px;
+    height: 14px;
+}
+
+.temp-icon {
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    font-size: 0.7rem;
+}
+
+.temp-score-badge {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 1px 4px;
+    border-radius: 6px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+
+.temp-icon-mini {
+    width: 10px;
+    height: 10px;
+}
+
+.score-text {
+    line-height: 1;
+}
+
+.temp-icon.hot {
+    background-color: #fff7ed;
+    color: #f97316;
+}
+
+.temp-icon.cold {
+    background-color: #eff6ff;
+    color: #3b82f6;
+}
+
+.kanban-card:hover {
+    background-color: #fafafa;
+    box-shadow: 0 6px 15px -4px rgba(0, 0, 0, 0.06);
+}
+
+.quick-actions-trigger {
+    position: relative;
+    z-index: 20;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: -4px;
+}
+
+.quick-actions-trigger:hover {
+    background-color: #f1f5f9;
+    color: #475569;
+}
+
+.action-icon {
+    width: 14px;
+    height: 14px;
+}
+
+.view-360-btn {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f8fafc;
+    color: #94a3b8;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    margin-right: 2px;
+}
+
+.view-360-btn:hover {
+    background-color: #eef2ff;
+    color: #4f46e5;
+    border-color: #c7d2fe;
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+}
+
+.view-360-btn :deep(svg) {
+    width: 13px;
+    height: 13px;
+}
+
+.actions-popover {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    padding: 0.4rem;
+    min-width: 180px;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.action-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.6rem;
+    border: none;
+    background: none;
+    width: 100%;
+    color: #475569;
+    font-size: 0.8rem;
+    font-weight: 500;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.action-item:hover {
+    background-color: #f8fafc;
+    color: #4f46e5;
+}
+
+.icon-circle {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background-color: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #64748b;
+    transition: all 0.2s;
+}
+
+.action-item:hover .icon-circle {
+    background-color: #eef2ff;
+    color: #4f46e5;
+}
+
+.item-icon {
+    width: 0.9rem;
+    height: 0.9rem;
+}
+
+.flex-1 {
+    flex: 1;
+}
+
+.has-submenu {
+    justify-content: space-between;
+}
+
+.submenu-arrow {
+    width: 12px;
+    height: 12px;
+    opacity: 0.4;
+}
+
+.dropdown-divider {
+    height: 1px;
+    background-color: #f1f5f9;
+    margin: 4px 0;
+}
+
+.reassign-modal-content {
+    padding: 0.5rem 0;
+}
+
+.modal-subtitle {
+    font-size: 0.9rem;
+    color: #64748b;
+    margin-bottom: 1.25rem;
+}
+
+.sellers-list-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.seller-selection-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.seller-selection-btn:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.seller-name-atrib {
+    font-weight: 500;
+    color: #1e293b;
+    font-size: 0.9rem;
+    text-align: left;
+}
+
+.seller-btn-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.seller-avatar-small {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.btn-arrow {
+    width: 1.1rem;
+    height: 1.1rem;
+    color: #cbd5e1;
+}
+
+.card-content {
+    flex-grow: 1;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.5rem 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.4rem;
+    margin-bottom: 0.1rem;
+    position: relative;
+    min-width: 0;
+    width: 100%;
+}
+
+.card-header-right {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.card-title {
+    font-weight: 500;
+    font-size: 0.85rem;
+    color: #1e293b;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: -0.01em;
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: calc(100% - 80px);
+    /* reserva 80px para os 3 botões */
+}
+
+.card-phone-number {
+    font-size: 0.78rem;
+    color: #64748b;
+    margin: 0;
+    font-weight: 500;
+}
+
+.card-appointment-module {
+    margin: 4px 4px;
+    background-color: #f0fdf4;
+    border-radius: 6px;
+    display: flex;
+    width: auto;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid #dcfce7;
+    padding: 4px 0;
+}
+
+.card-appointment-module:hover {
+    filter: brightness(0.98);
+}
+
+.appointment-content {
+    padding: 0 6px;
+    display: flex;
+    align-items: center;
+    flex-grow: 1;
+    min-width: 0;
+    height: 100%;
+}
+
+.appointment-header {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 2px;
+    flex-wrap: wrap;
+}
+
+.module-icon {
+    width: 10px;
+    height: 10px;
+    color: #64748b;
+}
+
+.appointment-time {
+    font-size: 0.62rem;
+    font-weight: 500;
+    color: #166534;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.appointment-hours {
+    font-weight: 500;
+}
+
+.card-appointment-module.is-late {
+    background-color: #fef2f2;
+    border-color: #fee2e2;
+}
+
+.card-appointment-module.is-late .appointment-time,
+.card-appointment-module.is-late .module-icon {
+    color: #e11d48;
+}
+
+.card-appointment-module-placeholder {
+    margin: 4px 4px;
+    background-color: transparent;
+    border: 1px dashed #e2e8f0;
+    border-radius: 6px;
+    display: flex;
+    width: auto;
+    max-width: 100%;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 4px 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.card-appointment-module-placeholder:hover {
+    border-color: #cbd5e1;
+    background-color: #f8fafc;
+}
+
+.placeholder-icon {
+    width: 10px;
+    height: 10px;
+    color: #94a3b8;
+}
+
+.placeholder-text {
+    font-size: 0.62rem;
+    color: #94a3b8;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+}
+
+.card-footer-modern {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.35rem 0.4rem 0.35rem 0.4rem;
+    border-top: 1px solid #f8fafc;
+    margin-top: 0.1rem;
+}
+
+.vendedor-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.online-indicator-text,
+.last-seen-text {
+    font-size: 0.65rem;
+    line-height: 1.2;
+}
+
+.online-indicator-text {
+    color: #10b981;
+    font-weight: 600;
+}
+
+.last-seen-text {
+    color: #94a3b8;
+    font-weight: 400;
+}
+
+.vendedor-compact {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.avatar-mini-wrapper {
+    position: relative;
+    width: 20px;
+    height: 20px;
+}
+
+.avatar-mini {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.avatar-placeholder-mini {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: #64748b;
+}
+
+.status-orbit {
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    border: 1.5px solid white;
+    background-color: #cbd5e1;
+}
+
+.status-orbit.is-online {
+    background-color: #10b981;
+}
+
+.corretor-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #64748b;
+    max-width: 80px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.footer-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+}
+
+.badges-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.badge-msg {
+    background-color: #ef4444;
+    color: white;
+    font-size: 0.6rem;
+    font-weight: 800;
+    padding: 1px 5px;
+    border-radius: 10px;
+    min-width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.badge-count {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    background-color: #f1f5f9;
+    color: #64748b;
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 4px;
+    border: 1px solid #e2e8f0;
+}
+
+.mini-icon {
+    width: 10px;
+    height: 10px;
+}
+
+.last-seen-text {
+    font-size: 0.6rem;
+    color: #94a3b8;
+    font-weight: 400;
+}
+
+.card-appointment-pill.status-upcoming {
+    background-color: #f0fdf4;
+    color: #16a34a;
+    border: 1px solid #dcfce7;
+}
+
+.card-appointment-pill.status-late {
+    background-color: #fff7ed;
+    color: #ea580c;
+    border: 1px solid #ffedd5;
+    animation: pulse-late 2s infinite;
+}
+
+.card-appointment-pill.status-none {
+    color: #cbd5e1;
+    background-color: #f8fafc;
+    opacity: 0.6;
+}
+
+.card-appointment-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    margin-bottom: 2px;
+    padding: 4px 8px;
+    background-color: #f0fdf4;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid #dcfce7;
+    transition: all 0.2s;
+}
+
+.card-appointment-line:hover {
+    background-color: #dcfce7;
+}
+
+.card-appointment-line.is-late {
+    background-color: #fff7ed;
+    border-color: #ffedd5;
+}
+
+.card-appointment-line.is-late:hover {
+    background-color: #ffedd5;
+}
+
+.line-icon {
+    width: 14px;
+    height: 14px;
+    color: #16a34a;
+}
+
+.is-late .line-icon {
+    color: #ea580c;
+}
+
+.line-text {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #166534;
+}
+
+.is-late .line-text {
+    color: #9a3412;
+}
+
+.late-label {
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 0.6rem;
+    margin-right: 2px;
+}
+
+.appointment-title {
+    display: inline-block;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+    font-weight: 700;
+}
+
+.pill-icon {
+    width: 12px;
+    height: 12px;
+}
+
+.pill-date {
+    white-space: nowrap;
+}
+
+@keyframes pulse-late {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.status-icon {
+    width: 1rem;
+    height: 1rem;
+}
+
+.card-arrow-icon {
+    color: #cbd5e1;
+    display: flex;
+    align-items: center;
+}

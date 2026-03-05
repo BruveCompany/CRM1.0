@@ -3,7 +3,13 @@
   Gerencia os links principais do sistema, controle de acesso por nível de usuário e recolhimento da barra.
 -->
 <template>
-  <aside :class="['bg-white border-r border-gray-100 flex flex-col h-screen transition-all duration-300 relative', isCollapsed ? 'w-20' : 'w-64']">
+  <aside 
+    :class="[
+      'bg-white border-r border-gray-100 flex flex-col h-screen relative', 
+      isMounted ? 'transition-[width] duration-300' : '',
+      isCollapsed ? 'w-20' : 'w-64'
+    ]"
+  >
     <!-- Toggle Button Overlay -->
     <button
       @click="toggleSidebar"
@@ -143,6 +149,12 @@ const userStore = useUserStore()
 const isCollapsed = ref(false)
 // Estado do submenu de configurações
 const isConfigOpen = ref(false)
+
+// Flag para habilitar transições apenas após o carregamento inicial (evita 'tremida')
+const isMounted = ref(false)
+onMounted(() => {
+  isMounted.value = true
+})
 
 /**
  * Itens de Navegação Dinâmicos

@@ -20,7 +20,7 @@ export const useTarefas = () => {
      * 8. Se houver um erro na chamada ao Supabase, ele deve ser logado no console e a função deve retornar um array vazio.
      * 9. Se a chamada for bem-sucedida, deve retornar o array de dados.
      */
-    const getProximasTarefas = async (profissionalId: number, limite: number = 5) => {
+    const getProximasTarefas = async (profissionalId: number | string, limite: number = 5) => {
         // 2. Retornar um array vazio e logar um erro se "profissionalId" não for fornecido.
         if (!profissionalId) {
             console.error('[getProximasTarefas] Erro: profissionalId é obrigatório!');

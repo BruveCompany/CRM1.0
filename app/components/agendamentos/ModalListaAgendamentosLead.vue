@@ -20,14 +20,10 @@
           <CalendarIcon class="w-8 h-8 text-neutral-300" />
         </div>
         <h4 class="text-base font-semibold text-neutral-900">
-          {{ !props.clienteId ? 'Lead não vinculado' : 'Nenhum agendamento' }}
+          Nenhum agendamento
         </h4>
         <p class="text-sm text-neutral-500 mt-1 mb-6 max-w-[280px]">
-          {{ 
-            !props.clienteId 
-              ? 'Este lead ainda não possui um cadastro de cliente vinculado. Crie um agendamento para vinculá-lo automaticamente.' 
-              : 'Este lead ainda não possui nenhum compromisso agendado no histórico.' 
-          }}
+          Este lead/cliente ainda não possui nenhum compromisso agendado no histórico.
         </p>
         <BaseButton variant="primary" size="sm" @click="emit('novo')">
           <PlusIcon class="w-4 h-4 mr-2" />
@@ -113,10 +109,12 @@ import { ref, computed, watch } from 'vue'
 import BaseModal from '../BaseModal.vue'
 import BaseButton from '../BaseButton.vue'
 import { CalendarIcon, ClockIcon, UserCircleIcon, PlusIcon } from '@heroicons/vue/24/outline'
+import { useAgendamento } from '~/composables/useAgendamento'
 
 interface Props {
   modelValue: boolean
   clienteId: number | null
+  leadId?: string | null
   leadName: string
 }
 
@@ -133,18 +131,30 @@ const isOpen = computed({
 const agendamentos = ref<any[]>([])
 const loading = ref(false)
 
-async function carregarAgendamentos() {
-  console.log(`📡 [ModalLista...] Iniciando busca para Cliente ID: ${props.clienteId}`);
-  if (!props.clienteId) {
-    console.log('  ⚠️ Abortando: clienteId nulo.');
+const isLoadLocked = ref(false)
+let debounceTimer: ReturnType<typeof setTimeout> | null = null
+
+const carregarAgendamentos = async () => {
+  // Ignora IDs que venham formatados como string literal "undefined" por falha de casting paterna
+  const invalidLeadId = !props.leadId || String(props.leadId) === 'undefined' || String(props.leadId) === 'null'
+  const invalidClientId = !props.clienteId
+
+  console.log(`📡 [ModalLista...] Iniciando busca para Cliente ID: ${props.clienteId} | Lead ID: ${props.leadId}`);
+  if (invalidClientId && invalidLeadId) {
+    console.log('  ⚠️ Abortando: clienteId e leadId nulos ou inválidos.');
     agendamentos.value = []
+    loading.value = false
     return
   }
   
+  if (isLoadLocked.value) return;
+  isLoadLocked.value = true;
   loading.value = true
+  
   try {
     const data = await buscarRelatorioAgendamentos({
-      clienteId: Number(props.clienteId),
+      clienteId: !invalidClientId ? Number(props.clienteId) : undefined,
+      leadId: !invalidLeadId ? String(props.leadId) : undefined,
       cancelado: undefined 
     })
 
@@ -158,7 +168,15 @@ async function carregarAgendamentos() {
     console.error('  ❌ Erro ao carregar lista:', err)
   } finally {
     loading.value = false
+    isLoadLocked.value = false;
   }
+}
+
+const scheduleLoad = () => {
+  if (debounceTimer) clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    carregarAgendamentos()
+  }, 100)
 }
 
 function formatarDataExtenso(dateStr: string) {
@@ -178,15 +196,15 @@ function formatarHorario(inicio: string, fim: string) {
 
 watch(() => isOpen.value, (aberto) => {
   if (aberto) {
-    console.log('🔓 Modal aberto. Forçando carregamento...');
-    carregarAgendamentos();
+    console.log('🔓 Modal aberto. Agendando carregamento...');
+    scheduleLoad();
   }
 });
 
-watch(() => props.clienteId, (newId) => {
-  if (isOpen.value && newId) {
-    console.log(`🆔 Cliente ID mudou para ${newId}. Recarregando...`);
-    carregarAgendamentos();
+watch([() => props.clienteId, () => props.leadId], () => {
+  if (isOpen.value) {
+    console.log(`🆔 Cliente/Lead mudou. Agendando carregamento...`);
+    scheduleLoad();
   }
 });
 </script>

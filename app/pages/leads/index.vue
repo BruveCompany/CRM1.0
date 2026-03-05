@@ -138,22 +138,8 @@ const handleScheduleSave = async (data: any) => {
   isScheduleModalOpen.value = false;
 };
 
-onMounted(async () => {
-  // Busca lista de profissionais para o modal de agendamento
-  const profs = await fetchProfissionais();
-  if (profs) globalProfissionais.value = profs;
-  
-  // Garante que os dias da semana estejam carregados na store
-  if (agendamentoStore.diasSemana.length === 0) {
-    await agendamentoStore.carregarAgendamentos(); 
-  }
-});
-
-
-
 const handleSave = async (formData: any) => {
   try {
-    // 1. Prepara o payload (limpa campos virtuais do modal como _slug)
     const payload = {
       nome:               formData.nome,
       email:              formData.email,
@@ -179,43 +165,27 @@ const handleSave = async (formData: any) => {
     };
 
     if (formData.id) {
-      // ── Lógica de UPDATE ──
-      const { error } = await (supabase
-        .from('ag_leads') as any)
-        .update(payload)
-        .eq('id', formData.id);
-
+      const { error } = await (supabase.from('ag_leads') as any).update(payload).eq('id', formData.id);
       if (error) throw error;
       notifySuccess('Lead atualizado com sucesso!');
     } else {
-      // ── Lógica de INSERT (Duas Etapas) ──
-      const { data: newLead, error } = await (supabase
-        .from('ag_leads') as any)
-        .insert([payload])
-        .select('id')
-        .single();
-
+      const { data: newLead, error } = await (supabase.from('ag_leads') as any).insert([payload]).select('id').single();
       if (error) throw error;
 
-      // Se informou data, cria o agendamento correspondente na estrutura correta
       if (formData.proximo_contato_em) {
         const pending = leadToEdit.value._pendingSchedule;
-        
         const dateObj = new Date(formData.proximo_contato_em);
         const yyyy = dateObj.getFullYear();
         const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
         const dd = String(dateObj.getDate()).padStart(2, '0');
         const dateStr = `${yyyy}-${mm}-${dd}`;
-        
         const hh = String(dateObj.getHours()).padStart(2, '0');
         const min = String(dateObj.getMinutes()).padStart(2, '0');
         const ss = String(dateObj.getSeconds()).padStart(2, '0');
         const timeStr = `${hh}:${min}:${ss}`;
 
-        // Busca o ID do profissional correspondente ao perfil logado como fallback secundário
         const currentProfId = globalProfissionais.value.find(p => p.profile_id === profile.value?.id)?.profissional_id;
         
-        // Dados do agendamento (usa o que foi preenchido no modal, se houver)
         const agPayload = {
           profissional_id: pending?.profissionalId || currentProfId || profile.value?.id,
           lead_id: newLead.id as string,
@@ -223,20 +193,17 @@ const handleSave = async (formData: any) => {
           hora_inicio: pending?.horaInicio || timeStr.slice(0, 5),
           hora_fim: pending?.horaFim || pending?.horaInicio || timeStr.slice(0, 5),
           titulo: pending?.titulo || `Contato inicial com ${payload.nome}`,
-          descricao: pending?.descricao || `Agendamento automático via criação de lead. Interesse: ${payload.interesse || 'Não informado'}`,
+          descricao: pending?.descricao || `Agendamento automático via criação de lead.`,
           categoria: pending?.categoria || 'Visita ao Showroom / Loja',
           cor: pending?.cor || null
         };
 
-        const agResult = await inserirAgendamento(agPayload);
-        if (!agResult) console.error('[AGENDAMENTO] Erro ao salvar agendamento automático');
+        await inserirAgendamento(agPayload);
       }
 
       notifySuccess('Lead criado com sucesso!');
       isCreateLeadModalOpen.value = false;
       await fetchLeads();
-      
-      // Redireciona para a página do novo lead
       await navigateTo(`/leads/${newLead.id}`);
       return;
     }
@@ -245,33 +212,34 @@ const handleSave = async (formData: any) => {
     await fetchLeads();
   } catch (err: any) {
     console.error('[ERRO AO SALVAR LEAD]', err.message);
-    if (err.message?.includes('duplicate key') || err.message?.includes('unique')) {
-      notifyError('Este telefone ou e-mail já pertence a outro lead.');
-    } else {
-      notifyError(`Erro ao salvar lead: ${err.message}`);
-    }
+    notifyError(`Erro ao salvar: ${err.message}`);
   }
 };
 
 let statusSub: any = null;
-let leadSub: any = null; // Adicionado (Tarefa: Sincronismo Realtime)
+let leadSub: any = null;
 let appointSub: any = null;
 
 onMounted(async () => {
-  // Carregamento inicial (Fetch imediato)
+  const profs = await fetchProfissionais();
+  if (profs) globalProfissionais.value = profs;
+  
+  if (agendamentoStore.diasSemana.length === 0) {
+    await agendamentoStore.carregarAgendamentos(); 
+  }
+
   fetchStatuses();
   fetchLeads();
 
-  // Inscrições Realtime unificadas (Tarefa: Sincronismo Realtime)
   statusSub = subscribeToStatusChanges();
   leadSub = subscribeToLeadChanges(); 
   appointSub = subscribeToAppointmentChanges();
 });
 
 onUnmounted(() => {
-  if (statusSub) statusSub.unsubscribe();
-  if (leadSub) leadSub.unsubscribe(); // Adicionado
-  if (appointSub) appointSub.unsubscribe();
+  if (statusSub) supabase.removeChannel(statusSub);
+  if (leadSub) supabase.removeChannel(leadSub); 
+  if (appointSub) supabase.removeChannel(appointSub);
 });
 
 definePageMeta({

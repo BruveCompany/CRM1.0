@@ -6,7 +6,7 @@
     <!-- Conteúdo Principal -->
     <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
       <!-- Área de Conteúdo principal ajustada para permitir componentes de altura total -->
-      <div class="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar">
+      <div class="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar" style="scrollbar-gutter: stable;">
         <slot />
       </div>
     </main>

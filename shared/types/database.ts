@@ -140,6 +140,7 @@ export interface AgAgendamento {
   user_id: string | null
   profissional_id: number | null
   cliente_id: number | null
+  lead_id: string | null
   data: string | null
   hora_inicio: string | null
   hora_fim: string | null
@@ -202,6 +203,9 @@ export interface AgViewAgendamentoCompleto {
   cliente_cpf: string | null
   cliente_email: string | null
   cliente_telefone: string | null
+
+  lead_id: string | null
+
   // Dados do profissional
   profissional_id: number | null
   profile_id: number | null
@@ -210,6 +214,7 @@ export interface AgViewAgendamentoCompleto {
   especialidade: string | null
   nome_contato: string | null
   responsavel_agendamento: string | null
+  criador_nome: string | null
 }
 
 // Estado do store de usuário

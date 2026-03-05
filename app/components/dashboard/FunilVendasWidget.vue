@@ -3,7 +3,8 @@
     <Bar 
       v-if="chartData && chartData.datasets && chartData.datasets[0] && chartData.datasets[0].data.length > 0"
       :data="chartData" 
-      :options="chartOptions" 
+      :options="chartOptions"
+      :plugins="[gradientPlugin]"
     />
     <div v-else class="text-center text-neutral-400">
       <Icon name="heroicons:chart-bar" class="w-12 h-12 mx-auto mb-2 opacity-20" />
@@ -25,7 +26,6 @@ import {
 } from 'chart.js'
 import ChartDataLabels from 'chartjs-plugin-datalabels'
 
-// Registro obrigatório do Chart.js + Plugin de Labels
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ChartDataLabels)
 
 const props = defineProps<{
@@ -33,7 +33,8 @@ const props = defineProps<{
     labels: string[]
     datasets: {
       data: number[]
-      backgroundColor: string[]
+      backgroundColor: (string | CanvasGradient)[]
+      borderColor?: string[]
       borderWidth?: number | any
       borderRadius?: any
       barThickness?: number
@@ -41,7 +42,35 @@ const props = defineProps<{
   } | null
 }>()
 
-// Configurações do gráfico
+// Converte hex para rgba
+const hexToRgba = (hex: string, alpha: number): string => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  if (!result) return `rgba(99,102,241,${alpha})`
+  return `rgba(${parseInt(result[1]!, 16)},${parseInt(result[2]!, 16)},${parseInt(result[3]!, 16)},${alpha})`
+}
+
+// Plugin: gradiente de cima para baixo em cada barra
+const gradientPlugin = {
+  id: 'barGradient',
+  beforeDatasetDraw(chart: any, args: any) {
+    const { ctx } = chart
+    const dataset = chart.data.datasets[args.index]
+    const meta = chart.getDatasetMeta(args.index)
+
+    meta.data.forEach((bar: any, i: number) => {
+      const baseColor = dataset.borderColor?.[i] ?? '#6366f1'
+      const top = bar.y - bar.height / 2
+      const bottom = bar.y + bar.height / 2
+
+      const gradient = ctx.createLinearGradient(0, top, 0, bottom)
+      gradient.addColorStop(0, hexToRgba(baseColor, 0.95)) // Topo: mais vivo
+      gradient.addColorStop(1, hexToRgba(baseColor, 0.50)) // Base: mais suave
+
+      dataset.backgroundColor[i] = gradient
+    })
+  }
+}
+
 const chartOptions = {
   indexAxis: 'y' as const,
   responsive: true,
@@ -50,7 +79,7 @@ const chartOptions = {
     duration: 2200,
     easing: 'easeOutQuart' as const,
     x: {
-      from: -500, // Começa fora da tela à esquerda
+      from: -500,
       type: 'number'
     }
   },
@@ -59,11 +88,8 @@ const chartOptions = {
     datalabels: {
       anchor: 'center' as const,
       align: 'center' as const,
-      color: '#ffffff', // Números agora em branco para melhor contraste
-      font: {
-        size: 11,
-        weight: 600
-      },
+      color: '#ffffff',
+      font: { size: 11, weight: 600 },
       formatter: (value: number) => value > 0 ? value : ''
     },
     tooltip: {
@@ -86,15 +112,16 @@ const chartOptions = {
       }
     }
   },
-  elements: {
+  datasets: {
     bar: {
+      barThickness: 22,
       borderRadius: {
-        topRight: 20,
-        bottomRight: 20,
-        topLeft: 0,
-        bottomLeft: 0
-      }, // Lado esquerdo reto, lado direito redondo
-      borderSkipped: 'left' as const
+        topRight: 12,
+        bottomRight: 12,
+        topLeft: 3,
+        bottomLeft: 3,
+      },
+      borderSkipped: false as const
     }
   }
 }

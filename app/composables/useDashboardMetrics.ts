@@ -2,7 +2,7 @@ import { ref, onUnmounted } from 'vue';
 
 export const useDashboardMetrics = () => {
     const supabase = useSupabaseClient();
-    const { profile } = useAuth();
+    const { waitForProfile, profile, profId: cachedProfId } = useAuth();
 
     // Estados Reativos
     const leadsAtivos = ref(0);
@@ -11,39 +11,66 @@ export const useDashboardMetrics = () => {
     const valorEmNegociacao = ref(0);
     const loading = ref(false);
     const currentPeriod = ref<number | string>(30);
+    const lastFetchTime = ref(0);
 
     const fetchDashboardData = async (periodoEmDias?: number | string) => {
-        const profileId = profile.value?.id;
-        if (!profileId) return;
+        if (loading.value) return;
+
+        // Rate limit: Mínimo 2 segundos entre atualizações automáticas do dashboard
+        const now = Date.now();
+        if (periodoEmDias === undefined && now - lastFetchTime.value < 2000) return;
 
         if (periodoEmDias !== undefined) currentPeriod.value = periodoEmDias;
         loading.value = true;
-
-        let startDate: Date;
-        if (currentPeriod.value === 'all') {
-            startDate = new Date(0);
-        } else {
-            startDate = new Date();
-            startDate.setDate(startDate.getDate() - Number(currentPeriod.value));
-        }
-        const startDateISO = startDate.toISOString();
+        lastFetchTime.value = now;
 
         try {
-            // Busca o profId uma única vez para as métricas que dependem dele (Ex: Tarefas)
-            const { data: profData } = await (supabase
-                .from('ag_profissionais') as any)
-                .select('id')
-                .eq('profile_id', profileId)
-                .maybeSingle();
+            // 1. ESPERA PELO PERFIL (GARANTIA DATABASE SYNC)
+            const profileData = await waitForProfile();
+            const profileId = profileData?.id;
 
-            const profId = (profData as any)?.id;
+            if (!profileId) {
+                console.warn('[DASHBOARD] Perfil não identificado no tempo limite.');
+                return;
+            }
 
-            await Promise.all([
-                _fetchLeadsAtivos(profileId, startDateISO),
-                _fetchProximasAcoes(profId),
-                _fetchTaxaConversao(profileId, startDateISO),
-                _fetchValorEmNegociacao(profileId, startDateISO)
-            ]);
+            // 2. Resolve o profId (Prioridade: Cache > DB)
+            let profId = cachedProfId.value;
+            if (!profId) {
+                const { data: profData } = await (supabase
+                    .from('ag_profissionais') as any)
+                    .select('id')
+                    .eq('profile_id', profileId)
+                    .maybeSingle();
+                profId = (profData as any)?.id;
+                if (profId) cachedProfId.value = profId;
+            }
+
+            let startDate: Date;
+            if (currentPeriod.value === 'all') {
+                startDate = new Date(0);
+            } else {
+                startDate = new Date();
+                startDate.setDate(startDate.getDate() - Number(currentPeriod.value));
+            }
+            const startDateISO = startDate.toISOString();
+
+            // 3. FUNÇÃO DE BUSCA CONSOLIDADA COM RETRY
+            const performFetch = async (retryCount = 0) => {
+                await Promise.all([
+                    _fetchLeadsAtivos(profileId, startDateISO),
+                    _fetchProximasAcoes(profId || undefined),
+                    _fetchTaxaConversao(profileId, startDateISO),
+                    _fetchValorEmNegociacao(profileId, startDateISO)
+                ]);
+
+                // Nota: O retry baseado em `totalMetrics === 0` foi removido.
+                // Zero é um estado válido (novo usuário, sem atividades na semana).
+                // A garantia do banco já é dada pelo `waitForProfile` no início.
+            };
+
+            await performFetch();
+
         } catch (error) {
             console.error('[useDashboardMetrics] Erro:', error);
         } finally {
@@ -137,27 +164,34 @@ export const useDashboardMetrics = () => {
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'ag_leads' },
                 () => {
-                    console.log('📈 Dashboard: Atualizando métricas de Leads...');
-                    fetchDashboardData();
-                    if (onUpdate) onUpdate();
+                    // Debounce para não processar cada pequena mudança instantaneamente
+                    setTimeout(() => {
+                        console.log('📈 Dashboard: Atualizando métricas de Leads...');
+                        fetchDashboardData();
+                        if (onUpdate) onUpdate();
+                    }, 500);
                 }
             )
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'ag_tarefas' },
                 () => {
-                    console.log('📈 Dashboard: Atualizando métricas de Tarefas...');
-                    fetchDashboardData();
-                    if (onUpdate) onUpdate();
+                    setTimeout(() => {
+                        console.log('📈 Dashboard: Atualizando métricas de Tarefas...');
+                        fetchDashboardData();
+                        if (onUpdate) onUpdate();
+                    }, 500);
                 }
             )
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'ag_agendamentos' },
                 () => {
-                    console.log('📈 Dashboard: Atualizando métricas de Agendamentos...');
-                    fetchDashboardData();
-                    if (onUpdate) onUpdate();
+                    setTimeout(() => {
+                        console.log('📈 Dashboard: Atualizando métricas de Agendamentos...');
+                        fetchDashboardData();
+                        if (onUpdate) onUpdate();
+                    }, 500);
                 }
             )
             .subscribe();

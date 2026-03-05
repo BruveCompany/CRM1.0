@@ -1,11 +1,19 @@
 <template>
-  <div class="p-6 lg:p-8 space-y-6 animate-fade-in max-w-[1600px] mx-auto">
-    <!-- Cabeçalho e KPIs (Blindagem ClientOnly) -->
-    <ClientOnly>
+  <div class="p-4 bg-white min-h-[calc(100vh-64px)] overflow-y-auto w-full custom-dashboard-scroll">
+    <div class="max-w-7xl mx-auto space-y-12">
+      
+      <!-- Cabeçalho e KPIs (Layout Estabilizado) -->
       <header class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 class="text-3xl font-bold text-neutral-900 tracking-tight">Dashboard</h1>
-          <p class="text-neutral-500 mt-1 font-medium">Bem-vindo {{ userNameDisplay }}! Aqui está o resumo do seu CRM hoje.</p>
+          <p class="text-neutral-500 mt-1 font-medium">
+            Bem-vindo 
+            <ClientOnly fallback-tag="span">
+              {{ userNameDisplay }}
+              <template #fallback><span>...</span></template>
+            </ClientOnly>! 
+            Aqui está o resumo do seu CRM hoje.
+          </p>
         </div>
         <div class="flex items-center gap-3">
           <!-- Filtro de Período -->
@@ -40,95 +48,103 @@
         </div>
       </header>
 
-      <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 min-h-[140px]">
         <UiKpiCard title="Leads Ativos" :value="metricsLoading ? '...' : leadsAtivos" icon="heroicons-outline:user-group" color-classes="bg-primary-50 text-primary-600" />
         <UiKpiCard title="Próximas Ações" :value="metricsLoading ? '...' : proximasAcoesCount" icon="heroicons-outline:clock" color-classes="bg-blue-50 text-blue-600" />
         <UiKpiCard title="Taxa de Conversão" :value="metricsLoading ? '...' : formatarPercentual(taxaConversao)" icon="heroicons-outline:presentation-chart-line" color-classes="bg-emerald-50 text-emerald-600" />
         <UiKpiCard title="Valor em Negociação" :value="metricsLoading ? '...' : formatarMoeda(valorEmNegociacao)" icon="heroicons-outline:currency-dollar" color-classes="bg-amber-50 text-amber-600" />
       </section>
 
-      <template #fallback>
-        <div class="h-[200px] flex items-center justify-center bg-white border border-neutral-100 rounded-2xl animate-pulse text-neutral-400">
-          Carregando dashboard...
-        </div>
-      </template>
-    </ClientOnly>
-
-    <!-- Layout em Grade Principal -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      
-      <!-- Minha Agenda (Funcional) -->
-      <section class="lg:col-span-2 flex flex-col h-[450px]">
-        <div class="flex items-center justify-between mb-4 px-1">
-          <h2 class="text-xl font-semibold text-neutral-900 flex items-center gap-2">
-            <ClientOnly>
-              <Icon name="heroicons:calendar-days" class="w-5 h-5 text-primary-500" />
-            </ClientOnly>
-            Minha Agenda
-          </h2>
-          <NuxtLink to="/agenda" class="text-sm font-semibold text-primary-600 hover:text-primary-700 transition-colors">Ver agenda completa</NuxtLink>
-        </div>
+      <!-- Layout em Grade Principal -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-12">
         
-        <div class="flex-1 bg-white rounded-2xl border border-neutral-100 p-6 shadow-soft overflow-hidden">
-          <ClientOnly>
-            <DashboardMinhaAgendaWidget :items="proximasAcoes" />
-          </ClientOnly>
-        </div>
-      </section>
-
-      <!-- Funil de Vendas (Dinâmico) -->
-      <section class="flex flex-col h-[450px]">
-        <div class="flex flex-col mb-4 px-1">
-          <h2 class="text-xl font-semibold text-neutral-900 flex items-center gap-2">
-            <ClientOnly>
-              <Icon name="heroicons:funnel" class="w-5 h-5 text-indigo-500" />
-            </ClientOnly>
-            Funil de Vendas
-          </h2>
-        </div>
-        
-        <div class="flex-1 bg-white rounded-2xl border border-neutral-100 p-6 shadow-soft overflow-hidden flex flex-col items-center justify-center">
-          <ClientOnly v-if="funilChartData">
-            <DashboardFunilVendasWidget :chart-data="funilChartData" />
-          </ClientOnly>
-          <div v-else-if="loading" class="flex flex-col gap-4 w-full animate-pulse">
-            <div class="h-8 bg-neutral-50 rounded-lg w-full"></div>
-            <div class="h-8 bg-neutral-50 rounded-lg w-4/5"></div>
-            <div class="h-8 bg-neutral-50 rounded-lg w-3/4"></div>
+        <!-- Minha Agenda (Funcional) -->
+        <section class="lg:col-span-2 flex flex-col h-[450px]">
+          <div class="flex items-center justify-between mb-4 px-1">
+            <h2 class="text-xl font-semibold text-neutral-900 flex items-center gap-2">
+              <ClientOnly>
+                <Icon name="heroicons:calendar-days" class="w-5 h-5 text-primary-500" />
+                <template #fallback><div class="w-5 h-5" /></template>
+              </ClientOnly>
+              Minha Agenda
+            </h2>
+            <NuxtLink to="/agenda" class="text-sm font-semibold text-primary-600 hover:text-primary-700 transition-colors">Ver agenda completa</NuxtLink>
           </div>
-          <div v-else class="text-center">
+          
+          <div class="flex-1 bg-white rounded-2xl border border-neutral-100 p-6 shadow-soft overflow-hidden">
             <ClientOnly>
-              <Icon name="heroicons:chart-bar" class="w-12 h-12 text-neutral-200 mx-auto mb-2" />
+              <DashboardMinhaAgendaWidget :items="proximasAcoes" />
+              <template #fallback>
+                <div class="space-y-4 animate-pulse">
+                  <div v-for="i in 3" :key="i" class="h-16 bg-neutral-50 rounded-xl"></div>
+                </div>
+              </template>
             </ClientOnly>
-            <p class="text-xs text-neutral-400">Nenhum dado encontrado no funil.</p>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <!-- Atividades Recentes (Dinâmico) -->
-      <section class="lg:col-span-3 flex flex-col">
-        <div class="flex items-center justify-between mb-4 px-1">
-          <h2 class="text-xl font-semibold text-neutral-900 flex items-center gap-2">
-            <ClientOnly>
-              <Icon name="heroicons:rocket-launch" class="w-5 h-5 text-warning-500" />
+        <!-- Funil de Vendas (Dinâmico) -->
+        <section class="flex flex-col h-[450px]">
+          <div class="flex flex-col mb-4 px-1">
+            <h2 class="text-xl font-semibold text-neutral-900 flex items-center gap-2">
+              <ClientOnly>
+                <Icon name="heroicons:funnel" class="w-5 h-5 text-indigo-500" />
+                <template #fallback><div class="w-5 h-5" /></template>
+              </ClientOnly>
+              Funil de Vendas
+            </h2>
+          </div>
+          
+          <div class="flex-1 bg-white rounded-2xl border border-neutral-100 p-6 shadow-soft overflow-hidden flex flex-col items-center justify-center">
+            <ClientOnly v-if="funilChartData">
+              <DashboardFunilVendasWidget :chart-data="funilChartData" />
+              <template #fallback>
+                <div class="w-full space-y-3 animate-pulse">
+                  <div class="h-8 bg-neutral-50 rounded-lg w-full"></div>
+                  <div class="h-8 bg-neutral-50 rounded-lg w-4/5"></div>
+                  <div class="h-8 bg-neutral-50 rounded-lg w-3/4"></div>
+                </div>
+              </template>
             </ClientOnly>
-            Atividades Recentes
-          </h2>
-        </div>
-        
-        <div class="flex-1 overflow-y-auto pr-1 custom-scrollbar">
-          <ClientOnly>
-            <DashboardAtividadesRecentesWidget :atividades="atividadesRecentes" />
-            <template #fallback>
-              <div class="space-y-3 animate-pulse">
-                <div class="h-16 bg-white border border-neutral-100 rounded-xl"></div>
-                <div class="h-16 bg-white border border-neutral-100 rounded-xl"></div>
-              </div>
-            </template>
-          </ClientOnly>
-        </div>
-      </section>
+            <div v-else-if="loading" class="flex flex-col gap-4 w-full animate-pulse p-4">
+              <div class="h-8 bg-neutral-50 rounded-lg w-full"></div>
+              <div class="h-8 bg-neutral-50 rounded-lg w-4/5"></div>
+              <div class="h-8 bg-neutral-50 rounded-lg w-3/4"></div>
+            </div>
+            <div v-else class="text-center">
+              <ClientOnly>
+                <Icon name="heroicons:chart-bar" class="w-12 h-12 text-neutral-200 mx-auto mb-2" />
+              </ClientOnly>
+              <p class="text-xs text-neutral-400">Nenhum dado encontrado no funil.</p>
+            </div>
+          </div>
+        </section>
 
+        <!-- Atividades Recentes (Dinâmico) -->
+        <section class="lg:col-span-3 flex flex-col">
+          <div class="flex items-center justify-between mb-4 px-1">
+            <h2 class="text-xl font-semibold text-neutral-900 flex items-center gap-2">
+              <ClientOnly>
+                <Icon name="heroicons:rocket-launch" class="w-5 h-5 text-amber-500" />
+                <template #fallback><div class="w-5 h-5" /></template>
+              </ClientOnly>
+              Atividades Recentes
+            </h2>
+          </div>
+          
+          <div class="flex-1 overflow-y-auto pr-1 custom-scrollbar">
+            <ClientOnly>
+              <DashboardAtividadesRecentesWidget :atividades="atividadesRecentes" />
+              <template #fallback>
+                <div class="space-y-3 animate-pulse">
+                  <div class="h-16 bg-white border border-neutral-100 rounded-xl"></div>
+                  <div class="h-16 bg-white border border-neutral-100 rounded-xl"></div>
+                </div>
+              </template>
+            </ClientOnly>
+          </div>
+        </section>
+      </div>
     </div>
 
     <!-- Modais -->
@@ -143,7 +159,7 @@
 /**
  * Página: Dashboard
  */
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { useAuth } from '~/composables/useAuth';
 import { useLeads } from '~/composables/useLeads';
 import { useTarefas } from '~/composables/useTarefas';
@@ -167,14 +183,13 @@ useHead({
 
 // --- ESTADO ---
 const supabase = useSupabaseClient();
-const { profile } = useAuth();
+const { profile, profId } = useAuth();
 const { isCreateLeadModalOpen } = useLeads();
 const { getProximasTarefas } = useTarefas();
 
 const tarefas = ref<any[]>([]);
 const agendamentos = ref<any[]>([]);
 const atividadesRecentes = ref<any[]>([]);
-const funnelResult = ref<any[]>([]);
 const funilChartData = ref<any>(null);
 const loading = ref(true);
 const showPeriodPopover = ref(false);
@@ -210,9 +225,6 @@ const userNameDisplay = computed(() => {
 });
 
 // --- AUXILIARES ---
-/**
- * Converte HEX para RGBA para suavizar as cores do gráfico
- */
 const hexToRgba = (hex: string, opacity: number = 1) => {
   let c: any;
   if (/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) {
@@ -234,46 +246,40 @@ const formatarMoeda = (valor: number) => {
 };
 
 const formatarPercentual = (valor: number) => {
-  return `${valor.toFixed(1)}%`;
+  return `${(valor || 0).toFixed(1)}%`;
 };
 
 const handleCustomDateApply = (dates: { start: string, end: string }) => {
-  console.log('Período personalizado aplicado:', dates);
   selectedPeriod.value = 'custom';
   fetchDashboardData(); 
 };
 
-// 4. Função carregarAgenda (Renomeada conforme pedido)
+/**
+ * Função fetchDashboardData centralizada e Otimizada
+ */
 const fetchDashboardData = async (silent = false) => {
   if (!profile.value?.id) return;
   
   if (!silent) loading.value = true;
   try {
-    // 1. Buscar ID do profissional logado
-    const fetchProf = supabase
-      .from('ag_profissionais')
-      .select('id')
-      .eq('profile_id', profile.value.id)
-      .maybeSingle() as any;
-    
-    // Calcular data de início baseada no período
     const startDate = new Date();
     const dias = typeof selectedPeriod.value === 'number' ? selectedPeriod.value : 30;
     startDate.setDate(startDate.getDate() - dias);
     const startDateISO = startDate.toISOString();
+    const todayISO = new Date().toISOString().split('T')[0];
 
-    // 2. Disparar TODAS as buscas em paralelo
-    const [profRes, agRes, metricsRes, funilRes, actRes]: any = await Promise.all([
-      fetchProf,
-      supabase.from('ag_view_agendamentos_completo').select('*').eq('cancelado', false).gte('data', new Date().toLocaleDateString('en-CA')).order('data').order('hora_inicio').limit(10),
+    // DISPARA TUDO EM PARALELO (Otimização Máxima)
+    const [agRes, metricsRes, funilRes, actRes]: any = await Promise.all([
+      supabase.from('ag_view_agendamentos_completo').select('*').eq('cancelado', false).gte('data', todayISO).order('data').order('hora_inicio').limit(10),
       fetchMetrics(selectedPeriod.value),
       (supabase.rpc as any)('get_funil_vendas_dashboard', { user_id_param: profile.value.user_id }),
       supabase.from('view_atividades_recentes').select('*').gte('data_criacao', startDateISO).order('data_criacao', { ascending: false }).limit(10)
     ]);
 
-    const profId = profRes.data?.id;
-    if (profId) {
-      tarefas.value = await getProximasTarefas(profId, 5);
+    // Busca tarefas de forma reativa sem bloquear
+    const currentProfId = profId.value;
+    if (currentProfId) {
+      getProximasTarefas(currentProfId as string, 5).then(res => tarefas.value = res);
     }
 
     agendamentos.value = agRes.data || [];
@@ -282,24 +288,21 @@ const fetchDashboardData = async (silent = false) => {
       funilChartData.value = {
         labels: (funilRes.data as any[]).map((d: any) => d.status_nome),
         datasets: [{
-          data: (funilRes.data as any[]).map((d: any) => d.lead_count),
-          backgroundColor: (funilRes.data as any[]).map((d: any, index: number) => {
-            const opacity = Math.min(1.0, 0.3 + (index * 0.12)); 
-            return hexToRgba(d.cor, opacity);
+          data: (funilRes.data as any[]).map((d: any) => d.quantidade || d.lead_count || 0),
+          backgroundColor: (funilRes.data as any[]).map((d: any) => {
+             const baseColor = d.status_cor || d.cor || '#6366f1';
+             return hexToRgba(baseColor, 0.85);
           }),
-          borderRadius: 20,
-          barThickness: 24,
-          borderWidth: 0
+          borderColor: (funilRes.data as any[]).map((d: any) => d.status_cor || d.cor || '#6366f1'),
         }]
       };
     }
 
     atividadesRecentes.value = actRes.data || [];
-
   } catch (err) {
-    console.error('Erro ao carregar dashboard:', err);
+    console.error('[Dashboard] Erro Crítico:', err);
   } finally {
-    if (!silent) loading.value = false;
+    loading.value = false;
   }
 };
 
@@ -314,7 +317,7 @@ const proximasAcoes = computed(() => {
     return {
       id: `ag-${ag.id}`,
       id_original: ag.id,
-      lead_id: ag.cliente_id, // Corrigido: cliente_id é a coluna correta na view
+      lead_id: ag.cliente_id, 
       tipo: 'agendamento' as const,
       titulo: ag.titulo || 'Compromisso',
       lead_nome: ag.cliente_nome || ag.nome_contato || 'Lead s/ nome',
@@ -345,12 +348,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  unsubscribeFromDashboardChanges(); // Remove Realtime
-});
-
-// Watch para recarregar se o profile mudar (ex: login tardio)
-watch(() => profile.value?.id, (newId) => {
-  if (newId) fetchDashboardData();
+  unsubscribeFromDashboardChanges(); 
 });
 
 // Watch para recarregar quando o período mudar
@@ -360,16 +358,16 @@ watch(selectedPeriod, () => {
 </script>
 
 <style scoped>
-.animate-fade-in {
-  animation: fadeIn 0.6s ease-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
 .shadow-soft {
   box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.05);
+}
+
+/* Scrollbar Identica ao Relatorio */
+.custom-dashboard-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-dashboard-scroll::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
 }
 </style>

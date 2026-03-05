@@ -1,5 +1,5 @@
 <template>
-  <div class="kpi-card bg-white p-6 rounded-xl border border-neutral-200 shadow-soft hover:shadow-medium transition-all duration-300 group">
+  <div class="kpi-card bg-white p-6 rounded-xl border border-neutral-200 shadow-soft hover:shadow-medium transition-shadow duration-300 group">
     <div class="flex items-center justify-between">
       <div class="space-y-1">
         <p class="text-xs font-semibold text-neutral-400 mb-1 tracking-wider uppercase">{{ title }}</p>
@@ -59,9 +59,7 @@ defineProps<Props>()
   100% { transform: scale(1); opacity: 1; }
 }
 
-.kpi-card {
-  animation: scale-in-subtle 0.4s ease-out;
-}
+
 
 .custom-icon :deep(svg) {
   stroke-width: 1.0px !important;

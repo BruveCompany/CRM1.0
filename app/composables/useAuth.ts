@@ -1,34 +1,39 @@
 import { useToast } from 'vue-toastification'
 
+// Singleton de módulo: compartilhado entre todas as instâncias sem ser serializado pelo SSR
+// (useState não funciona para Promises porque o Nuxt tenta serializá-las no SSR)
+let _sharedFetchPromise: Promise<void> | null = null
+let _sharedIsLoading = false
+
 export const useAuth = () => {
   const supabase = useSupabaseClient()
   const user = useSupabaseUser()
   const toast = useToast()
   const router = useRouter()
   const profile = useState<any>('auth-user-profile', () => null)
+  const profId = useState<string | number | null>('auth-prof-id', () => null)
   const isAdminStore = useState<boolean | null>('auth-is-admin', () => null)
-  const fetchPromise = ref<Promise<void> | null>(null)
 
   const fetchProfile = async () => {
     if (!user.value) {
       profile.value = null
+      profId.value = null
       return
     }
 
     // Se já existe uma busca em andamento, aguarda ela em vez de disparar outra
-    if (fetchPromise.value) return fetchPromise.value;
+    if (_sharedFetchPromise) return _sharedFetchPromise;
 
     const currentUser = user.value;
     if (!currentUser) return;
 
-    fetchPromise.value = (async () => {
+    _sharedFetchPromise = (async () => {
       try {
         const userId = currentUser.id
         const userSub = (currentUser as any).sub
         const email = currentUser.email
 
         // Busca em paralelo por diferentes identificadores para robustez
-        // A prioridade é: user_id (UUID) > sub (UUID legado) > email
         const [idRes, subRes, emailRes]: any = await Promise.all([
           userId ? (supabase.from('ag_profiles').select('*').eq('user_id', userId).maybeSingle()) : Promise.resolve({ data: null }),
           (userSub && userSub !== userId) ? (supabase.from('ag_profiles').select('*').eq('user_id', userSub).maybeSingle()) : Promise.resolve({ data: null }),
@@ -39,8 +44,15 @@ export const useAuth = () => {
 
         if (data) {
           profile.value = data
+
+          // BUSCA O PROF_ID EM PARALELO (Otimização Produção)
+          const { data: profData } = await (supabase.from('ag_profissionais').select('id').eq('profile_id', data.id).maybeSingle() as any);
+          if (profData) profId.value = profData.id;
+
           // Se achou mas não tinha user_id vinculado, vincula em background
           if (!(data as any).user_id && userId) {
+            (data as any).user_id = userId;
+            if (profile.value) profile.value.user_id = userId;
             (supabase.from('ag_profiles') as any).update({ user_id: userId }).eq('id', (data as any).id).then();
           }
           // Atualiza cache de admin se a role estiver presente
@@ -50,11 +62,11 @@ export const useAuth = () => {
       } catch (err) {
         console.error('❌ Erro no fetchProfile:', err)
       } finally {
-        fetchPromise.value = null;
+        _sharedFetchPromise = null;
       }
     })();
 
-    return fetchPromise.value;
+    return _sharedFetchPromise;
   }
 
   const isOnlineCalculated = computed(() => {
@@ -266,8 +278,8 @@ export const useAuth = () => {
     }
 
     // 2. Se o perfil está sendo buscado, aguarda a busca terminar
-    if (fetchPromise.value) {
-      await fetchPromise.value;
+    if (_sharedFetchPromise) {
+      await _sharedFetchPromise;
       if (profile.value) {
         const isAdm = profile.value.role === 'admin' || profile.value.role === 'administrador';
         isAdminStore.value = isAdm;
@@ -368,10 +380,36 @@ export const useAuth = () => {
     }
   }
 
+  /**
+   * Aguarda o perfil do usuário estar carregado e disponível.
+   * Útil para evitar falhas de RLS em carregamentos iniciais de página.
+   * 
+   * @param {number} maxAttempts - Máximo de tentativas (padrão 15 = 3s)
+   * @returns {Promise<any>} O perfil carregado ou null
+   */
+  const waitForProfile = async (maxAttempts = 15) => {
+    let attempts = 0;
+    while (!profile.value?.id && attempts < maxAttempts) {
+      if (user.value) {
+        // Se temos usuário mas não perfil, tenta disparar o fetch se não estiver correndo
+        if (!_sharedFetchPromise) fetchProfile();
+        // Aguarda a prom essa atual se houver
+        if (_sharedFetchPromise) await _sharedFetchPromise;
+      }
+
+      if (profile.value?.id) break;
+
+      await new Promise(resolve => setTimeout(resolve, 200));
+      attempts++;
+    }
+    return profile.value;
+  }
+
   return {
     // Estado
     user,
     profile,
+    profId,
     isAuthenticated,
     isOnlineCalculated,
 
@@ -379,6 +417,7 @@ export const useAuth = () => {
     login,
     logout,
     fetchProfile,
+    waitForProfile,
     changePassword,
     updateUserName,
     recoverPassword,

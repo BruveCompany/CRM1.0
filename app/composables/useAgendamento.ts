@@ -47,9 +47,11 @@ export interface EditarAgendamentoDTO {
 export function useAgendamento() {
   // Cliente Supabase com tipagem completa do banco de dados
   const supabase = useSupabaseClient<Database>()
+  const currentUser = useSupabaseUser()
 
   // Sistema de notificações toast (vue-toastification)
   const { notifyError, notifySuccess } = useNotification()
+  const { waitForProfile } = useAuth()
 
   /**
    * Busca agendamentos de um profissional em um período específico
@@ -80,55 +82,69 @@ export function useAgendamento() {
   async function buscarAgendamentosPorProfissional(
     profissionalId: number | null,
     dataInicio: string,
-    dataFim: string
+    dataFim: string,
+    silent = false
   ): Promise<AgViewAgendamentoCompleto[] | null> {
     try {
+      // 1. ESPERA PELO PERFIL (GARANTIA RLS)
+      await waitForProfile();
+
       // Logs para debug e monitoramento
       console.log('🔍 Buscando agendamentos:')
       console.log('  📍 Profissional:', profissionalId || 'TODOS')
       console.log('  📅 Período:', dataInicio, 'até', dataFim)
 
-      let query = supabase
-        .from('ag_view_agendamentos_completo')
-        .select('*')
-        .eq('cancelado', false)                  // Filtro: apenas ativos
-        .gte('data', dataInicio)                 // Filtro: data >= início
-        .lte('data', dataFim)                    // Filtro: data <= fim
+      const performFetch = async (retryCount = 0): Promise<any> => {
+        let query = supabase
+          .from('ag_view_agendamentos_completo')
+          .select('*')
+          .eq('cancelado', false)                  // Filtro: apenas ativos
+          .gte('data', dataInicio)                 // Filtro: data >= início
+          .lte('data', dataFim)                    // Filtro: data <= fim
 
-      // Filtro opcional: profissional específico
-      if (profissionalId) {
-        query = query.eq('profissional_id', profissionalId)
+        // Filtro opcional: profissional específico
+        if (profissionalId) {
+          query = query.eq('profissional_id', profissionalId)
+        }
+
+        const { data, error } = await query
+          .order('data', { ascending: true })      // Ordena por data (crescente)
+          .order('hora_inicio', { ascending: true }) // Depois por horário (crescente)
+
+        // Adiciona lógica de retry para lidar com falhas de fetch intermitentes durante a navegação cliente
+        if (error && retryCount < 2) {
+          const errMsg = error.message?.toLowerCase() || '';
+          if (errMsg.includes('fetch') || errMsg.includes('network') || errMsg.includes('timeout') || errMsg.includes('abort')) {
+            console.warn(`⚠️ Falha na rede ao buscar agendamentos. Retentando (${retryCount + 1}/2)...`);
+            await new Promise(resolve => setTimeout(resolve, 600));
+            return performFetch(retryCount + 1);
+          }
+        }
+
+        return { data, error };
       }
 
-      const { data, error } = await query
-        .order('data', { ascending: true })      // Ordena por data (crescente)
-        .order('hora_inicio', { ascending: true }) // Depois por horário (crescente)
-
-      console.log('Dados recebidos da view de agendamentos:', data);
+      const { data, error } = await performFetch();
 
       // Tratamento de erro do Supabase
       if (error) {
         console.error('❌ Erro ao buscar agendamentos:', error)
-        console.error('Detalhes do erro:', {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
-        })
-        // Notifica usuário com toast de erro
-        notifyError('Erro ao buscar agendamentos')
+        // Notifica usuário com toast de erro apenas se não for silencioso
+        if (!silent) {
+          notifyError(`Erro ao buscar: ${error.message || 'Falha de conexão'}`)
+        }
         return null // Retorna null para indicar falha
       }
 
       // Sucesso: retorna dados
       console.log('✅ Agendamentos encontrados:', data?.length || 0)
-      console.log('📊 Dados:', data)
-
       return data as AgViewAgendamentoCompleto[]
     } catch (err) {
       // Catch para erros inesperados (ex: network, timeout)
       console.error('❌ Erro inesperado ao buscar agendamentos:', err)
-      notifyError('Erro inesperado ao buscar agendamentos')
+      if (!silent) {
+        notifyError('Erro inesperado ao buscar agendamentos')
+      }
       return null
     }
   }
@@ -150,13 +166,14 @@ export function useAgendamento() {
     try {
       console.log('📝 Inserindo agendamento:', dados)
 
-      const { data: { user } } = await supabase.auth.getUser()
+      // Garantir carregamento do profile real
+      const profile = await waitForProfile()
 
       const payload = {
         profissional_id: dados.profissional_id,
         cliente_id: dados.cliente_id || null,
         lead_id: dados.lead_id || null,
-        user_id: user?.id || null, // Fallback explícito
+        user_id: currentUser.value?.id || profile?.user_id || null, // Garante id válido
         data: dados.data,
         hora_inicio: `${dados.hora_inicio}:00-03`,
         hora_fim: `${dados.hora_fim}:00-03`,
@@ -175,7 +192,7 @@ export function useAgendamento() {
 
       if (error) {
         console.error('❌ Erro ao inserir agendamento:', error)
-        notifyError('Erro ao criar agendamento')
+        notifyError(`Erro ao criar agendamento: ${error.message || JSON.stringify(error)}`)
         return null
       }
 
@@ -301,44 +318,92 @@ export function useAgendamento() {
     dataFim?: string
     profissionalId?: number
     clienteId?: number
+    leadId?: string
     cancelado?: boolean
+    silent?: boolean
   }): Promise<AgViewAgendamentoCompleto[] | null> {
     try {
-      console.log('📊 Buscando relatório de agendamentos:', filtros)
+      const isSilent = filtros?.silent || false
 
-      // Busca via RPC function (bypass RLS da view)
-      const { data, error } = await supabase.rpc('ag_get_agendamentos_completo')
+      if (!isSilent) {
+        console.log('📊 Buscando relatório de agendamentos:', filtros)
+      }
+
+      const performRelatorioFetch = async (retryCount = 0): Promise<any> => {
+        try {
+          // Helper method for rapid indexing query
+          const runSingleQuery = async (field?: 'cliente_id' | 'lead_id', val?: any) => {
+            let query = supabase.from('ag_view_agendamentos_completo').select('*')
+
+            if (filtros?.dataInicio) query = query.gte('data', filtros.dataInicio)
+            if (filtros?.dataFim) query = query.lte('data', filtros.dataFim)
+            if (filtros?.profissionalId !== undefined && filtros?.profissionalId !== null) {
+              query = query.eq('profissional_id', filtros.profissionalId)
+            }
+            if (filtros?.cancelado !== undefined && filtros?.cancelado !== null) {
+              query = query.eq('cancelado', filtros.cancelado)
+            }
+
+            // Bind single index parameter instead of multiple slow ORs
+            if (field && val) {
+              query = query.eq(field, val)
+            }
+
+            const { data, error } = await query
+            if (error) throw error
+            return data || []
+          }
+
+          let results: any[] = []
+
+          // Se tivermos AMBOS, fazemos duas queries paralelas rápidas por índice (MUITO mais rápido que OR em Views)
+          if (filtros?.clienteId && filtros?.leadId) {
+            const [data1, data2] = await Promise.all([
+              runSingleQuery('cliente_id', filtros.clienteId),
+              runSingleQuery('lead_id', filtros.leadId)
+            ])
+            // Desduplica os resultados pelo ID
+            const map = new Map()
+            data1.forEach((i: any) => map.set(i.id, i))
+            data2.forEach((i: any) => map.set(i.id, i))
+            results = Array.from(map.values())
+          }
+          else if (filtros?.clienteId) {
+            results = await runSingleQuery('cliente_id', filtros.clienteId)
+          }
+          else if (filtros?.leadId) {
+            results = await runSingleQuery('lead_id', filtros.leadId)
+          }
+          else {
+            results = await runSingleQuery()
+          }
+
+          return { data: results, error: null };
+        } catch (error: any) {
+          if (retryCount < 2) {
+            const errMsg = error.message?.toLowerCase() || '';
+            if (errMsg.includes('fetch') || errMsg.includes('network') || errMsg.includes('timeout') || errMsg.includes('abort')) {
+              console.warn(`⚠️ Falha na rede ao buscar relatório. Retentando (${retryCount + 1}/2)...`);
+              await new Promise(resolve => setTimeout(resolve, 600));
+              return await performRelatorioFetch(retryCount + 1);
+            }
+          }
+          return { data: null, error };
+        }
+      }
+
+      const { data, error } = await performRelatorioFetch();
 
       if (error) {
         console.error('❌ Erro ao buscar relatório de agendamentos:', error)
-        console.error('Detalhes do erro:', {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
-        })
-        notifyError('Erro ao buscar relatório de agendamentos')
-        return null
+        if (!isSilent) {
+          notifyError(`Erro ao buscar relatório: ${error.message || 'Falha de conexão'}`)
+        }
+        return []
       }
 
-      // Aplica filtros manualmente nos dados retornados
-      let resultado = data as AgViewAgendamentoCompleto[]
-
-      if (filtros?.dataInicio) {
-        resultado = resultado.filter(a => a.data && a.data >= filtros.dataInicio!)
-      }
-      if (filtros?.dataFim) {
-        resultado = resultado.filter(a => a.data && a.data <= filtros.dataFim!)
-      }
-      if (filtros?.profissionalId) {
-        resultado = resultado.filter(a => a.profissional_id === filtros.profissionalId)
-      }
-      if (filtros?.clienteId) {
-        resultado = resultado.filter(a => a.cliente_id === filtros.clienteId)
-      }
-      if (filtros?.cancelado !== undefined) {
-        resultado = resultado.filter(a => a.cancelado === filtros.cancelado)
-      }
+      // Aplica filtros manualmente nos dados retornados (não é mais necessário, mas os dados já estão filtrados)
+      const resultado = (data || []) as AgViewAgendamentoCompleto[]
 
       // Ordena por data e hora
       resultado.sort((a, b) => {
@@ -355,14 +420,15 @@ export function useAgendamento() {
         return 0
       })
 
-      console.log('✅ Relatório de agendamentos encontrado:', resultado.length)
-      console.log('📊 Dados:', resultado)
+      if (!isSilent) {
+        console.log('✅ Relatório de agendamentos encontrado:', resultado.length)
+      }
 
       return resultado
-    } catch (err) {
+    } catch (err: any) {
       console.error('❌ Erro inesperado ao buscar relatório:', err)
       notifyError('Erro inesperado ao buscar relatório')
-      return null
+      return []
     }
   }
 

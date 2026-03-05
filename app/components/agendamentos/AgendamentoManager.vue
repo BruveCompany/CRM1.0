@@ -56,7 +56,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   hideInternalHeader: false
 })
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import ControladorSemana from './ControladorSemana.vue'
 import ProfissionalAtual from './ProfissionalAtual.vue'
 import ListaDias from './ListaDias.vue'
@@ -89,19 +89,21 @@ let agendaChannel: any = null
 function setupRealtime() {
   console.log('🔌 Agenda: Configurando Realtime...')
   
+  let agendaDebounceTimer: any = null
   agendaChannel = supabase
     .channel('agenda-realtime')
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'ag_agendamentos' },
       (payload: any) => {
-        console.log('✨ Agenda: Mudança detectada no banco!', payload.eventType)
-        
-        // Limpa todo o cache de agendamentos para garantir que nada antigo seja exibido
-        agendamentoStore.cacheAgendamentos = {}
-        
-        // Recarrega os agendamentos da visão atual
-        agendamentoStore.carregarAgendamentos()
+        if (agendaDebounceTimer) clearTimeout(agendaDebounceTimer)
+        agendaDebounceTimer = setTimeout(() => {
+          console.log('✨ Agenda: Mudança detectada no banco!', payload.eventType)
+          // Limpa todo o cache de agendamentos para garantir que nada antigo seja exibido
+          agendamentoStore.cacheAgendamentos = {}
+          // Recarrega os agendamentos da visão atual (silencioso)
+          agendamentoStore.carregarAgendamentos(true)
+        }, 800)
       }
     )
     .subscribe((status) => {

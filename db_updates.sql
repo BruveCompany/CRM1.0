@@ -132,9 +132,24 @@ SELECT
     p.profile_id,
     pr.nome as profissional_nome,
     e.id as especialidade_id,
-    e.especialidade
+    e.especialidade,
+    cre.nome as criador_nome,
+    cre.nome as responsavel_agendamento,
+    c.nome as nome_contato
 FROM public.ag_agendamentos ag
 LEFT JOIN public.ag_clientes c ON ag.cliente_id = c.id
 LEFT JOIN public.ag_profissionais p ON ag.profissional_id = p.id
 LEFT JOIN public.ag_profiles pr ON p.profile_id = pr.id
-LEFT JOIN public.ag_especialidades e ON p.especialidade_id = e.id;
+LEFT JOIN public.ag_especialidades e ON p.especialidade_id = e.id
+LEFT JOIN public.ag_profiles cre ON ag.user_id = cre.user_id;
+
+-- Atualizar a RPC function para refletir os novos campos da view
+-- Necessário DROP pois o retorno da view mudou (Postgres não permite REPLACE com retorno diferente)
+DROP FUNCTION IF EXISTS public.ag_get_agendamentos_completo();
+
+CREATE OR REPLACE FUNCTION public.ag_get_agendamentos_completo()
+RETURNS SETOF public.ag_view_agendamentos_completo AS $$
+BEGIN
+    RETURN QUERY SELECT * FROM public.ag_view_agendamentos_completo;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

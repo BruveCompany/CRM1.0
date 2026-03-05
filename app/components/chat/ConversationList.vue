@@ -57,6 +57,7 @@ const emit = defineEmits(['select']);
 
 const supabase = useSupabaseClient();
 const { onlineUsers: socketOnlineUsers } = usePresence(); // CRM Prime
+const { waitForProfile } = useAuth();
 const conversations = ref<any[]>([]);
 const loadingConversations = ref(true);
 
@@ -67,26 +68,35 @@ const isVendedorOnline = (vId: number | string | null) => {
 
 const fetchConversations = async () => {
   try {
-    const { data, error } = await supabase
-      .from('ag_conversas')
-      .select(`
-        *,
-        lead:ag_leads (
-          id, 
-          nome, 
-          status,
-          score
-        ),
-        cliente:ag_clientes (
-          id, 
-          nome, 
-          telefone
-        )
-      `)
-      .order('ultima_mensagem_em', { ascending: false });
+    // 1. ESPERA PELO PERFIL (GARANTIA RLS NO CHAT)
+    await waitForProfile();
 
-    if (error) throw error;
-    conversations.value = data || [];
+    const performFetch = async (retryCount = 0): Promise<any[]> => {
+      const { data, error } = await supabase
+        .from('ag_conversas')
+        .select(`
+          *,
+          lead:ag_leads (
+            id, 
+            nome, 
+            status,
+            score,
+            vendedor_id
+          ),
+          cliente:ag_clientes (
+            id, 
+            nome, 
+            telefone
+          )
+        `)
+        .order('ultima_mensagem_em', { ascending: false });
+
+      if (error) throw error;
+
+      return data || [];
+    };
+
+    conversations.value = await performFetch();
   } catch (err) {
     console.error('Erro ao buscar conversas:', err);
   } finally {

@@ -2,7 +2,9 @@
  * Composable useLeads
  * Gerencia o estado global, busca e processamento de dados relacionados aos Leads.
  */
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
+import { useLeadStatuses } from './useLeadStatuses'
+import { useLeadAppointments } from './useLeadAppointments'
 
 export interface LeadTask {
     id: string;
@@ -60,59 +62,46 @@ export interface KanbanColumn extends LeadStatus {
 
 export const useLeads = () => {
     const supabase = useSupabaseClient()
-    const { profile, isOnlineCalculated } = useAuth()
+    const { profile, waitForProfile } = useAuth()
+
+    // Core State
     const allLeads = useState<any[]>('leads-all-data', () => [])
-    const leadStatuses = useState<LeadStatus[]>('leads-statuses', () => [])
     const searchQuery = useState<string>('leads-search-query', () => '')
     const showKanbanView = useState<boolean>('leads-view-mode-toggle', () => true)
 
-    // Armazena IDs de leads sendo movidos para atualização otimista na interface
+    // Variáveis auxiliares de estado
     const pendingStatusUpdates = useState<Record<string, string>>('leads-pending-updates', () => ({}))
-    const appointmentsMap = useState<Record<string, any>>('leads-appointments-map', () => ({}))
-    // Estados reativos para modais e filtros
     const selectedLeadId = useState<string | null>('selected-lead-id', () => null)
     const showDetailsModal = useState<boolean>('show-details-modal', () => false)
     const vendedores = useState<any[]>('leads-vendedores', () => [])
     const selectedVendedorId = useState<string | null>('leads-selected-vendedor-id', () => null)
     const showMyLeads = useState<boolean>('leads-show-my-leads', () => false)
-    const isEditingStatuses = useState<boolean>('leads-is-editing-statuses', () => false)
     const isCreateLeadModalOpen = useState<boolean>('leads-create-modal-open', () => false)
     const isLoadingLeads = useState<boolean>('leads-is-loading', () => false)
     const isFetching = useState<boolean>('leads-is-fetching-global', () => false)
     const lastFetchTime = useState<number>('leads-last-fetch-time', () => 0)
 
+    // Extracted modules
+    const {
+        leadStatuses,
+        isEditingStatuses,
+        fetchStatuses,
+        subscribeToStatusChanges,
+        addStatus,
+        updateStatus,
+        deleteStatus,
+        reorderStatuses
+    } = useLeadStatuses()
+
+    const {
+        appointmentsMap,
+        fetchNextAppointments,
+        subscribeToAppointmentChanges
+    } = useLeadAppointments()
+
     const openDetails = (id: string) => {
         selectedLeadId.value = id
         showDetailsModal.value = true
-    }
-
-    const fetchStatuses = async () => {
-        // Cache de 5 minutos para os status
-        const now = Date.now();
-        const lastStatusFetch = useState<number>('leads-last-status-fetch', () => 0);
-        if (leadStatuses.value.length > 0 && now - lastStatusFetch.value < 300000) return;
-
-        const { data, error } = await supabase
-            .from('ag_lead_statuses')
-            .select('*')
-            .order('order_index', { ascending: true })
-
-        if (!error && data) {
-            leadStatuses.value = data
-            lastStatusFetch.value = now;
-        }
-    }
-
-    /**
-     * SUBSCRIPÇÃO REALTIME PARA STATUS
-     */
-    const subscribeToStatusChanges = () => {
-        return (supabase as any)
-            .channel('public:ag_lead_statuses')
-            .on('postgres_changes', { event: '*', table: 'ag_lead_statuses', schema: 'public' }, () => {
-                fetchStatuses()
-            })
-            .subscribe()
     }
 
     /**
@@ -128,7 +117,7 @@ export const useLeads = () => {
                 schema: 'public'
             }, (payload: any) => {
                 console.log('Realtime Lead Change:', payload.event)
-                fetchLeads()
+                fetchLeads(true) // Silent refresh
             })
             .subscribe()
     }
@@ -157,236 +146,93 @@ export const useLeads = () => {
     }
 
     const fetchVendedores = async () => {
-        const { data, error } = await supabase
-            .from('ag_profiles')
-            .select('id, user_id, nome, role, is_online, last_activity')
-            .order('nome');
+        try {
+            await waitForProfile();
 
-        if (error) {
-            console.error('Erro ao buscar vendedores:', error);
-            return;
-        }
+            const performFetch = async (retryCount = 0): Promise<any[]> => {
+                const { data, error } = await supabase
+                    .from('ag_profiles')
+                    .select('id, user_id, nome, role, is_online, last_activity')
+                    .order('nome');
 
-        if (data) {
+                if (error) throw error;
+
+                return data || [];
+            };
+
+            const data = await performFetch();
             vendedores.value = data;
             const lastVendedoresFetch = useState<number>('leads-last-vendedores-fetch', () => 0);
             lastVendedoresFetch.value = Date.now();
+        } catch (err) {
+            console.error('Erro ao buscar vendedores:', err);
         }
     };
 
-    /**
-     * Busca o próximo agendamento futuro para todos os leads carregados.
-     * Tenta vincular leads a clientes pelo telefone caso o cliente_id esteja ausente.
-     */
-    const fetchNextAppointments = async () => {
-        if (allLeads.value.length === 0) return;
-
-        // 1. Preparar lista de telefones para busca de vínculos (Leads SEM cliente_id)
-        const leadsWithoutClient = (allLeads.value as LeadTask[]).filter(l => !l.cliente_id && (l.telefone || l.phone));
-        const phoneToLeadMap: Record<string, string[]> = {};
-        const phonesToSearch: string[] = [];
-
-        leadsWithoutClient.forEach((l: LeadTask) => {
-            const rawPhone = String(l.telefone || l.phone || '').replace(/\D/g, '');
-            if (rawPhone.length >= 8) {
-                if (!phoneToLeadMap[rawPhone]) phoneToLeadMap[rawPhone] = [];
-                phoneToLeadMap[rawPhone].push(String(l.id));
-                // Adicionamos variações comuns de busca ilike para garantir
-                phonesToSearch.push(rawPhone);
-            }
-        });
-
-        // 2. Simplificação drástica: Não fazer buscas pesadas por ILIKE de telefone em todas as consultas.
-        // O vínculo deve ser feito na criação do lead ou em um processo separado.
-        const autoClientIds: Record<string, number> = {};
-
-        // 3. Montar mapa final de LeadID -> ClienteID e lista de ClientIDs únicos
-        const leadToClientMapping: Record<string, number> = {};
-        const allTargetClientIds = new Set<number>();
-        const allLeadIds: string[] = [];
-
-        allLeads.value.forEach(l => {
-            const lid = String(l.id);
-            allLeadIds.push(lid);
-            const cid = l.cliente_id || autoClientIds[lid];
-            if (cid) {
-                leadToClientMapping[lid] = Number(cid);
-                allTargetClientIds.add(Number(cid));
-                // Atualiza localmente o lead para que futuras consultas saibam o vínculo
-                l.cliente_id = cid;
-            }
-        });
-
-        if (allTargetClientIds.size === 0 && allLeadIds.length === 0) {
-            console.log('⚠️ [fetchNextAppointments] Nenhum lead ou cliente para buscar agendamentos.');
-            appointmentsMap.value = {};
-            return;
-        }
-
-        // 4. Buscar TODOS os agendamentos ativos dos clientes OU leads encontrados
-        let query = supabase
-            .from('ag_agendamentos')
-            .select('cliente_id, lead_id, data, hora_inicio, hora_fim, titulo, descricao, categoria')
-            .eq('cancelado', false);
-
-        const filters: string[] = [];
-        if (allTargetClientIds.size > 0) {
-            filters.push(`cliente_id.in.(${Array.from(allTargetClientIds).join(',')})`);
-        }
-        if (allLeadIds.length > 0) {
-            // Usa aspas para IDs de string/UUID
-            filters.push(`lead_id.in.(${allLeadIds.map(id => `"${id}"`).join(',')})`);
-        }
-
-        if (filters.length > 0) {
-            query = query.or(filters.join(','));
-        }
-
-        const { data, error } = await query
-            .order('data', { ascending: true })
-            .order('hora_inicio', { ascending: true });
-
-        if (error) {
-            console.error('❌ [fetchNextAppointments] Erro:', error);
-            return;
-        }
-
-        console.log(`📡 [fetchNextAppointments] ${data?.length || 0} agendamentos totais encontrados para ${allTargetClientIds.size} clientes e ${allLeadIds.length} leads.`);
-
-        const newMap: Record<string, any> = {};
-        const now = new Date();
-        const nowTs = now.getTime();
-
-        // Inverte o mapeamento: ClienteID -> Lista de LeadIDs
-        const clientToLeads: Record<number, string[]> = {};
-        for (const lid in leadToClientMapping) {
-            const cid = leadToClientMapping[lid];
-            if (cid !== undefined) {
-                if (!clientToLeads[cid]) clientToLeads[cid] = [];
-                clientToLeads[cid].push(lid);
-            }
-        }
-
-        data?.forEach((app: any) => {
-            // Identifica quais leads este agendamento atende (via lead_id direto ou via cliente_id)
-            const leadsMatching: string[] = [];
-
-            if (app.lead_id) {
-                leadsMatching.push(String(app.lead_id));
-            }
-
-            if (app.cliente_id) {
-                const leadsByClient = clientToLeads[app.cliente_id];
-                if (leadsByClient) {
-                    leadsByClient.forEach(lid => {
-                        if (!leadsMatching.includes(lid)) leadsMatching.push(lid);
-                    });
-                }
-            }
-
-            if (leadsMatching.length > 0) {
-                leadsMatching.forEach(leadId => {
-                    if (!newMap[leadId]) {
-                        newMap[leadId] = { count: 0, next: null };
-                    }
-
-                    // Corrige parsing de data ISO removendo offset se necessário ou tratando UTC
-                    const horaInicioLimpa = (app.hora_inicio || '00:00:00').split(/[-+]/)[0] || '00:00:00';
-                    const appDate = `${app.data}T${horaInicioLimpa}`;
-                    const appObj = {
-                        appointment_date: appDate,
-                        status: 'active',
-                        titulo: app.titulo,
-                        descricao: app.descricao,
-                        hora_fim: app.hora_fim,
-                        categoria: app.categoria
-                    };
-
-                    newMap[leadId].count++;
-                    const appTs = new Date(appDate).getTime();
-
-                    // Lógica de seleção do "Próximo" ou "Atrasado"
-                    if (!newMap[leadId].next) {
-                        newMap[leadId].next = appObj;
-                    } else {
-                        const currTs = new Date(newMap[leadId].next.appointment_date).getTime();
-
-                        if (appTs >= nowTs) {
-                            // Se o novo é futuro e o atual era passado, o futuro ganha.
-                            // Se ambos são futuro, o mais próximo ganha.
-                            if (currTs < nowTs || appTs < currTs) {
-                                newMap[leadId].next = appObj;
-                            }
-                        } else {
-                            // Se ambos são passado, o mais recente ganha.
-                            if (currTs < nowTs && appTs > currTs) {
-                                newMap[leadId].next = appObj;
-                            }
-                        }
-                    }
-                });
-            }
-        });
-
-        console.log('✅ [fetchNextAppointments] Mapeamento concluído para', Object.keys(newMap).length, 'leads.');
-        appointmentsMap.value = newMap;
-    }
-
-    /**
-     * Inscrição Realtime para Agendamentos
-     */
-    const subscribeToAppointmentChanges = () => {
-        return (supabase as any)
-            .channel('agendamentos-realtime')
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'ag_agendamentos' },
-                () => {
-                    fetchNextAppointments();
-                }
-            )
-            .subscribe();
-    }
-
+    let fetchDebounceTimer: any = null;
     const fetchLeads = async (silent = false) => {
-        if (isFetching.value) return;
+        if (isFetching.value) {
+            // Se já está buscando, agendamos uma busca silenciosa para logo depois
+            if (fetchDebounceTimer) clearTimeout(fetchDebounceTimer);
+            fetchDebounceTimer = setTimeout(() => fetchLeads(true), 1200);
+            return;
+        }
 
-        // Estratégia de Cache: Se buscou nos últimos 0.5 segundos em modo não-silencioso, pula
+        // Estratégia de Cache: Debounce Realtime e Guard de Frequência
         const now = Date.now();
-        if (!silent && now - lastFetchTime.value < 500) return;
+
+        // Se o usuário acabou de autenticar e a lista está vazia, ignoramos o gap para permitir o carregamento inicial
+        const isInitialAuthFetch = !silent && profile.value?.id && allLeads.value.length === 0;
+        const minGap = silent ? 1500 : (isInitialAuthFetch ? 0 : 500);
+
+        if (now - lastFetchTime.value < minGap && !isInitialAuthFetch) {
+            // Se bloqueado pelo guard de tempo, agendamos um "catch-up" para garantir que a última mudança seja pega
+            if (fetchDebounceTimer) clearTimeout(fetchDebounceTimer);
+            fetchDebounceTimer = setTimeout(() => fetchLeads(true), minGap + 100);
+            return;
+        }
 
         isFetching.value = true;
         if (!silent) isLoadingLeads.value = true;
+        if (fetchDebounceTimer) clearTimeout(fetchDebounceTimer);
+        fetchDebounceTimer = null;
 
         try {
-            // 1. Dispara buscas em paralelo
+            // 1. GARANTE IDENTIDADE (RLS SYNC)
+            const { waitForProfile } = useAuth();
+            await waitForProfile();
+
+            // 2. FUNÇÃO DE BUSCA COM RETRY
+            const performFetch = async (retryCount = 0): Promise<any> => {
+                let query = supabase
+                    .from('ag_leads')
+                    .select(`
+                        *,
+                        vendedor:vendedor_id (id, nome)
+                    `)
+
+                if (showMyLeads.value && profile.value?.id) {
+                    query = query.eq('vendedor_id', profile.value.id)
+                } else if (selectedVendedorId.value && selectedVendedorId.value !== 'all') {
+                    query = query.eq('vendedor_id', selectedVendedorId.value)
+                }
+
+                const { data, error } = await query.order('criado_em', { ascending: false });
+
+                return { data, error };
+            };
+
+            // 3. Dispara buscas de perfis em paralelo ao fetch principal
             const fetchProfilesTask = fetchVendedores();
 
-            // 2. Busca leads da tabela ag_leads com JOIN explícito para garantir o nome do vendedor
-            let query = supabase
-                .from('ag_leads')
-                .select(`
-                    *,
-                    vendedor:vendedor_id (id, nome)
-                `)
-
-            if (showMyLeads.value && profile.value?.id) {
-                query = query.eq('vendedor_id', profile.value.id)
-            } else if (selectedVendedorId.value && selectedVendedorId.value !== 'all') {
-                query = query.eq('vendedor_id', selectedVendedorId.value)
-            }
-
-            // Executa a Query principal e a busca de vendedores em paralelo
-            const [leadsResult] = await Promise.all([
-                query.order('criado_em', { ascending: false }),
+            const [{ data }, _] = await Promise.all([
+                performFetch(),
                 fetchProfilesTask
             ]);
 
-            if (leadsResult.error) throw leadsResult.error;
-
-            if (leadsResult.data) {
-                // 3. Normalização dos Leads
-                allLeads.value = (leadsResult.data as any[]).map(lead => {
+            if (data) {
+                // 4. Normalização rápida dos Leads
+                allLeads.value = (data as any[]).map(lead => {
                     const leadId = lead.id ? String(lead.id) : '';
                     let statusFinal = lead.status || 'leads_novos';
 
@@ -399,11 +245,8 @@ export const useLeads = () => {
                         }
                     }
 
-                    // Tenta obter o nome do vendedor DIRETAMENTE do objeto (do JOIN vendedor)
                     const vIdRaw = lead.vendedor_id || lead.vendedor?.id;
                     const vNomeRaw = lead.vendedor?.nome || lead.vendedor_nome || lead.profissional_nome || 'Não Atribuído';
-
-                    // Normalização do vendedor_id: trata 0 ou '0' como null (Não Atribuído)
                     const normalizedVendedorId = (vIdRaw && vIdRaw !== 0 && vIdRaw !== '0') ? String(vIdRaw) : null;
 
                     return {
@@ -411,32 +254,21 @@ export const useLeads = () => {
                         id: leadId,
                         status: statusFinal,
                         vendedor_id: normalizedVendedorId,
-                        vendedor_nome: (() => {
-                            if (!vNomeRaw || vNomeRaw === 'Não Atribuído' || vNomeRaw === 'Sem Vendedor') return 'Não Atribuído';
-                            // Limpeza básica do nome
-                            const parts = String(vNomeRaw).trim().split(/\s+/).filter(p => !['de', 'da', 'do', 'das', 'dos', 'e'].includes(p.toLowerCase()));
-                            return parts.length >= 2 ? `${parts[0]} ${parts[1]}` : parts[0] || vNomeRaw;
-                        })()
+                        vendedor_nome: vNomeRaw === 'Não Atribuído' ? 'Não Atribuído' : (String(vNomeRaw).split(' ').slice(0, 2).join(' '))
                     }
                 });
 
                 lastFetchTime.value = now;
-                // Busca agendamentos logo após ter os leads (depende dos IDs)
-                await fetchNextAppointments();
+
+                // Dispara busca de agendamentos SEM dar await
+                fetchNextAppointments().then(() => { });
             }
         } catch (error) {
             console.error('[fetchLeads] Falha:', error);
         } finally {
             isFetching.value = false;
-            if (!silent) isLoadingLeads.value = false; // Removido setTimeout de 300ms
+            if (!silent) isLoadingLeads.value = false;
         }
-    }
-
-    // Monitora o carregamento do perfil para buscar leads assim que a identidade for confirmada
-    if (import.meta.client) {
-        watch(() => profile.value?.id, (newId) => {
-            if (newId) fetchLeads();
-        }, { immediate: true });
     }
 
     // VERSÃO OTIMIZADA: Propriedade computada para enriquecer os leads com dados de UI e presença
@@ -510,66 +342,6 @@ export const useLeads = () => {
             (lead.vendedor_nome && lead.vendedor_nome.toLowerCase().includes(query))
         );
     });
-
-    // Funções Administrativas para Gerenciamento de Status
-    const addStatus = async (status: Partial<LeadStatus>) => {
-        const { data, error } = await (supabase
-            .from('ag_lead_statuses') as any)
-            .insert([{
-                ...status,
-                id: status.display_name?.toLowerCase().trim().replace(/\s+/g, '_'),
-                order_index: leadStatuses.value.length + 1,
-                font_size: status.font_size || 'text-xs',
-                font_weight: status.font_weight || 'font-bold',
-                font_family: status.font_family || 'font-sans',
-                status_icon: status.status_icon || null
-            }])
-            .select()
-        return { data, error }
-    }
-
-    const updateStatus = async (id: string, updates: Partial<LeadStatus>) => {
-        const { error } = await (supabase
-            .from('ag_lead_statuses') as any)
-            .update(updates)
-            .eq('id', id)
-        return { error }
-    }
-
-    const deleteStatus = async (id: string, reassignToId?: string) => {
-        // Se houver leads e um novo status para reatribuição for fornecido
-        if (reassignToId) {
-            await (supabase
-                .from('ag_leads') as any)
-                .update({ status: reassignToId })
-                .eq('status', id)
-        }
-
-        const { error } = await (supabase
-            .from('ag_lead_statuses') as any)
-            .delete()
-            .eq('id', id)
-        return { error }
-    }
-
-    const reorderStatuses = async (newOrderedStatuses: LeadStatus[]) => {
-        const updates = newOrderedStatuses.map((s, index) => ({
-            id: s.id,
-            display_name: s.display_name,
-            color_bg: s.color_bg,
-            color_text: s.color_text,
-            order_index: index + 1,
-            font_size: s.font_size,
-            font_weight: s.font_weight,
-            font_family: s.font_family,
-            status_icon: s.status_icon
-        }))
-
-        const { error } = await (supabase
-            .from('ag_lead_statuses') as any)
-            .upsert(updates)
-        return { error }
-    }
 
     // Popula o Kanban com os dados dinâmicos da tabela ag_lead_statuses
     const columnsWithTotals = computed(() => {
