@@ -1,7 +1,7 @@
 <template>
   <div class="flex h-full w-full overflow-hidden bg-white">
     <!-- Coluna Central: Área de Conversa (Design WhatsApp Official) -->
-    <div class="flex-1 flex flex-col relative chat-area-root">
+    <div class="flex-1 flex flex-col min-w-0 min-h-0 relative chat-area-root">
       <!-- 1. Header do Chat (Slim) -->
       <ChatHeader
         :contact="contactData"
@@ -12,7 +12,7 @@
 
       <div 
         ref="messageContainer" 
-        class="flex-1 overflow-y-auto p-4 space-y-2 bg-transparent flex flex-col justify-end custom-scrollbar scroll-smooth"
+        class="flex-1 min-h-0 overflow-y-auto p-4 space-y-2 bg-transparent flex flex-col custom-scrollbar scroll-smooth"
       >
         <div v-if="loadingMessages" class="flex flex-col gap-4 py-8 animate-pulse text-center text-neutral-300">
           Carregando histórico...
@@ -22,8 +22,7 @@
       </div>
 
       <!-- 3. Rodapé do Chat -->
-      <!-- 3. Rodapé do Chat -->
-      <ChatInput :sending="sending" @send="sendMessage" @typing="handleTyping" />
+      <ChatInput :sending="sending" @send="sendMessage" @typing="handleTyping" @attach="handleFileAttach" @action="handleActionMessage" />
     </div>
 
     <!-- Coluna 3: Painel do Lead (Consolidado e Modular) -->
@@ -171,6 +170,103 @@ function handleTyping() {
       payload: { userId: currentProfileId.value }
     });
   }, 2000);
+}
+
+async function handleFileAttach(file: File) {
+  if (sending.value || !file) return;
+  sending.value = true;
+
+  try {
+    const isImage = file.type.startsWith('image/');
+    const isAudio = file.type.startsWith('audio/');
+    const fileExt = file.name.split('.').pop() || 'tmp';
+    // Path: /conversa_ID/timestamp-random.ext
+    const fileName = `${Date.now()}-${Math.floor(Math.random() * 10000)}.${fileExt}`;
+    const filePath = `conversa_${props.conversaId}/${fileName}`;
+
+    // 1. Upload pro Storage via Backend Nuxt Server (Bypassa bloqueios RLS de client publico)
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('path', filePath);
+
+    const { data: uploadResult, error: apiError } = await useFetch('/api/chat/upload', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (apiError.value) {
+      console.error('Erro ao enviar arquivo via API Nuxt:', apiError.value);
+      alert('Houve um erro no carregamento da mídia.');
+      sending.value = false;
+      return;
+    }
+
+    const publicUrl = uploadResult.value?.publicUrl;
+
+    if (!publicUrl) throw new Error('Falha ao pegar link publico da imagem.');
+    
+    // 3. Monta Syntax amigável pro Front Parsear
+    const typeLabel = isImage ? 'IMAGE' : (isAudio ? 'AUDIO' : 'FILE');
+    const finalContent = `[${typeLabel}|${publicUrl}] ${file.name}`;
+
+    // Insere no banco o File/Image formatado
+    const { data: insertData, error: insertError } = await (supabase
+      .from('ag_chat') as any)
+      .insert({
+        conversa_id: props.conversaId,
+        conteudo: finalContent,
+        direcao: 'out',
+        status: 'sending'
+      })
+      .select()
+      .single();
+
+    if (insertError) throw insertError;
+
+    if (insertData) addMessageToList({ ...insertData, status: 'sent' });
+
+    // Atualiza timestamp ag_conversas mas sinaliza que foi Anexo e nao texto solto
+    await (supabase.from('ag_conversas') as any)
+      .update({ 
+        ultima_mensagem_em: new Date().toISOString(), 
+        ultima_mensagem: `📎 Arquivo Anexado` 
+      })
+      .eq('id', props.conversaId);
+
+  } catch (err) {
+    console.error('Erro crítico no attach:', err);
+  } finally {
+    sending.value = false;
+  }
+}
+
+async function handleActionMessage(actionText: string, emoji: string) {
+  if (sending.value) return;
+  sending.value = true;
+  try {
+     const { data: insertData, error: insertError } = await (supabase
+        .from('ag_chat') as any)
+        .insert({
+          conversa_id: props.conversaId,
+          conteudo: `${emoji} ${actionText}`,
+          direcao: 'out',
+          status: 'sending'
+        })
+        .select()
+        .single();
+      
+      if (insertError) throw insertError;
+      if (insertData) addMessageToList({ ...insertData, status: 'sent' });
+
+      await (supabase.from('ag_conversas') as any).update({ 
+          ultima_mensagem_em: new Date().toISOString(), 
+          ultima_mensagem: `${emoji} Novo painel de chat` 
+      }).eq('id', props.conversaId);
+  } catch (err) {
+    console.error('Action err', err);
+  } finally {
+    sending.value = false;
+  }
 }
 
 function setupSubscription() {

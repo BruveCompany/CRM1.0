@@ -40,20 +40,27 @@
           v-for="item in navItems"
           :key="item.to"
           :to="item.to" 
-          :class="['group flex items-center px-4 py-2.5 text-sm font-normal rounded-lg transition-all duration-200', 
+          :class="['group flex items-center px-4 py-2.5 text-sm font-normal rounded-lg transition-all duration-200 relative', 
             isCollapsed ? 'justify-center' : 'gap-3'
           ]"
           active-class="bg-indigo-50 text-[#4338CA] font-medium"
           class="text-gray-600 hover:bg-gray-50 hover:text-gray-900"
           :title="isCollapsed ? item.label : ''"
         >
-          <div class="w-8 flex items-center justify-center flex-shrink-0">
+          <div class="w-8 flex items-center justify-center flex-shrink-0 relative">
             <component 
               :is="item.icon" 
               :class="['w-5 h-5 transition-colors duration-200 stroke-[1.5]']" 
             />
+            <!-- Badge quando colapsado ou como pontinho no icone (opcional) -->
+            <span v-if="item.count && item.count > 0 && isCollapsed" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-white"></span>
           </div>
-          <span v-if="!isCollapsed">{{ item.label }}</span>
+          <span v-if="!isCollapsed" class="flex-1">{{ item.label }}</span>
+          
+          <!-- Badge quando aberto -->
+          <span v-if="!isCollapsed && item.count && item.count > 0" class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 text-[10px] font-bold text-white bg-red-500 rounded-full">
+            {{ item.count }}
+          </span>
         </NuxtLink>
 
         <!-- Seção Configurações (Apenas Admin) -->
@@ -141,6 +148,10 @@ import {
   Cog6ToothIcon
 } from '@heroicons/vue/24/outline'
 
+const props = defineProps<{
+  unreadCount?: number
+}>()
+
 const user = useSupabaseUser()
 const { logout } = useAuth()
 const userStore = useUserStore()
@@ -163,7 +174,7 @@ onMounted(() => {
 const navItems = computed(() => {
   return [
     { label: 'Dashboard', to: '/dashboard', icon: HomeIcon },
-    { label: 'Chat', to: '/chat', icon: ChatBubbleLeftRightIcon },
+    { label: 'Chat', to: '/chat', icon: ChatBubbleLeftRightIcon, count: props.unreadCount || 0 },
     { label: 'Leads', to: '/leads', icon: IdentificationIcon },
     { label: 'Relatórios', to: '/relatorios', icon: ChartBarIcon },
     { label: 'Agenda', to: '/agenda', icon: CalendarIcon },

@@ -7,11 +7,10 @@
 
 .modal-form-scroll-container {
     background-color: #ffffff;
-    padding: 1rem 1.25rem;
+    padding: 1rem 1.25rem 0.5rem;
     border-radius: 12px;
-    height: 92vh;
     max-height: 92vh;
-    overflow: hidden;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
 }
@@ -100,25 +99,18 @@
 /* ── FORM ── */
 .lead-form-content {
     padding: 0;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
+    display: block;
 }
 
 .tab-panel {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
+    display: block;
     padding: 0.15rem 0.25rem;
-    /* Margem de segurança para não cortar bordas */
+    min-height: 300px;
 }
 
 .form-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    /* minmax(0,...) evita que o conteúdo empurre a largura */
     gap: 1.1rem;
     align-content: start;
 }
@@ -481,4 +473,26 @@
     100% {
         opacity: 1;
     }
+}
+
+/* Animação de entrada/saída do modal */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+    transition: opacity 0.2s ease;
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+    opacity: 0;
+}
+
+.modal-fade-enter-active .modal-form-scroll-container,
+.modal-fade-leave-active .modal-form-scroll-container {
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.modal-fade-enter-from .modal-form-scroll-container,
+.modal-fade-leave-to .modal-form-scroll-container {
+    transform: scale(0.95);
+    opacity: 0;
 }

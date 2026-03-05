@@ -8,6 +8,7 @@
       v-for="conversa in sortedConversations" 
       :key="conversa.id"
       @click="$emit('select', conversa)"
+      @contextmenu.prevent="openContextMenu($event, conversa)"
       class="w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 text-left border border-transparent"
       :class="activeId === conversa.id 
         ? 'bg-primary-50 border-primary-100 shadow-sm' 
@@ -41,18 +42,66 @@
         </p>
       </div>
 
-      <!-- Badge Não Lidas -->
-      <div v-if="conversa.nao_lidas > 0" class="flex-shrink-0 min-w-[20px] h-5 px-1 bg-primary-600 text-white rounded-full flex items-center justify-center text-[10px] font-bold">
-        {{ conversa.nao_lidas }}
+      <!-- Badges (Fixado/Nao Lida) -->
+      <div class="flex flex-col items-end gap-1">
+        <Icon v-if="conversa.favorita" name="heroicons:star-solid" class="w-3.5 h-3.5 text-amber-400 drop-shadow-sm" />
+        <div v-if="conversa.nao_lidas > 0" class="flex-shrink-0 min-w-[20px] h-5 px-1 bg-primary-600 text-white rounded-full flex items-center justify-center text-[10px] font-bold">
+          {{ conversa.nao_lidas }}
+        </div>
       </div>
     </button>
+
+    <!-- Context Menu Flutuante -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div 
+          v-if="contextMenu.show"
+          class="fixed z-[9999] bg-white rounded-[10px] shadow-[0_4px_16px_rgba(0,0,0,0.15)] filter drop-shadow-md py-2 min-w-[230px] border border-neutral-100"
+          :style="{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }"
+        >
+          <!-- Arquivar conversa (Apenas Front) -->
+          <button @click="closeContextMenu" class="flex items-center gap-4 w-full px-5 py-2.5 hover:bg-[#F5F6F6] text-left">
+             <Icon name="lucide:archive-x" class="w-[20px] h-[20px] text-[#54656F]" />
+             <span class="text-[14.5px] text-[#3b4a54] font-medium font-sans">Arquivar conversa</span>
+          </button>
+          
+          <!-- Marcar como lida/não lida -->
+          <button @click="toggleReadStatus" class="flex items-center gap-4 w-full px-5 py-2.5 hover:bg-[#F5F6F6] text-left">
+             <Icon name="lucide:mail" class="w-[20px] h-[20px] text-[#54656F]" />
+             <span class="text-[14.5px] text-[#3b4a54] font-medium font-sans">
+                {{ contextMenu.conversa?.nao_lidas > 0 ? 'Marcar como lida' : 'Marcar como não lida' }}
+             </span>
+          </button>
+
+          <!-- Favoritos -->
+          <button @click="toggleFavorite" class="flex items-center gap-4 w-full px-5 py-2.5 hover:bg-[#F5F6F6] text-left">
+             <Icon :name="contextMenu.conversa?.favorita ? 'lucide:heart-off' : 'lucide:heart'" class="w-[20px] h-[20px] text-[#54656F]" />
+             <span class="text-[14.5px] text-[#3b4a54] font-medium font-sans">
+               {{ contextMenu.conversa?.favorita ? 'Remover dos Favoritos' : 'Adicionar aos Favoritos' }}
+             </span>
+          </button>
+
+          <hr class="border-neutral-100 my-1 mx-3" />
+
+          <!-- Apagar conversa -->
+          <button @click="deleteConversation" class="flex items-center gap-4 w-full px-5 py-2.5 hover:bg-[#F5F6F6] text-left">
+             <Icon name="lucide:trash-2" class="w-[20px] h-[20px] text-[#54656F]" />
+             <span class="text-[14.5px] text-[#3b4a54] font-medium font-sans">Apagar conversa</span>
+          </button>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed, onUnmounted } from 'vue';
 
-const props = defineProps<{ activeId: number | null }>();
+const props = defineProps<{ 
+  activeId: number | null;
+  searchQuery?: string;
+  activeFilter?: string;
+}>();
 const emit = defineEmits(['select']);
 
 const supabase = useSupabaseClient();
@@ -60,6 +109,97 @@ const { onlineUsers: socketOnlineUsers } = usePresence(); // CRM Prime
 const { waitForProfile } = useAuth();
 const conversations = ref<any[]>([]);
 const loadingConversations = ref(true);
+
+// Estado do Context Menu
+const contextMenu = ref<{ show: boolean, x: number, y: number, conversa: any | null }>({
+  show: false,
+  x: 0,
+  y: 0,
+  conversa: null
+});
+
+// Abertura do Menu Direito
+const openContextMenu = (e: MouseEvent, conversa: any) => {
+  e.preventDefault();
+  // Evitar overflow da janela calculando tamanho basico do menu (altura ~220px, largura ~230px)
+  let posX = e.clientX;
+  let posY = e.clientY;
+  
+  if (posY + 220 > window.innerHeight) {
+    posY = posY - 220; // abre pra cima se estourar a tela
+  }
+  
+  contextMenu.value = {
+    show: true,
+    x: posX,
+    y: posY,
+    conversa
+  };
+};
+
+const closeContextMenu = () => {
+  if (contextMenu.value.show) {
+    contextMenu.value.show = false;
+  }
+};
+
+// Listeners p/ fechar menu ao clicar por fora
+onMounted(() => {
+  window.addEventListener('click', closeContextMenu);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('click', closeContextMenu);
+});
+
+// Ações do Menu de Contexto
+const toggleReadStatus = async () => {
+  if (!contextMenu.value.conversa) return;
+  const targetId = contextMenu.value.conversa.id;
+  const readVal = contextMenu.value.conversa.nao_lidas > 0 ? 0 : 1; 
+
+  // Optimistic UI
+  contextMenu.value.conversa.nao_lidas = readVal; 
+
+  const { error } = await (supabase.from('ag_conversas') as any).update({ nao_lidas: readVal }).eq('id', targetId);
+  closeContextMenu();
+};
+
+const toggleFavorite = async () => {
+  if (!contextMenu.value.conversa) return;
+  const targetId = contextMenu.value.conversa.id;
+  const curFav = !!contextMenu.value.conversa.favorita;
+  
+  // Optimistic UI
+  contextMenu.value.conversa.favorita = !curFav;
+
+  const { error } = await (supabase.from('ag_conversas') as any).update({ favorita: !curFav }).eq('id', targetId);
+  closeContextMenu();
+};
+
+const deleteConversation = async () => {
+  if (!contextMenu.value.conversa) return;
+  if (!confirm('Deseja realmente apagar esta conversa e todo o seu histórico?\nEssa ação não pode ser desfeita.')) {
+     closeContextMenu();
+     return;
+  }
+  
+  const targetId = contextMenu.value.conversa.id;
+
+  // Primeiro remove as mensagens linkadas para evitar erro FK, se existir restrição 
+  await (supabase.from('ag_chat') as any).delete().eq('conversa_id', targetId);
+  
+  // Então deleta a conversa mae
+  await (supabase.from('ag_conversas') as any).delete().eq('id', targetId);
+  
+  // Se for o char ativo, reseta a prop selection alertando o parent
+  if (props.activeId === targetId) {
+    // Para simplificar a hierarquia, nao emitir select vazio (necessitaria logica no page) 
+    // O realtime cuidará de remover do v-for
+  }
+
+  closeContextMenu();
+};
 
 const isVendedorOnline = (vId: number | string | null) => {
   if (!vId) return false;
@@ -105,7 +245,26 @@ const fetchConversations = async () => {
 };
 
 const sortedConversations = computed(() => {
-  return [...conversations.value].sort((a, b) => 
+  let list = [...conversations.value];
+  
+  // Filtro de Busca por texto (Nome)
+  if (props.searchQuery) {
+    const q = props.searchQuery.toLowerCase();
+    list = list.filter(c => {
+      const name = (c.lead?.nome || c.cliente?.nome || '').toLowerCase();
+      return name.includes(q);
+    });
+  }
+
+  // Filtro por botões
+  if (props.activeFilter === 'nao_lidas') {
+    list = list.filter(c => c.nao_lidas > 0);
+  } else if (props.activeFilter === 'favoritas') {
+    // Se não existir a prop `favorita` na tabela, isso filtrará pra zero até ser implementado no backend
+    list = list.filter(c => c.favorita === true);
+  }
+
+  return list.sort((a, b) => 
     new Date(b.ultima_mensagem_em).getTime() - new Date(a.ultima_mensagem_em).getTime()
   );
 });

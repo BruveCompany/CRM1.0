@@ -1,18 +1,22 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  compatibilityDate: '2026-07-15', // Você pode manter sua data, ou usar a do professor se preferir
+  compatibilityDate: '2026-07-15',
   devtools: {
     enabled: false,
     telemetry: false
-  }, // Mantenha como true para desenvolvimento
+  },
   modules: ['@nuxtjs/tailwindcss', '@nuxtjs/supabase', '@pinia/nuxt', '@nuxt/icon'],
 
+  css: [
+    '~/components/lead/EditModal.css'
+  ],
+
   supabase: {
-    redirect: true, // <-- ADICIONAR ESTA LINHA!
+    redirect: true,
     redirectOptions: {
       login: '/login',
       callback: '/confirm',
-      exclude: ['/login', '/confirm', '/esqueci-senha', '/recuperar-senha'] // <-- ADICIONAR '/confirm' AQUI!
+      exclude: ['/login', '/confirm', '/esqueci-senha', '/recuperar-senha']
     }
   },
 
