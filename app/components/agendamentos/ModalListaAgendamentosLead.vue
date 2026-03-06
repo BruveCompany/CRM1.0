@@ -152,20 +152,20 @@ const carregarAgendamentos = async () => {
   loading.value = true
   
   try {
-    const data = await buscarRelatorioAgendamentos({
+    const result = await buscarRelatorioAgendamentos({
       clienteId: !invalidClientId ? Number(props.clienteId) : undefined,
       leadId: !invalidLeadId ? String(props.leadId) : undefined,
       cancelado: undefined 
     })
 
-    console.log(`  ✅ Resultado da busca: ${data?.length || 0} registros encontrados.`);
-    if (data) {
-      agendamentos.value = data
+    console.log(`  ✅ Resultado da busca: ${result?.data?.length || 0} registros encontrados.`);
+    if (result && result.data) {
+      agendamentos.value = result.data
     } else {
       agendamentos.value = []
     }
-  } catch (err) {
-    console.error('  ❌ Erro ao carregar lista:', err)
+  } catch (error) {
+    console.error('  ❌ Erro ao carregar lista:', error)
   } finally {
     loading.value = false
     isLoadLocked.value = false;

@@ -321,7 +321,11 @@ export function useAgendamento() {
     leadId?: string
     cancelado?: boolean
     silent?: boolean
-  }): Promise<AgViewAgendamentoCompleto[] | null> {
+    orderBy?: string
+    orderAsc?: boolean
+    page?: number
+    limit?: number
+  }): Promise<{ data: AgViewAgendamentoCompleto[]; count: number } | null> {
     try {
       const isSilent = filtros?.silent || false
 
@@ -347,6 +351,16 @@ export function useAgendamento() {
             // Bind single index parameter instead of multiple slow ORs
             if (field && val) {
               query = query.eq(field, val)
+            }
+
+            if (filtros?.orderBy) {
+              query = query.order(filtros.orderBy as any, { ascending: filtros.orderAsc !== false })
+            }
+
+            if (filtros?.page && filtros?.limit) {
+              const from = (filtros.page - 1) * filtros.limit
+              const to = from + filtros.limit - 1
+              query = query.range(from, to)
             }
 
             const { data, error } = await query
@@ -399,36 +413,76 @@ export function useAgendamento() {
         if (!isSilent) {
           notifyError(`Erro ao buscar relatório: ${error.message || 'Falha de conexão'}`)
         }
-        return []
+        return null
       }
 
       // Aplica filtros manualmente nos dados retornados (não é mais necessário, mas os dados já estão filtrados)
       const resultado = (data || []) as AgViewAgendamentoCompleto[]
 
-      // Ordena por data e hora
-      resultado.sort((a, b) => {
-        // Primeiro por data
-        if (a.data && b.data) {
-          if (a.data !== b.data) {
-            return a.data.localeCompare(b.data)
+      // Obtém o count real apenas quando existe paginação e não estamos fundindo resultados de 2 consultas
+      let totalCount = resultado.length;
+      if (filtros?.page && filtros?.limit && !(filtros?.clienteId && filtros?.leadId)) {
+        let countQuery = supabase.from('ag_view_agendamentos_completo').select('*', { count: 'exact', head: true })
+        if (filtros?.dataInicio) countQuery = countQuery.gte('data', filtros.dataInicio)
+        if (filtros?.dataFim) countQuery = countQuery.lte('data', filtros.dataFim)
+        if (filtros?.profissionalId !== undefined && filtros?.profissionalId !== null) countQuery = countQuery.eq('profissional_id', filtros.profissionalId)
+        if (filtros?.cancelado !== undefined && filtros?.cancelado !== null) countQuery = countQuery.eq('cancelado', filtros.cancelado)
+        if (filtros?.clienteId) countQuery = countQuery.eq('cliente_id', filtros.clienteId)
+        if (filtros?.leadId) countQuery = countQuery.eq('lead_id', filtros.leadId)
+
+        const { count, error: countError } = await countQuery
+        if (!countError && count !== null) {
+          totalCount = count
+        }
+      } else if (filtros?.clienteId && filtros?.leadId && filtros?.page && filtros?.limit) {
+        // Tratamento burro/simplificado para manter compatibilidade: funde memórias na página e retorna count total das combinações
+        totalCount = resultado.length;
+        const from = (filtros.page - 1) * filtros.limit;
+        resultado.splice(0, resultado.length, ...resultado.slice(from, from + filtros.limit));
+      }
+
+      // Local sort only if DB-level sorting was lost during deduplication (i.e. we did multiple queries)
+      // Or if no specific orderBy was requested, we do the default data/hora sort.
+      if (!filtros?.orderBy || (filtros?.clienteId && filtros?.leadId)) {
+        resultado.sort((a, b) => {
+          // Default sorting logic
+          if (filtros?.orderBy) {
+            // we lost order due to deduplication of multiple client/lead search, sort locally
+            const col = filtros.orderBy as keyof AgViewAgendamentoCompleto
+            let valA = a[col] || ''
+            let valB = b[col] || ''
+            if (typeof valA === 'string' && typeof valB === 'string') {
+              const comp = valA.localeCompare(valB)
+              return filtros.orderAsc === false ? -comp : comp
+            }
+            if (valA < valB) return filtros.orderAsc === false ? 1 : -1
+            if (valA > valB) return filtros.orderAsc === false ? -1 : 1
+            return 0
+          } else {
+            // Primeiro por data
+            if (a.data && b.data) {
+              if (a.data !== b.data) {
+                return a.data.localeCompare(b.data)
+              }
+            }
+            // Depois por hora_inicio
+            if (a.hora_inicio && b.hora_inicio) {
+              return a.hora_inicio.localeCompare(b.hora_inicio)
+            }
+            return 0
           }
-        }
-        // Depois por hora_inicio
-        if (a.hora_inicio && b.hora_inicio) {
-          return a.hora_inicio.localeCompare(b.hora_inicio)
-        }
-        return 0
-      })
+        })
+      }
 
       if (!isSilent) {
         console.log('✅ Relatório de agendamentos encontrado:', resultado.length)
       }
 
-      return resultado
+      return { data: resultado, count: totalCount }
     } catch (err: any) {
       console.error('❌ Erro inesperado ao buscar relatório:', err)
       notifyError('Erro inesperado ao buscar relatório')
-      return []
+      return null
     }
   }
 
