@@ -4,40 +4,50 @@
     :style="{ 
       top: `${posicaoTop}px`, 
       height: `${altura}px`,
-      backgroundColor: agendamento.cor || '#B4A7F5',
+      backgroundColor: paleta.background,
       zIndex: isHovered ? 10 : 1
     }"
-    :title="`Título: ${agendamento.titulo}\nContato: ${agendamento.nome_contato || 'N/A'}\nResponsável: ${agendamento.profissional_nome || 'N/A'}\nAgendado por: ${vendedorNome || 'Sistema'}\nHorário: ${horarioFormatado}\nCategoria: ${agendamento.categoria || 'N/A'}${agendamento.descricao ? '\nDescrição: ' + agendamento.descricao : ''}`"
-    class="absolute left-0 right-0 border border-black/10 text-neutral-900 rounded px-2 py-1.5 cursor-pointer transition-all duration-200 overflow-hidden hover:shadow-lg flex flex-col"
+    :title="`Título: ${agendamento.titulo}\nStatus: ${nomeStatus}\nContato: ${agendamento.nome_contato || 'N/A'}\nResponsável: ${agendamento.profissional_nome || 'N/A'}\nAgendado por: ${vendedorNome || 'Sistema'}\nHorário: ${horarioFormatado}\nCategoria: ${agendamento.categoria || 'N/A'}${agendamento.descricao ? '\nDescrição: ' + agendamento.descricao : ''}`"
+    class="absolute left-0 right-0 rounded px-2 py-1.5 cursor-pointer transition-all duration-200 overflow-hidden hover:shadow-lg flex flex-col"
     @click="emit('click', agendamento)"
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
   >
-    <!-- 1. Cabeçalho: Categoria e Horário (Lado a lado no topo) -->
+      <!-- 1. Cabeçalho: Categoria + Status e Horário -->
     <div class="flex items-center justify-between gap-1 mb-1.5">
-      <div v-if="agendamento.categoria" class="flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-black/10 max-w-[70%]">
-        <component :is="iconeCategoria" class="w-2.5 h-2.5 text-black/60 shrink-0" />
-        <span class="text-[7px] font-extrabold uppercase tracking-tight text-black/70 truncate">{{ agendamento.categoria.split(' / ')[0] }}</span>
+      <div class="flex items-center gap-1 min-w-0 flex-1 overflow-hidden">
+        <div v-if="agendamento.categoria" class="flex items-center gap-1 px-1.5 py-0.5 rounded-sm max-w-[60%] flex-shrink-0" :style="{ backgroundColor: paleta.accent + '25' }">
+          <component :is="iconeCategoria" class="w-2.5 h-2.5 shrink-0" :style="{ color: paleta.text }" />
+          <span class="text-[7px] font-extrabold uppercase tracking-tight truncate" :style="{ color: paleta.text }">{{ agendamento.categoria.split(' / ')[0] }}</span>
+        </div>
+        <!-- Badge do status -->
+        <div
+          v-if="nomeStatus"
+          class="flex-shrink-0 flex items-center gap-0.5 px-1.5 py-0.5 rounded-sm"
+          :style="{ backgroundColor: paleta.accent + '30', color: paleta.text }"
+        >
+          <span class="text-[7px] font-extrabold uppercase tracking-tight truncate">{{ nomeStatus }}</span>
+        </div>
       </div>
-      <div class="text-[8px] font-black text-black/50 tabular-nums shrink-0">
+      <div class="text-[8px] font-black tabular-nums shrink-0" :style="{ color: paleta.text }">
         {{ horarioFormatado }}
       </div>
     </div>
 
     <!-- 2. Nome do Contato -->
-    <div v-if="agendamento.nome_contato" class="text-[10px] font-black text-black/90 truncate leading-none uppercase">
+    <div v-if="agendamento.nome_contato" class="text-[10px] font-black truncate leading-none uppercase" :style="{ color: paleta.text }">
       {{ agendamento.nome_contato }}
     </div>
     
     <!-- 3. Título (Apenas se houver espaço) -->
-    <div v-if="altura > 50" class="text-[9px] font-bold text-black/60 truncate leading-tight mt-1 opacity-80">
+    <div v-if="altura > 50" class="text-[9px] font-bold truncate leading-tight mt-1 opacity-80" :style="{ color: paleta.text }">
       {{ agendamento.titulo }}
     </div>
 
     <!-- 4. Rodapé: Profissional -->
-    <div v-if="altura > 80 && agendamento.profissional_nome" class="mt-auto pt-1 flex items-center gap-1 border-t border-black/5">
-      <UserCircleIcon class="w-2.5 h-2.5 text-black/40" />
-      <span class="text-[8px] font-bold text-black/50 truncate italic">{{ agendamento.profissional_nome }}</span>
+    <div v-if="altura > 80 && agendamento.profissional_nome" class="mt-auto pt-1 flex items-center gap-1" :style="{ borderTop: `1px solid ${paleta.accent}30` }">
+      <UserCircleIcon class="w-2.5 h-2.5 flex-shrink-0" :style="{ color: paleta.text + 'aa' }" />
+      <span class="text-[8px] font-bold truncate italic" :style="{ color: paleta.text + 'bb' }">{{ agendamento.profissional_nome }}</span>
     </div>
   </div>
 </template>
@@ -69,6 +79,7 @@ import {
   CheckBadgeIcon,
   ChatBubbleLeftRightIcon
 } from '@heroicons/vue/24/solid'
+// useStatusPalette é auto-importado pelo Nuxt (app/composables)
 
 interface Props {
   agendamento: AgViewAgendamentoCompleto
@@ -90,6 +101,29 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits(['click'])
 
 const isHovered = ref(false)
+
+// ============================================================
+// Paleta dinâmica via useStatusPalette (auto-importado pelo Nuxt)
+// normalizarNome() remove acentos e aplica toLowerCase internamente
+// ============================================================
+const { getPaletteByName } = useStatusPalette()
+
+/**
+ * Resolve o nome do status em cadeia de prioridades:
+ * 1. Campo plano da view: status_nome (vem do JOIN na view)
+ * 2. Objeto relacional local (setado após mudança no modal)
+ * 3. string vazia → paleta default
+ */
+const nomeStatus = computed<string>(() => {
+  const ag = props.agendamento as any
+  let nome = ''
+  if (ag.status_nome) nome = ag.status_nome
+  else if (ag.ag_agendamento_statuses?.nome) nome = ag.ag_agendamento_statuses.nome
+  return nome ? nome.toLowerCase() : ''
+})
+
+/** Paleta completa. Ex: "Pendente" → "pendente" → #FFFBEB / #B45309 */
+const paleta = computed(() => getPaletteByName(nomeStatus.value))
 
 // Busca lista de vendedores da store global como fallback se a prop não estiver preenchida
 const vendedoresGlobal = useState<any[]>('leads-vendedores', () => [])

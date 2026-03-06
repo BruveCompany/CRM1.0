@@ -1,13 +1,15 @@
 <template>
   <!-- Item de agendamento para um dia específico -->
-  <div class="flex-1 relative bg-neutral-100">
-    <!-- Container dos slots de agendamento com posição relativa -->
-    <div class="flex flex-col relative">
+  <div 
+    class="flex-1 relative bg-white border-l border-dotted border-black/10 transition-colors duration-300 min-h-[960px] h-full"
+  >
+    <!-- Container dos slots de agendamento com posição relative -->
+    <div class="relative h-full">
       <!-- Slots de horário (8h às 22h = 15 slots) - apenas para estrutura visual -->
       <div 
         v-for="hora in 15" 
         :key="hora"
-        class="h-16 border-t border-white first:border-t-0 hover:bg-neutral-50 cursor-pointer transition-colors pt-1"
+        class="h-16 border-b border-dotted border-black/10 hover:bg-neutral-100/50 cursor-pointer transition-colors pt-1"
       >
         <!-- Slot vazio - estrutura de fundo -->
       </div>
@@ -35,16 +37,6 @@
 /**
  * ================= ItemAgendamento.vue =================
  * Componente para exibir slots de agendamento de um dia
- * 
- * Props:
- * @param {Date} data - Data do dia para exibir agendamentos
- * @param {AgCliente[]} clientes - Lista de clientes para resolver nomes
- * 
- * Responsabilidades:
- * - Exibir grid de horários (8h às 22h)
- * - Filtrar agendamentos do dia específico vindos do store
- * - Renderizar componentes SlotAgendamento
- * ======================================================
  */
 
 import SlotAgendamento from './SlotAgendamento.vue'
@@ -76,14 +68,19 @@ const emit = defineEmits(['editar-agendamento'])
 const agendamentoStore = useAgendamentoStore()
 
 /**
+ * Lógica para verificar se a data deste ItemAgendamento é hoje
+ */
+const isToday = computed(() => {
+  const hoje = new Date()
+  return props.data.getDate() === hoje.getDate() &&
+         props.data.getMonth() === hoje.getMonth() &&
+         props.data.getFullYear() === hoje.getFullYear()
+})
+
+/**
  * Filtra agendamentos do dia específico a partir do store
- * Compara apenas dia/mês/ano, ignorando horários
- * 
- * ⚠️ Este componente NÃO busca dados - apenas lê do store
- * A busca é responsabilidade do AgendamentoManager
  */
 const agendamentosDoDia = computed(() => {
   return agendamentoStore.getAgendamentosDoDia(props.data)
 })
-
 </script>

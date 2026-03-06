@@ -1,13 +1,22 @@
 <template>
   <!-- Item individual para exibir um dia -->
-  <div class="flex flex-1 flex-col items-center gap-1 px-4 py-3 cursor-pointer transition-all duration-200 rounded-t-2xl bg-neutral-100 border-b-4 border-white">
+  <div 
+    class="flex flex-1 flex-col items-center gap-1 px-4 py-3 cursor-pointer transition-all duration-200 border-l border-dotted border-black/10"
+    :class="isToday ? 'bg-neutral-100' : 'bg-white'"
+  >
     <!-- Dia da semana abreviado (ex: SEG, TER, QUA) -->
-    <div class="text-xs font-semibold text-neutral-700">
+    <div 
+      class="text-[10px] tracking-[0.1em] uppercase transition-colors duration-200"
+      :class="isToday ? 'text-indigo-600 font-black' : 'text-slate-400 font-bold'"
+    >
       {{ diaSemana }}
     </div>
     
     <!-- Número do dia (ex: 07, 12, 25) -->
-    <div class="text-lg font-bold text-neutral-900">
+    <div 
+      class="text-xl tracking-tighter transition-colors duration-200"
+      :class="isToday ? 'text-indigo-600 font-black scale-110 transform' : 'text-slate-900 font-bold'"
+    >
       {{ numeroDia }}
     </div>
   </div>
@@ -17,20 +26,9 @@
 /**
  * ================= DiaItem.vue =================
  * Componente para exibir informações de um dia específico
- * 
- * Props:
- * @param {Date} dia - Data a ser exibida
- * 
- * Exibe:
- * - Dia da semana abreviado (DOM, SEG, TER, etc.)
- * - Número do dia (1-31)
- * 
- * Futuras melhorias:
- * - Destacar dia atual
- * - Permitir seleção/clique
- * - Exibir indicadores de agendamentos
- * =================================================
  */
+
+import { computed } from 'vue'
 
 // Interface de propriedades
 interface Props {
@@ -38,6 +36,16 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+
+/**
+ * Lógica para verificar se a data passada é hoje
+ */
+const isToday = computed(() => {
+  const hoje = new Date()
+  return props.dia.getDate() === hoje.getDate() &&
+         props.dia.getMonth() === hoje.getMonth() &&
+         props.dia.getFullYear() === hoje.getFullYear()
+})
 
 /**
  * Array com os dias da semana abreviados

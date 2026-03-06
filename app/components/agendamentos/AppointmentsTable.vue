@@ -4,6 +4,9 @@
       <!-- THEAD estático/fixo -->
       <thead class="sticky top-0 z-10 bg-neutral-50 text-[13px] uppercase text-neutral-700 border-b border-neutral-200">
         <tr>
+          <!-- Faixa colorida lateral (header vazio) -->
+          <th class="w-1 p-0"></th>
+          
           <th scope="col" class="px-2 py-3.5 font-semibold text-center whitespace-nowrap cursor-pointer hover:bg-neutral-100 transition-colors group user-select-none" @click="$emit('sort', 'id')">
             <div class="flex flex-row items-center justify-center gap-1">
               ID (#)
@@ -11,10 +14,10 @@
               <span v-else class="text-[10px] text-neutral-300 opacity-0 group-hover:opacity-100 transition-opacity ml-1">&#9650;</span>
             </div>
           </th>
-          <th scope="col" class="px-2 py-3.5 font-semibold text-center whitespace-nowrap cursor-pointer hover:bg-neutral-100 transition-colors group user-select-none" @click="$emit('sort', 'cancelado')">
+          <th scope="col" class="px-2 py-3.5 font-semibold text-center whitespace-nowrap cursor-pointer hover:bg-neutral-100 transition-colors group user-select-none" @click="$emit('sort', 'status_id')">
             <div class="flex flex-row items-center justify-center gap-1">
               Status
-              <span v-if="sortColumn === 'cancelado'" class="text-[10px] text-primary-600 font-bold ml-1" v-html="sortDirection === 'asc' ? '&#9650;' : '&#9660;'"></span>
+              <span v-if="sortColumn === 'status_id'" class="text-[10px] text-primary-600 font-bold ml-1" v-html="sortDirection === 'asc' ? '&#9650;' : '&#9660;'"></span>
               <span v-else class="text-[10px] text-neutral-300 opacity-0 group-hover:opacity-100 transition-opacity ml-1">&#9650;</span>
             </div>
           </th>
@@ -71,17 +74,28 @@
         <tr 
           v-for="appointment in appointments" 
           :key="appointment.id"
-          class="hover:bg-neutral-50 transition-colors duration-150 group"
+          class="hover:bg-neutral-50 transition-colors duration-150 group relative"
         >
+          <!-- Faixa colorida lateral (status visual) -->
+          <td class="p-0 w-1">
+            <div
+              class="w-1 h-full min-h-[52px] rounded-sm"
+              :style="{ backgroundColor: getStatusCor(appointment) }"
+            />
+          </td>
+
           <!-- ID -->
           <td class="px-2 py-3 font-mono text-[13px] text-center text-neutral-500 align-middle whitespace-nowrap">
             #{{ appointment.id }}
           </td>
           
-          <!-- Status -->
+          <!-- Status dinâmico via ag_agendamento_statuses -->
           <td class="px-2 py-3 align-middle text-center whitespace-nowrap">
-            <span :class="['inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold tracking-wide uppercase', getStatusBadgeClass(appointment.cancelado)]">
-              {{ appointment.cancelado ? 'Cancelado' : 'Ativo' }}
+            <span
+              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide uppercase"
+              :style="getStatusStyle(appointment)"
+            >
+              {{ getStatusNome(appointment) }}
             </span>
           </td>
           
@@ -203,12 +217,39 @@ const handleAction = (actionId: string, appointment: AgViewAgendamentoCompleto) 
   if (actionId === 'cancel') emit('cancel-clicked', appointment)
 }
 
-// Regras de cores para os Status Badges baseados no booleano Cancelado
-const getStatusBadgeClass = (cancelado: boolean) => {
-  if (cancelado) {
-    return 'bg-red-100 text-[#ff3333] border border-red-200'
+import { getPaletteByName } from '../../composables/useStatusPalette'
+
+/**
+ * Retorna a cor accent (sólida) do status — usada na faixa lateral da linha.
+ * Prioridade: paleta pelo nome → status_cor da view → fallback legado
+ */
+const getStatusCor = (appointment: AgViewAgendamentoCompleto): string => {
+  const nome = (appointment as any).status_nome
+  if (nome) return getPaletteByName(nome).accent
+  if ((appointment as any).status_cor) return (appointment as any).status_cor
+  return (appointment as any).cancelado ? '#ef4444' : '#22c55e'
+}
+
+/**
+ * Retorna o nome do status a ser exibido no badge.
+ */
+const getStatusNome = (appointment: AgViewAgendamentoCompleto): string => {
+  const s = (appointment as any).ag_agendamento_statuses
+  if (s?.nome) return s.nome
+  if ((appointment as any).status_nome) return (appointment as any).status_nome
+  return (appointment as any).cancelado ? 'Cancelado' : 'Ativo'
+}
+
+/**
+ * Gera o style object inline para o badge colorido usando a paleta pastel.
+ */
+const getStatusStyle = (appointment: AgViewAgendamentoCompleto): Record<string, string> => {
+  const nome = getStatusNome(appointment)
+  const p = getPaletteByName(nome)
+  return {
+    backgroundColor: p.background,
+    color: p.text
   }
-  return 'bg-green-100 text-green-700 border border-green-200'
 }
 
 const formataHora = (timeString: string | null) => {

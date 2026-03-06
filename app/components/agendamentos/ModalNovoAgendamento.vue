@@ -206,6 +206,13 @@ import { useAgendamento } from '~/composables/useAgendamento'
 import { useNotification } from '~/composables/useNotification'
 import { useAgendamentoStore } from '~/stores/agendamento'
 
+/**
+ * UUID fixo do status "Pendente" na tabela ag_agendamento_statuses.
+ * Todo novo agendamento inicia com este status por padrão.
+ * Se o UUID mudar no banco, altere apenas aqui.
+ */
+const PENDENTE_STATUS_ID = 'bf6d3101-c18c-4cee-94db-23fe2df75674'
+
 interface Props {
   modelValue: boolean
   profissionalId?: number | null
@@ -470,7 +477,8 @@ async function handleSalvar() {
     titulo: formData.value.titulo.trim(),
     descricao: formData.value.descricao?.trim() || null,
     cor: formData.value.cor || null,
-    categoria: formData.value.categoria
+    categoria: formData.value.categoria,
+    status_id: PENDENTE_STATUS_ID  // Sempre inicia como "Pendente"
   };
 
   console.log('Dados finais enviados ao inserirAgendamento:', payloadToInsert);

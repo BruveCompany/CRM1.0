@@ -12,7 +12,7 @@
       <!-- Conteúdo Dinâmico -->
       <main class="flex-1 min-h-0 overflow-hidden">
         <ClientOnly>
-          <div v-if="activeView === 'agenda'" class="h-full bg-white border-t border-neutral-200">
+          <div v-if="activeView === 'agenda'" class="h-full bg-white border-t border-black/10">
             <AgendamentoManager ref="managerRef" hide-internal-header />
           </div>
           <div v-else class="h-full overflow-auto">

@@ -7,9 +7,14 @@
     </template>
     
     <div v-if="agendamento" class="space-y-6">
+      <!-- Status Badge atual + ID -->
       <div class="flex items-center gap-2">
-        <span :class="['inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase', agendamento.cancelado ? 'bg-error-50 text-error-700' : (agendamento.titulo?.startsWith('[CONCLUÍDO]') ? 'bg-emerald-50 text-emerald-700' : 'bg-success-50 text-success-700')]">
-          {{ agendamento.cancelado ? 'Cancelado' : (agendamento.titulo?.startsWith('[CONCLUÍDO]') ? 'Concluído' : 'Ativo') }}
+        <span
+          class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase transition-all"
+          :style="statusAtualStyle"
+        >
+          <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: paletaAtual.accent }" />
+          {{ statusAtualNome }}
         </span>
         <span class="text-sm text-neutral-500 font-mono">#{{ agendamento.id }}</span>
       </div>
@@ -24,7 +29,7 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <!-- Quando e Quem -->
         <div class="space-y-3 p-4 bg-white border border-neutral-200 rounded-xl shadow-sm">
-          <h5 class="text-xs font-bold text-neutral-400 uppercase tracking-wider">Quando & Quem</h5>
+          <h5 class="text-xs font-bold text-neutral-400 uppercase tracking-wider">Quando &amp; Quem</h5>
           
           <div class="flex items-center gap-3">
             <div class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-blue-50 text-blue-600">
@@ -37,7 +42,7 @@
           </div>
 
           <div class="flex items-center gap-3">
-             <div class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+            <div class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
               <Icon name="lucide:user" class="w-4 h-4" />
             </div>
             <div class="min-w-0">
@@ -77,6 +82,65 @@
         </div>
       </div>
 
+      <!-- ============================================================ -->
+      <!-- Bloco: Alterar Status — 1 clique, sem botão "Salvar"          -->
+      <!-- ============================================================ -->
+      <div class="p-4 bg-white border border-neutral-200 rounded-xl shadow-sm space-y-3">
+        <h5 class="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-2">
+          <Icon name="lucide:tag" class="w-3.5 h-3.5" />
+          Alterar Status
+          <span v-if="salvandoStatus" class="flex items-center gap-1 text-primary-500 font-normal normal-case text-[11px]">
+            <Icon name="svg-spinners:ring-resize" class="w-3 h-3" />
+            Salvando...
+          </span>
+        </h5>
+
+        <!-- Loading dos statuses -->
+        <div v-if="loadingStatuses" class="flex items-center gap-2 text-sm text-neutral-400 py-1">
+          <Icon name="svg-spinners:ring-resize" class="w-4 h-4" />
+          Carregando opções...
+        </div>
+
+        <!-- Botões de Status — 1 clique = salva imediatamente -->
+        <div v-else class="flex flex-wrap gap-2">
+          <button
+            v-for="status in statuses"
+            :key="status.id"
+            type="button"
+            :disabled="salvandoStatus"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+            :class="[
+              statusAtualId === status.id
+                ? 'ring-2 ring-offset-1 shadow-md scale-105'
+                : 'opacity-70 hover:opacity-100 hover:scale-[1.03] cursor-pointer'
+            ]"
+            :style="getStatusButtonStyle(status, statusAtualId === status.id)"
+            :title="statusAtualId === status.id ? 'Status atual' : `Alterar para ${status.nome}`"
+            @click="selecionarStatus(status)"
+          >
+            <!-- Bolinha / check indicator -->
+            <span
+              v-if="statusAtualId !== status.id"
+              class="w-2 h-2 rounded-full flex-shrink-0"
+              :style="{ backgroundColor: getPaletteByName(status.nome).accent }"
+            />
+            <Icon
+              v-else
+              name="lucide:check-circle-2"
+              class="w-3.5 h-3.5 flex-shrink-0"
+              :style="{ color: getPaletteByName(status.nome).accent }"
+            />
+            {{ status.nome }}
+          </button>
+        </div>
+
+        <!-- Dica de UX -->
+        <p class="text-[11px] text-neutral-400 italic flex items-center gap-1">
+          <Icon name="lucide:mouse-pointer-click" class="w-3 h-3" />
+          Clique em um status para alterar automaticamente.
+        </p>
+      </div>
+
       <!-- Histórico -->
       <div class="flex items-center gap-2 text-xs text-neutral-500 bg-neutral-50 px-3 py-2 rounded-lg border border-neutral-100">
         <Icon name="lucide:info" class="w-4 h-4 text-neutral-400 flex-shrink-0" />
@@ -101,8 +165,110 @@ import { useState } from '#imports'
 import type { AgViewAgendamentoCompleto } from '../../../shared/types/database'
 import BaseModal from '../BaseModal.vue'
 import BaseButton from '../BaseButton.vue'
+import { useAgendamentoStatuses, type AgendamentoStatus } from '../../composables/useAgendamentoStatuses'
+import { getPaletteByName } from '../../composables/useStatusPalette'
 
-// Lookup reverso: find lead_id via allLeads when appointment only has cliente_id
+// ============================================================
+// Props & Emits
+// ============================================================
+const props = defineProps<{
+  modelValue: boolean
+  agendamento: AgViewAgendamentoCompleto | null
+}>()
+
+const emit = defineEmits<{
+  (e: 'update:modelValue', val: boolean): void
+  (e: 'status-atualizado', agendamentoId: number, novoStatus: AgendamentoStatus): void
+}>()
+
+// ============================================================
+// Statuses dinâmicos
+// ============================================================
+const { statuses, loadingStatuses, fetchStatuses, atualizarStatusAgendamento } = useAgendamentoStatuses()
+
+// Carrega os statuses ao abrir o modal (usa cache global, só busca 1 vez)
+watch(() => props.modelValue, async (aberto) => {
+  if (aberto) {
+    await fetchStatuses()
+  }
+}, { immediate: true })
+
+// ============================================================
+// Estado do seletor de status
+// ============================================================
+const salvandoStatus = ref(false)
+
+/**
+ * ID do status ATUAL do agendamento.
+ * Prioriza o dado relacional `ag_agendamento_statuses`, com fallback em `status_id`.
+ */
+const statusAtualId = computed<string | null>(() => {
+  if (!props.agendamento) return null
+  return (props.agendamento as any).ag_agendamento_statuses?.id
+    ?? (props.agendamento as any).status_id
+    ?? null
+})
+
+const statusAtualNome = computed(() => {
+  // Prioridade: objeto relacional local > campo plano da view > lista de statuses > fallback
+  const s = (props.agendamento as any)?.ag_agendamento_statuses
+  if (s?.nome) return s.nome
+  const nomeView = (props.agendamento as any)?.status_nome
+  if (nomeView) return nomeView
+  const found = statuses.value.find(x => x.id === statusAtualId.value)
+  if (found) return found.nome
+  return (props.agendamento as any)?.cancelado ? 'Cancelado' : 'Ativo'
+})
+
+/** Paleta do status atual para o badge do header */
+const paletaAtual = computed(() => getPaletteByName(statusAtualNome.value))
+
+const statusAtualStyle = computed(() => ({
+  backgroundColor: paletaAtual.value.background,
+  color: paletaAtual.value.text
+}))
+
+// ============================================================
+// Estilo dos botões de seleção — paleta centralizada
+// ============================================================
+const getStatusButtonStyle = (status: AgendamentoStatus, ativo: boolean) => {
+  const p = getPaletteByName(status.nome)
+  return {
+    backgroundColor: ativo ? p.background : p.background + 'bb',
+    color: p.text
+  }
+}
+
+// ============================================================
+// Selecionar status — 1 clique = salva direto
+// ============================================================
+async function selecionarStatus(status: AgendamentoStatus) {
+  // Se já é o status atual, ignora
+  if (!props.agendamento || status.id === statusAtualId.value) return
+
+  salvandoStatus.value = true
+  try {
+    const sucesso = await atualizarStatusAgendamento(props.agendamento.id, status.id)
+
+    if (sucesso) {
+      // Atualiza o objeto local imediatamente → reatividade sem reload
+      ;(props.agendamento as any).ag_agendamento_statuses = status
+      ;(props.agendamento as any).status_id = status.id
+
+      // Notifica o componente pai para atualizar a linha na tabela
+      emit('status-atualizado', props.agendamento.id, status)
+
+      // Fecha o modal automaticamente após salvar
+      emit('update:modelValue', false)
+    }
+  } finally {
+    salvandoStatus.value = false
+  }
+}
+
+// ============================================================
+// Lead lookup (para link do cliente)
+// ============================================================
 const allLeads = useState<any[]>('leads-all-data', () => [])
 
 const getLeadId = (ag: AgViewAgendamentoCompleto | null): string | null => {
@@ -115,13 +281,9 @@ const getLeadId = (ag: AgViewAgendamentoCompleto | null): string | null => {
   return null
 }
 
-const props = defineProps<{
-  modelValue: boolean
-  agendamento: AgViewAgendamentoCompleto | null
-}>()
-
-const emit = defineEmits(['update:modelValue'])
-
+// ============================================================
+// Formatação
+// ============================================================
 const formatarDataCurta = (dataString: string | null) => {
   if (!dataString) return '-'
   const [ano, mes, dia] = dataString.split('-')

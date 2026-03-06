@@ -2,7 +2,7 @@
   <!-- Container de visualização dos dias da semana -->
   <div class="w-full">
     <!-- Exibe cada dia da semana usando DiaItem - distribuídos uniformemente -->
-    <div class="flex w-full gap-2">
+    <div class="flex w-full gap-0 border-r border-dotted border-black/10">
       <!-- Espaçador para alinhar com a régua de horários -->
       <div class="w-20 flex-shrink-0"></div>
       
@@ -11,6 +11,7 @@
         v-for="(dia, index) in dias" 
         :key="index"
         :dia="dia"
+        class="border-b border-dotted border-black/10"
       />
     </div>
   </div>

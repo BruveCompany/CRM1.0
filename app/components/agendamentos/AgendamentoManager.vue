@@ -1,17 +1,19 @@
 <template>
   <div class="flex flex-col h-full bg-white">
     <!-- Cabeçalho dos Dias (Fixado no topo da grade) -->
-    <div class="px-4 pt-2 border-b border-neutral-100 pb-2 bg-white sticky top-0 z-10">
+    <div class="px-4 pt-2 border-b border-black/10 pb-2 bg-white sticky top-0 z-10">
       <ListaDias :dias="agendamentoStore.diasSemana" />
     </div>
 
     <!-- Grade da Agenda -->
-    <div class="flex-1 px-4 flex min-h-0 overflow-hidden">
+    <div class="flex-1 px-4 flex min-h-0 overflow-y-auto custom-scrollbar">
+      <!-- Régua Lateral -->
       <div class="flex-shrink-0">
         <ReguaHorarios />
       </div>
       
-      <div class="flex flex-1 gap-2 overflow-x-auto pb-4">
+      <!-- Container das Colunas -->
+      <div class="flex flex-1 gap-0 border-r border-dotted border-black/10 min-h-[960px]">
         <ItemAgendamento
           v-for="(dia, index) in agendamentoStore.diasSemana"
           :key="'dia-' + index"
@@ -21,6 +23,7 @@
           :vendedores="vendedoresLista"
           :profissional-nome="profissionalAtualNome"
           :profissional-especialidade="profissionalAtualEspecialidade"
+          class="last:border-r"
           @editar-agendamento="handleAbrirEdicao"
         />
       </div>
@@ -150,6 +153,11 @@ onMounted(async () => {
   console.log('🚀 Agenda: Iniciando montagem...')
   setupRealtime() // Ativa o Realtime na montagem
   
+  // Invalida o cache na montagem para garantir que status_nome e status_cor
+  // venham frescos da view atualizada (ag_view_agendamentos_completo).
+  // Isso resolve o bug onde dados cacheados antes da migração não tinham status_nome.
+  agendamentoStore.cacheAgendamentos = {}
+  
   try {
     loadingProfissionais.value = true
     
@@ -208,3 +216,19 @@ defineExpose({
   handleNovoAgendamento
 })
 </script>
+
+<style scoped>
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+</style>
