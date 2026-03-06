@@ -13,17 +13,16 @@
       <!-- Barra colorida vertical -->
       <div
         class="flex-shrink-0 w-1 h-12 rounded-full"
-        :style="{ backgroundColor: agendamento.cor || '#4338CA' }"
+        :style="{ backgroundColor: statusCor }"
       ></div>
 
-      <!-- Status Ativo/Cancelado -->
-      <div v-if="agendamento.cancelado" class="flex-shrink-0 flex items-center justify-center gap-1 bg-error-50 px-2 py-1 rounded w-[85px]">
-        <XCircleIcon class="w-4 h-4 text-error-600" />
-        <span class="text-xs font-medium text-error-700">Cancelado</span>
-      </div>
-      <div v-else class="flex-shrink-0 flex items-center justify-center gap-1 bg-success-50 px-2 py-1 rounded w-[85px]">
-        <CheckCircleIcon class="w-4 h-4 text-success-600" />
-        <span class="text-xs font-medium text-success-700">Ativo</span>
+      <!-- Status do agendamento (dinâmico via ag_agendamento_statuses) -->
+      <div
+        class="flex-shrink-0 flex items-center justify-center gap-1.5 px-2 py-1 rounded w-[100px]"
+        :style="statusBadgeStyle"
+      >
+        <span class="w-2 h-2 rounded-full flex-shrink-0" :style="{ backgroundColor: statusCor }" />
+        <span class="text-xs font-semibold truncate">{{ statusNome }}</span>
       </div>
 
       <!-- Data e horário -->
@@ -72,7 +71,7 @@
       <div class="flex-1 basis-0 flex items-center gap-2 h-12 min-w-0" :title="`Profissional: ${agendamento.profissional_nome || 'Não informado'}${agendamento.especialidade ? ' | ' + agendamento.especialidade : ''}`">
         <div
           class="flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-semibold flex-shrink-0"
-          :style="{ backgroundColor: agendamento.cor || '#4338CA' }"
+          :style="{ backgroundColor: statusCor }"
         >
           {{ agendamento.profissional_nome?.charAt(0).toUpperCase() || 'P' }}
         </div>
@@ -131,7 +130,7 @@
  */
 
 import { computed, onMounted } from 'vue'
-import { CalendarIcon, UserIcon, UserCircleIcon, EllipsisVerticalIcon, CheckCircleIcon, XCircleIcon, ClipboardDocumentListIcon } from '@heroicons/vue/24/outline'
+import { CalendarIcon, UserIcon, UserCircleIcon, EllipsisVerticalIcon, ClipboardDocumentListIcon } from '@heroicons/vue/24/outline'
 import type { AgViewAgendamentoCompleto } from '../../shared/types/database'
 import { useLeads } from '../composables/useLeads'
 
@@ -162,6 +161,31 @@ onMounted(async () => {
     await fetchVendedores()
   }
 })
+
+// ============================================================
+// Status dinâmico via ag_agendamento_statuses
+// ============================================================
+import { getPaletteByName } from '../composables/useStatusPalette'
+
+const statusObj = computed(() => (props.agendamento as any).ag_agendamento_statuses ?? null)
+
+const statusNome = computed<string>(() => {
+  if (statusObj.value?.nome) return statusObj.value.nome
+  if ((props.agendamento as any).status_nome) return (props.agendamento as any).status_nome
+  return (props.agendamento as any).cancelado ? 'Cancelado' : 'Ativo'
+})
+
+/** Paleta pastel + texto escuro baseada no nome do status */
+const paletaStatus = computed(() => getPaletteByName(statusNome.value))
+
+/** Cor accent usada na barra lateral e no avatar */
+const statusCor = computed<string>(() => paletaStatus.value.accent)
+
+/** Style object para o badge pastel */
+const statusBadgeStyle = computed(() => ({
+  backgroundColor: paletaStatus.value.background,
+  color: paletaStatus.value.text
+}))
 
 /**
  * Formata data com dia da semana abreviado

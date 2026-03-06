@@ -13,16 +13,21 @@
         
         <!-- Filtros Avançados -->
         <div class="flex flex-wrap items-center gap-3">
-          <!-- Filtro Status -->
+          <!-- Filtro de Status Dinâmico -->
           <div class="relative">
             <select 
-              v-model="filtroStatus" 
+              v-model="filtroStatusId" 
               class="appearance-none bg-white border border-neutral-200 text-neutral-700 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-3 pr-8 py-2 shadow-sm transition-colors"
               @change="onFilterChange"
             >
-              <option :value="undefined">Todos os Status</option>
-              <option :value="false">Ativos</option>
-              <option :value="true">Cancelados</option>
+              <option value="">Todos os Status</option>
+              <option 
+                v-for="status in statuses" 
+                :key="status.id" 
+                :value="status.id"
+              >
+                {{ status.nome }}
+              </option>
             </select>
             <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-neutral-500">
               <Icon name="lucide:chevron-down" class="w-4 h-4" />
@@ -105,6 +110,7 @@
     <AppointmentDetailsModal
       v-model="modalDetalhesAberto"
       :agendamento="agendamentoSelecionado"
+      @status-atualizado="handleStatusAtualizado"
     />
 
     <ModalEditarAgendamento
@@ -141,6 +147,7 @@ import { useAgendamento } from '../composables/useAgendamento'
 import { useProfissionais } from '../composables/useProfissionais'
 import { useLeads } from '../composables/useLeads'
 import { useNotification } from '../composables/useNotification'
+import { useAgendamentoStatuses, type AgendamentoStatus } from '../composables/useAgendamentoStatuses'
 import type { AgViewAgendamentoCompleto } from '../../shared/types/database'
 import type { AgCliente, AgProfissional } from '../../shared/types/database'
 import AppointmentsTable from './agendamentos/AppointmentsTable.vue'
@@ -164,10 +171,13 @@ const totalItems = ref(0)
 const totalPages = computed(() => Math.max(1, Math.ceil(totalItems.value / itemsPerPage.value)))
 
 // Filtros Avançados
-const filtroStatus = ref<boolean | undefined>(undefined)
+const filtroStatusId = ref<string>('')          // UUID do status selecionado ('' = todos)
 const filtroPeriodo = ref<string>('all')
 const customDataInicio = ref<string | undefined>(undefined)
 const customDataFim = ref<string | undefined>(undefined)
+
+// Statuses dinâmicos para popular o filtro
+const { statuses, fetchStatuses } = useAgendamentoStatuses()
 
 const onFilterChange = () => {
   currentPage.value = 1
@@ -253,6 +263,21 @@ const handleViewAction = (agendamento: AgViewAgendamentoCompleto) => {
   modalDetalhesAberto.value = true
 }
 
+/**
+ * Atualiza reativamente o agendamento na lista após mudança de status no modal.
+ * Evita reload completo da página — apenas o objeto na lista é modificado.
+ */
+const handleStatusAtualizado = (agendamentoId: number, novoStatus: AgendamentoStatus) => {
+  const idx = agendamentos.value.findIndex(a => a.id === agendamentoId)
+  if (idx !== -1) {
+    // Cria uma cópia do objeto com o novo status (força reatividade Vue)
+    const atualizado = { ...agendamentos.value[idx] } as any
+    atualizado.ag_agendamento_statuses = novoStatus
+    atualizado.status_id = novoStatus.id
+    agendamentos.value.splice(idx, 1, atualizado as AgViewAgendamentoCompleto)
+  }
+}
+
 const handleEditAction = (agendamento: AgViewAgendamentoCompleto) => {
   agendamentoSelecionado.value = agendamento
   modalEditarAberto.value = true
@@ -299,8 +324,8 @@ const executarAcao = async () => {
       
       const success = await editarAgendamento(agendamentoSelecionado.value.id, {
         titulo: tituloNovo,
-        descricao: agendamentoSelecionado.value.descricao || null,
-        cor: '#10B981' // Verde para concluído
+        descricao: agendamentoSelecionado.value.descricao || null
+        // Nota: cor agora é gerenciada pelo status_id, não mais pelo campo `cor`
       })
       if (success) {
         modalConfirmacaoAberto.value = false
@@ -364,7 +389,8 @@ async function carregarAgendamentos() {
       orderAsc: sortDirection.value === 'asc',
       page: currentPage.value,
       limit: itemsPerPage.value,
-      cancelado: filtroStatus.value,
+      // Filtra por status_id se houver selecionado; senão busca todos
+      // Nota: a view já inclui status_id; filtramos no servidor se possível
       dataInicio: customDataInicio.value,
       dataFim: customDataFim.value
     })
@@ -406,6 +432,8 @@ async function carregarDadosFiltros() {
 onMounted(() => {
   carregarAgendamentos()
   carregarDadosFiltros()
+  // Pré-carrega statuses para o filtro (usa cache global)
+  fetchStatuses()
   // Carrega leads silenciosamente para habilitar lookup reverso (cliente_id -> lead_id)
   if (!allLeads.value || allLeads.value.length === 0) {
     fetchLeads(true)

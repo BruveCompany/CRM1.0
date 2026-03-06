@@ -32,6 +32,7 @@ export interface InserirAgendamentoDTO {
   descricao?: string | null
   cor?: string | null
   categoria: string
+  status_id?: string | null
 }
 
 /**
@@ -173,14 +174,15 @@ export function useAgendamento() {
         profissional_id: dados.profissional_id,
         cliente_id: dados.cliente_id || null,
         lead_id: dados.lead_id || null,
-        user_id: currentUser.value?.id || profile?.user_id || null, // Garante id válido
+        user_id: currentUser.value?.id || profile?.user_id || null,
         data: dados.data,
         hora_inicio: `${dados.hora_inicio}:00-03`,
         hora_fim: `${dados.hora_fim}:00-03`,
         titulo: dados.titulo,
         descricao: dados.descricao || null,
         cor: dados.cor || null,
-        categoria: dados.categoria
+        categoria: dados.categoria,
+        status_id: dados.status_id || null
       }
 
       const { data, error } = await supabase
