@@ -266,6 +266,7 @@
     flex: 1;
     min-width: 0;
     font-size: 0.95rem;
+    text-transform: none !important;
 }
 
 .header-metrics {

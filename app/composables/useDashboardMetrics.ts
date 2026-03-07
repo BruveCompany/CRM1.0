@@ -153,7 +153,8 @@ export const useDashboardMetrics = () => {
      * Inscreve para mudanças no banco que afetam o Dashboard.
      * @param onUpdate Callback opcional para atualizar dados extras na página (ex: tarefas, funil)
      */
-    const subscribeToDashboardChanges = (onUpdate?: () => void) => {
+    const subscribeToDashboardChanges = async (onUpdate?: () => void) => {
+        await waitForProfile();
         if (!profile.value?.id || dashboardChannel) return;
 
         console.log('🔌 Dashboard: Ativando monitoramento em tempo real...');

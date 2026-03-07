@@ -183,7 +183,7 @@ useHead({
 
 // --- ESTADO ---
 const supabase = useSupabaseClient();
-const { profile, profId } = useAuth();
+const { profile, profId, waitForProfile } = useAuth();
 const { isCreateLeadModalOpen } = useLeads();
 const { getProximasTarefas } = useTarefas();
 
@@ -258,6 +258,8 @@ const handleCustomDateApply = (dates: { start: string, end: string }) => {
  * Função fetchDashboardData centralizada e Otimizada
  */
 const fetchDashboardData = async (silent = false) => {
+  // Garantia: Aguarda o perfil estar carregado (Essencial para F5/Reload)
+  await waitForProfile();
   if (!profile.value?.id) return;
   
   if (!silent) loading.value = true;
@@ -342,7 +344,8 @@ const proximasAcoes = computed(() => {
 });
 
 // Executa ao montar o componente
-onMounted(() => {
+onMounted(async () => {
+  await waitForProfile();
   fetchDashboardData();
   subscribeToDashboardChanges(() => fetchDashboardData(true)); 
 });

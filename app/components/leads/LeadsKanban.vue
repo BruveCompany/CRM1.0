@@ -48,7 +48,7 @@
                 :class="[column.font_size || 'text-lg', column.font_weight === 'font-bold' ? 'font-bold' : 'font-normal', column.font_family || 'font-sans']"
                 :style="{ color: column.color_text }"
               >
-                {{ column.display_name.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') }}
+                {{ column.display_name }}
               </h3>
               
               <div class="header-metrics">

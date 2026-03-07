@@ -10,7 +10,7 @@
       :to="item.to"
       :class="[
         'group flex items-center rounded-xl transition-all duration-300 relative overflow-hidden h-9 my-0.5',
-        isActive ? 'bg-indigo-50/50 text-indigo-600 active-glow font-medium' : 'text-neutral-500 hover:bg-neutral-50 hover:text-neutral-800 font-normal',
+        isActive ? 'bg-indigo-50/50 text-indigo-600 active-glow font-normal' : 'text-neutral-500 hover:bg-neutral-50 hover:text-neutral-800 font-normal',
         isCollapsed ? 'justify-center w-9 mx-auto px-0' : 'mx-2 px-3 gap-3 w-auto'
       ]"
       active-class="bg-indigo-50/50 text-indigo-600 shadow-sm"
@@ -22,12 +22,12 @@
           isCollapsed ? 'w-5 h-5' : 'w-5 h-5'
         ]"
       >
-        <Icon :name="item.icon" class="w-[17px] h-[17px] stroke-[1.2]" />
+        <Icon :name="item.icon" class="w-[17px] h-[17px] stroke-[1]" />
       </div>
       
       <span 
         v-if="!isCollapsed" 
-        class="flex-1 truncate transition-opacity duration-300 tracking-tight text-sm"
+        class="flex-1 truncate transition-opacity duration-300 tracking-tight text-sm font-normal"
       >
         {{ item.label }}
       </span>
@@ -61,7 +61,7 @@
             isCollapsed ? 'w-5 h-5' : 'w-5 h-5'
           ]"
         >
-          <Icon :name="item.icon" class="w-[17px] h-[17px] stroke-[1.2]" />
+          <Icon :name="item.icon" class="w-[17px] h-[17px] stroke-[1]" />
         </div>
         
         <span 
@@ -78,7 +78,7 @@
         />
       </button>
 
-      <!-- Sub-menu Colapsável (Modo Aberto) -->
+      <!-- Sub-menu Colapsável -->
       <div 
         v-if="isSubMenuOpen && !isCollapsed" 
         class="w-full pl-10 pr-4 space-y-0.5"
@@ -88,10 +88,10 @@
           :key="child.to"
           :to="child.to"
           class="group flex items-center gap-3 py-1.5 text-sm font-normal text-neutral-400 hover:text-indigo-600 transition-all leading-tight"
-          active-class="text-indigo-600 font-medium"
+          active-class="text-indigo-600"
         >
-          <Icon v-if="child.icon" :name="child.icon" class="w-4 h-4 stroke-[1.2]" />
-          <span class="tracking-tight">{{ child.label }}</span>
+          <Icon v-if="child.icon" :name="child.icon" class="w-4 h-4 stroke-[1]" />
+          <span class="tracking-tight font-normal">{{ child.label }}</span>
         </NuxtLink>
       </div>
 
