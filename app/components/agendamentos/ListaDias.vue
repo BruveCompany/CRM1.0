@@ -2,9 +2,9 @@
   <!-- Container de visualização dos dias da semana -->
   <div class="w-full">
     <!-- Exibe cada dia da semana usando DiaItem - distribuídos uniformemente -->
-    <div class="flex w-full gap-0 border-r border-dotted border-black/10">
+    <div class="flex w-full gap-0">
       <!-- Espaçador para alinhar com a régua de horários -->
-      <div class="w-20 flex-shrink-0"></div>
+      <div class="w-16 flex-shrink-0 border-r border-dotted border-black/10 bg-white"></div>
       
       <!-- Dias da semana -->
       <DiaItem 

@@ -1,4 +1,4 @@
-import type { Database } from '../../shared/types/database'
+import type { AgViewAgendamentoCompleto, Database } from '../../shared/types/database'
 
 /**
  * ====== useAgendamentoStatuses.ts ======
@@ -124,6 +124,30 @@ export function useAgendamentoStatuses() {
             // ─────────────────────────────────────────────────────────────
             console.log('✅ Status atualizado com sucesso no banco:', data[0])
             notifySuccess('Status atualizado com sucesso!')
+
+            // ─────────────────────────────────────────────────────────────
+            // PASSO 5: Lógica de Notificação Inteligente (WhatsApp/Email)
+            // ─────────────────────────────────────────────────────────────
+            const statusObj = _statuses.value.find(s => s.id === novoStatusId)
+            const statusName = statusObj?.nome.toLowerCase() || ''
+
+            if (['pendente', 'confirmado'].includes(statusName)) {
+                console.log(`📣 Novo status convida a notificação: ${statusName}`)
+
+                // Busca dados completos (Cliente + Profissional) para a notificação
+                const { data: fullAg, error: viewError } = await supabase
+                    .from('ag_view_agendamentos_completo')
+                    .select('*')
+                    .eq('id', agendamentoId)
+                    .single()
+
+                if (viewError) {
+                    console.warn('⚠️ Falha ao buscar dados completos para notificação:', viewError.message)
+                } else if (fullAg) {
+                    triggerNotificationForAppointment(fullAg as AgViewAgendamentoCompleto, statusName)
+                }
+            }
+
             return true
 
         } catch (err) {
@@ -131,6 +155,24 @@ export function useAgendamentoStatuses() {
             notifyError('Erro inesperado ao atualizar status')
             return false
         }
+    }
+
+    /**
+     * Dispara o fluxo de notificação para um agendamento.
+     * Ativa o modal reativo de confirmação.
+     */
+    function triggerNotificationForAppointment(agendamento: AgViewAgendamentoCompleto, statusName: string) {
+        console.log('🔔 [Notificação] Preparando aviso para:', agendamento.cliente_nome)
+        console.log(`💬 Sugestão de mensagem para status: ${statusName.toUpperCase()}`)
+
+        // Ativa o modal reativo (compartilhado via confirm-notification-modal.vue)
+        const isOpen = useState<boolean>('notification-modal-open')
+        const notificationAg = useState<AgViewAgendamentoCompleto | null>('notification-agendamento')
+        const notificationStatus = useState<string>('notification-status-name')
+
+        notificationAg.value = agendamento
+        notificationStatus.value = statusName
+        isOpen.value = true
     }
 
     /*

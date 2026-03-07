@@ -1,7 +1,7 @@
 <template>
   <!-- Item individual para exibir um dia -->
   <div 
-    class="flex flex-1 flex-col items-center gap-1 px-4 py-3 cursor-pointer transition-all duration-200 border-l border-dotted border-black/10"
+    class="flex flex-1 flex-col items-center gap-1 px-4 py-3 cursor-pointer transition-all duration-200 border-r border-dotted border-black/10"
     :class="isToday ? 'bg-neutral-100' : 'bg-white'"
   >
     <!-- Dia da semana abreviado (ex: SEG, TER, QUA) -->

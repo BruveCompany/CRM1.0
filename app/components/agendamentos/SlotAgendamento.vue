@@ -2,19 +2,38 @@
   <!-- Slot de agendamento individual -->
   <div 
     :style="{ 
-      top: `${posicaoTop}px`, 
-      height: `${altura}px`,
+      top: `${isResizing ? localTop : posicaoTop}px`, 
+      height: `${isResizing ? localAltura : altura}px`,
       backgroundColor: paleta.background,
-      zIndex: isHovered ? 10 : 1
+      zIndex: isHovered || isResizing ? 50 : 1
     }"
     :title="`Título: ${agendamento.titulo}\nStatus: ${nomeStatus}\nContato: ${agendamento.nome_contato || 'N/A'}\nResponsável: ${agendamento.profissional_nome || 'N/A'}\nAgendado por: ${vendedorNome || 'Sistema'}\nHorário: ${horarioFormatado}\nCategoria: ${agendamento.categoria || 'N/A'}${agendamento.descricao ? '\nDescrição: ' + agendamento.descricao : ''}`"
-    class="absolute left-0 right-0 rounded px-2 py-1.5 cursor-pointer transition-all duration-200 overflow-hidden hover:shadow-lg flex flex-col"
+    class="absolute left-0 right-0 rounded px-2 py-1.5 transition-all duration-200 overflow-hidden hover:shadow-lg flex flex-col active:scale-95 group/slot"
+    :class="[
+      isDragging ? 'opacity-50 grayscale-50' : '',
+      isResizing ? 'ring-2 ring-indigo-400 z-50 shadow-2xl cursor-ns-resize shadow-indigo-100' : 'cursor-move'
+    ]"
     @click="emit('click', agendamento)"
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
+    :draggable="!isResizing"
+    @dragstart="onDragStart"
+    @dragend="isDragging = false"
   >
+    <!-- Alças de Redimensionamento (Resizing Handles) -->
+    <div 
+      class="absolute top-0 left-0 right-0 h-1.5 cursor-ns-resize z-30 opacity-0 group-hover/slot:opacity-100 bg-black/5 hover:bg-indigo-400/50 transition-colors"
+      @mousedown.stop.prevent="startResize($event, 'top')"
+    ></div>
+    <div 
+      class="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize z-30 flex items-center justify-center group-hover/slot:opacity-100 opacity-0 hover:bg-indigo-400/50 transition-colors"
+      @mousedown.stop.prevent="startResize($event, 'bottom')"
+    >
+      <div class="w-6 h-1 rounded-full bg-black/10"></div>
+    </div>
+
       <!-- 1. Cabeçalho: Categoria + Status e Horário -->
-    <div class="flex items-center justify-between gap-1 mb-1.5">
+    <div class="flex items-center justify-between gap-1 mb-1.5 select-none pointer-events-none">
       <div class="flex items-center gap-1 min-w-0 flex-1 overflow-hidden">
         <div v-if="agendamento.categoria" class="flex items-center gap-1 px-1.5 py-0.5 rounded-sm max-w-[60%] flex-shrink-0" :style="{ backgroundColor: paleta.accent + '25' }">
           <component :is="iconeCategoria" class="w-2.5 h-2.5 shrink-0" :style="{ color: paleta.text }" />
@@ -30,22 +49,22 @@
         </div>
       </div>
       <div class="text-[8px] font-black tabular-nums shrink-0" :style="{ color: paleta.text }">
-        {{ horarioFormatado }}
+        {{ isResizing ? horarioFormatadoLocal : horarioFormatado }}
       </div>
     </div>
 
     <!-- 2. Nome do Contato -->
-    <div v-if="agendamento.nome_contato" class="text-[10px] font-black truncate leading-none uppercase" :style="{ color: paleta.text }">
+    <div v-if="agendamento.nome_contato" class="text-[10px] font-black truncate leading-none uppercase select-none pointer-events-none" :style="{ color: paleta.text }">
       {{ agendamento.nome_contato }}
     </div>
     
     <!-- 3. Título (Apenas se houver espaço) -->
-    <div v-if="altura > 50" class="text-[9px] font-bold truncate leading-tight mt-1 opacity-80" :style="{ color: paleta.text }">
+    <div v-if="localAltura > 50" class="text-[9px] font-bold truncate leading-tight mt-1 opacity-80 select-none pointer-events-none" :style="{ color: paleta.text }">
       {{ agendamento.titulo }}
     </div>
 
     <!-- 4. Rodapé: Profissional -->
-    <div v-if="altura > 80 && agendamento.profissional_nome" class="mt-auto pt-1 flex items-center gap-1" :style="{ borderTop: `1px solid ${paleta.accent}30` }">
+    <div v-if="localAltura > 80 && agendamento.profissional_nome" class="mt-auto pt-1 flex items-center gap-1 select-none pointer-events-none" :style="{ borderTop: `1px solid ${paleta.accent}30` }">
       <UserCircleIcon class="w-2.5 h-2.5 flex-shrink-0" :style="{ color: paleta.text + 'aa' }" />
       <span class="text-[8px] font-bold truncate italic" :style="{ color: paleta.text + 'bb' }">{{ agendamento.profissional_nome }}</span>
     </div>
@@ -98,9 +117,150 @@ const props = withDefaults(defineProps<Props>(), {
   profissionalEspecialidade: ''
 })
 
-const emit = defineEmits(['click'])
+const emit = defineEmits(['click', 'reagendar'])
 
 const isHovered = ref(false)
+const isDragging = ref(false)
+const isResizing = ref(false)
+
+// Estados locais para feedback visual instantâneo durante o redimensionamento
+const localTop = ref(0)
+const localAltura = ref(0)
+const resizeDirection = ref<'top' | 'bottom' | null>(null)
+let startY = 0
+let startTop = 0
+let startHeight = 0
+
+/**
+ * Inicia o redimensionamento
+ */
+function startResize(event: MouseEvent, direction: 'top' | 'bottom') {
+  isResizing.value = true
+  resizeDirection.value = direction
+  startY = event.clientY
+  startTop = posicaoTop.value
+  startHeight = altura.value
+  
+  localTop.value = startTop
+  localAltura.value = startHeight
+
+  // Adiciona listeners globais
+  document.addEventListener('mousemove', handleMouseMove)
+  document.addEventListener('mouseup', handleMouseUp)
+  
+  // Muda o cursor globalmente para indicar redimensionamento
+  document.body.style.cursor = 'ns-resize'
+}
+
+/**
+ * Lida com o movimento do mouse durante o redimensionamento
+ */
+function handleMouseMove(event: MouseEvent) {
+  if (!isResizing.value) return
+
+  const dy = event.clientY - startY
+  const SNAP_STEP = 16 // 15 minutos = 16px (baseado em ALTURA_HORA = 64)
+  
+  if (resizeDirection.value === 'bottom') {
+    // Redimensionando por baixo: altera apenas a altura
+    const newHeight = Math.max(SNAP_STEP, startHeight + dy)
+    // Aplica o snap
+    localAltura.value = Math.round(newHeight / SNAP_STEP) * SNAP_STEP
+  } else if (resizeDirection.value === 'top') {
+    // Redimensionando por cima: altera altura e posição top
+    const newTop = startTop + dy
+    const snappedTop = Math.round(newTop / SNAP_STEP) * SNAP_STEP
+    
+    // Diferença real aplicada pelo snap
+    const actualDy = snappedTop - startTop
+    const newHeight = startHeight - actualDy
+    
+    if (newHeight >= SNAP_STEP) {
+      localTop.value = snappedTop
+      localAltura.value = newHeight
+    }
+  }
+}
+
+/**
+ * Finaliza o redimensionamento e emite a atualização
+ */
+async function handleMouseUp() {
+  if (!isResizing.value) return
+  
+  document.removeEventListener('mousemove', handleMouseMove)
+  document.removeEventListener('mouseup', handleMouseUp)
+  document.body.style.cursor = ''
+  
+  // Converte a nova posição/altura para horários
+  const novaHoraInicio = pixelsParaHora(localTop.value)
+  const novaHoraFim = pixelsParaHora(localTop.value + localAltura.value)
+  
+  // Emite o evento de reagendamento para o pai salvar no Supabase
+  emit('reagendar', {
+    id: props.agendamento.id,
+    novaData: (props.agendamento.data as string).split('T')[0],
+    novaHoraInicio: `${novaHoraInicio}:00`,
+    novaHoraFim: `${novaHoraFim}:00`
+  })
+  
+  isResizing.value = false
+  resizeDirection.value = null
+}
+
+/**
+ * Converte posição em pixels para string de hora (ex: 64px offset -> 09:00)
+ */
+function pixelsParaHora(px: number): string {
+  // Ajusta o padding de 4px (pt-1)
+  const pxSemPadding = Math.max(0, px - 4)
+  const totalHorasDecimais = (pxSemPadding / ALTURA_HORA) + INICIO_DIA
+  
+  const horas = Math.floor(totalHorasDecimais)
+  const minutos = Math.round((totalHorasDecimais - horas) * 60)
+  
+  return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`
+}
+
+/**
+ * Formata o horário para exibição local (durante o resize)
+ */
+const horarioFormatadoLocal = computed(() => {
+  return `${pixelsParaHora(localTop.value)} - ${pixelsParaHora(localTop.value + localAltura.value)}`
+})
+
+/**
+ * Inicia o arraste do card
+ */
+function onDragStart(event: DragEvent) {
+  if (isResizing.value) {
+    event.preventDefault()
+    return
+  }
+  isDragging.value = true
+  if (event.dataTransfer) {
+    const data = {
+      id: props.agendamento.id,
+      duracaoMinutos: totalDuracaoMinutos.value,
+      horaInicioOriginal: props.agendamento.hora_inicio
+    }
+    
+    event.dataTransfer.setData('application/json', JSON.stringify(data))
+    event.dataTransfer.effectAllowed = 'move'
+    
+    // Feedback visual do fantasma do drag
+    const target = event.target as HTMLElement
+    if (target) {
+      target.style.opacity = '0.5'
+    }
+  }
+}
+
+const totalDuracaoMinutos = computed(() => {
+  const inicio = parseHora(props.agendamento.hora_inicio)
+  const fim = parseHora(props.agendamento.hora_fim)
+  return (fim.horas * 60 + fim.minutos) - (inicio.horas * 60 + inicio.minutos)
+})
 
 // ============================================================
 // Paleta dinâmica via useStatusPalette (auto-importado pelo Nuxt)
@@ -203,8 +363,8 @@ const posicaoTop = computed(() => {
   const horasDesdeInicio = horas - INICIO_DIA
   const minutosEmHoras = minutos / 60
   
-  // Adiciona 4px (pt-1) para alinhar com o padding da régua
-  return (horasDesdeInicio + minutosEmHoras) * ALTURA_HORA + 4
+  // Compensação refinada (offset de 1px) para alinhar perfeitamente com as linhas tracejadas do grid
+  return (horasDesdeInicio + minutosEmHoras) * ALTURA_HORA + 1
 })
 
 /**

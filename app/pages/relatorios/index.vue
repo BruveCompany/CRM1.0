@@ -20,6 +20,16 @@
               </div>
 
               <div class="flex items-center gap-2">
+                <!-- Link para Analytics de Agenda (Discreto) -->
+                <NuxtLink 
+                  to="/relatorios/agendamentos"
+                  class="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl hover:bg-white hover:border-indigo-300 transition-all group shadow-sm mr-1"
+                  title="Analytics de Agenda"
+                >
+                  <Icon name="lucide:calendar-range" class="w-4 h-4 text-slate-400 group-hover:text-indigo-600" />
+                  <span class="text-[10px] font-black text-slate-500 uppercase tracking-wider group-hover:text-indigo-700">Analytics Agenda</span>
+                </NuxtLink>
+
                 <div class="relative">
                   <button 
                     @click="showFilterPopover = !showFilterPopover"
@@ -133,6 +143,7 @@
               </button>
             </div>
           </div>
+
 
 
           <!-- ÁREA DE CAPTURA DO PDF (Renderizada apenas durante a exportação para garantir captura) -->

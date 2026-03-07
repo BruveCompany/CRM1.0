@@ -1,6 +1,6 @@
 <template>
   <!-- Régua de horários - exibe as horas do dia -->
-  <div class="flex flex-col w-20 bg-white">
+  <div class="flex flex-col w-16 bg-white border-r border-dotted border-black/10">
     <!-- Cada horário -->
     <div 
       v-for="hora in horarios" 

@@ -49,8 +49,6 @@
         ></textarea>
       </div>
 
-      <!-- Cor (editável) -->
-      <SeletorCor v-model="formData.cor" />
 
     </div>
 
@@ -136,8 +134,7 @@ const isOpen = computed({
 
 const formData = ref({
   titulo: '',
-  descricao: '',
-  cor: '#B4A7F5'
+  descricao: ''
 })
 
 const processando = ref(false)
@@ -191,8 +188,7 @@ watch(() => props.agendamento, (ag) => {
   if (ag) {
     formData.value = {
       titulo: ag.titulo || '',
-      descricao: ag.descricao || '',
-      cor: ag.cor || '#B4A7F5'
+      descricao: ag.descricao || ''
     }
     confirmarCancelamento.value = false
   }
@@ -217,8 +213,7 @@ async function handleSalvar() {
 
   const resultado = await editarAgendamento(props.agendamento.id, {
     titulo: formData.value.titulo.trim(),
-    descricao: formData.value.descricao?.trim() || null,
-    cor: formData.value.cor || null
+    descricao: formData.value.descricao?.trim() || null
   })
 
   processando.value = false

@@ -52,8 +52,27 @@
           </div>
         </div>
 
-        <!-- Blocos de Data e Hora -->
-        <div class="grid grid-cols-1 gap-3 pt-1">
+        <!-- INFORMAÇÃO DE DATA E HORA (Estilo Prime) -->
+        <div v-if="dataPreSelecionada" class="col-span-1 md:col-span-2 bg-neutral-50 border border-neutral-200 rounded-xl p-4 mb-2 flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-full bg-white shadow-sm border border-neutral-100 flex items-center justify-center text-primary-600">
+              <CalendarDaysIcon class="w-6 h-6" />
+            </div>
+            <div>
+              <p class="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Data e Horário</p>
+              <h4 class="text-base font-semibold text-neutral-900">
+                {{ formData.data ? formatarDiaParaExibicao(new Date(Number(formData.data.split('-')[0]), Number(formData.data.split('-')[1]) - 1, Number(formData.data.split('-')[2]))) : '' }}
+              </h4>
+              <p class="text-sm text-neutral-500 font-medium">{{ formData.horaInicio }} até {{ formData.horaFim }}</p>
+            </div>
+          </div>
+          <div class="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[11px] font-bold uppercase tracking-tight border border-indigo-100">
+            Duração: 01:00h
+          </div>
+        </div>
+
+        <!-- Blocos de Data e Hora (Apenas visíveis se NÃO vier da grade) -->
+        <div v-if="!dataPreSelecionada" class="grid grid-cols-1 gap-3 pt-1">
           <!-- Data -->
           <div>
             <label class="block text-sm font-semibold text-neutral-700 mb-1">
@@ -153,10 +172,6 @@
           ></textarea>
         </div>
 
-        <!-- Cor -->
-        <div class="pt-1">
-          <SeletorCor v-model="formData.cor" />
-        </div>
       </div>
     </div>
     
@@ -188,15 +203,14 @@ import BaseModal from '../BaseModal.vue'
 import BaseInput from '../BaseInput.vue'
 import BaseButton from '../BaseButton.vue'
 import SeletorCliente from '../SeletorCliente.vue'
-import SeletorCor from '../SeletorCor.vue'
 import { 
-  UserIcon,
   BuildingStorefrontIcon,
   WrenchScrewdriverIcon,
   PresentationChartBarIcon,
   CheckBadgeIcon,
   ChatBubbleLeftRightIcon,
-  UserCircleIcon
+  UserCircleIcon,
+  CalendarDaysIcon
 } from '@heroicons/vue/24/outline'
 import { ref, computed, watch, toRef } from 'vue'
 import { useAuth } from '~/composables/useAuth'
@@ -226,6 +240,7 @@ interface Props {
   clienteNome?: string
   leadId?: string | null
   initialDescription?: string
+  dataPreSelecionada?: Date | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -240,7 +255,8 @@ const props = withDefaults(defineProps<Props>(), {
   clienteId: null,
   clienteNome: '',
   leadId: null,
-  initialDescription: ''
+  initialDescription: '',
+  dataPreSelecionada: null
 })
 
 const emit = defineEmits(['update:modelValue', 'salvar'])
@@ -277,12 +293,12 @@ const formData = ref({
   categoria: 'Visita ao Showroom / Loja',
   data: '',
   horaInicio: '',
-  horaFim: '',
-  cor: '#10B981' // Começa com o verde do Showroom
+  horaFim: ''
 })
 
 // Estado de salvamento (para desabilitar botão e mostrar loading)
 const salvando = ref(false)
+const isPreFilling = ref(false)
 
 // --- Lógica de Disponibilidade em Tempo Real ---
 const bookedSlots = ref<string[]>([])
@@ -476,7 +492,6 @@ async function handleSalvar() {
     hora_fim: formData.value.horaFim,
     titulo: formData.value.titulo.trim(),
     descricao: formData.value.descricao?.trim() || null,
-    cor: formData.value.cor || null,
     categoria: formData.value.categoria,
     status_id: PENDENTE_STATUS_ID  // Sempre inicia como "Pendente"
   };
@@ -501,10 +516,8 @@ function handleCancelar() {
  * Ao trocar a categoria, sugere a cor padrão dela
  */
 function handleTrocarCategoria() {
-  const cat = CATEGORIAS.find(c => c.id === formData.value.categoria)
-  if (cat) {
-    formData.value.cor = cat.color
-  }
+  // Cores agora são gerenciadas via Status. 
+  // Mantemos a função apenas para compatibilidade futura com outros campos se necessário.
 }
 
 /**
@@ -519,8 +532,7 @@ function resetarFormulario() {
     categoria: 'Visita ao Showroom / Loja',
     data: '',
     horaInicio: '',
-    horaFim: '',
-    cor: '#10B981'
+    horaFim: ''
   }
   seletorClienteRef.value?.resetar()
 }
@@ -529,12 +541,14 @@ function resetarFormulario() {
 
 // Quando a data muda, limpa os horários
 watch(() => formData.value.data, () => {
+  if (isPreFilling.value) return
   formData.value.horaInicio = ''
   formData.value.horaFim = ''
 })
 
 // Quando hora início muda, limpa hora fim
 watch(() => formData.value.horaInicio, () => {
+  if (isPreFilling.value) return
   formData.value.horaFim = ''
 })
 
@@ -570,6 +584,32 @@ watch(isOpen, (novoValor) => {
     // Preenche a descrição inicial se houver (ex: notas do lead)
     if (props.initialDescription) {
       formData.value.descricao = props.initialDescription
+    }
+
+    // Preenche a data e hora se uma célula da grade foi clicada
+    if (props.dataPreSelecionada) {
+      isPreFilling.value = true
+      const d = props.dataPreSelecionada
+      formData.value.data = formatarDataISO(d)
+      
+      const hh = String(d.getHours()).padStart(2, '0')
+      const mm = String(d.getMinutes()).padStart(2, '0')
+      const horaStr = `${hh}:${mm}`
+      
+      // Seta hora inicial
+      formData.value.horaInicio = horaStr
+      
+      // Sugere hora fim (1 hora depois)
+      const dataFim = new Date(d)
+      dataFim.setHours(dataFim.getHours() + 1)
+      const hhFim = String(dataFim.getHours()).padStart(2, '0')
+      const mmFim = String(dataFim.getMinutes()).padStart(2, '0')
+      formData.value.horaFim = `${hhFim}:${mmFim}`
+      
+      // Libera os watchers após o preenchimento (usando nextTick)
+      setTimeout(() => {
+        isPreFilling.value = false
+      }, 100)
     }
   }
 })

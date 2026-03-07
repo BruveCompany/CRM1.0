@@ -35,14 +35,19 @@ export interface InserirAgendamentoDTO {
   status_id?: string | null
 }
 
-/**
- * Tipo para os dados de edição de um agendamento.
- * Apenas campos editáveis: título, descrição e cor.
- */
 export interface EditarAgendamentoDTO {
   titulo: string
   descricao?: string | null
   cor?: string | null
+}
+
+/**
+ * Tipo para os dados de reagendamento.
+ */
+export interface ReagendarAgendamentoDTO {
+  data: string
+  hora_inicio: string
+  hora_fim: string
 }
 
 export function useAgendamento() {
@@ -488,10 +493,47 @@ export function useAgendamento() {
     }
   }
 
+  /**
+   * Reagenda um agendamento (move de data ou hora)
+   */
+  async function reagendarAgendamento(id: number, dados: ReagendarAgendamentoDTO): Promise<AgAgendamento | null> {
+    try {
+      console.log('🔄 Reagendando agendamento:', id, dados)
+
+      const payload = {
+        data: dados.data,
+        hora_inicio: dados.hora_inicio.includes('-03') ? dados.hora_inicio : `${dados.hora_inicio}-03`,
+        hora_fim: dados.hora_fim.includes('-03') ? dados.hora_fim : `${dados.hora_fim}-03`
+      }
+
+      const { data, error } = await supabase
+        .from('ag_agendamentos')
+        .update(payload as unknown as never)
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) {
+        console.error('❌ Erro ao reagendar agendamento:', error)
+        notifyError('Erro ao mover agendamento')
+        return null
+      }
+
+      console.log('✅ Agendamento reagendado com sucesso:', data)
+      notifySuccess('Agendamento movido!')
+      return data as AgAgendamento
+    } catch (err) {
+      console.error('❌ Erro inesperado ao reagendar:', err)
+      notifyError('Erro inesperado ao mover agendamento')
+      return null
+    }
+  }
+
   return {
     buscarAgendamentosPorProfissional,
     inserirAgendamento,
     editarAgendamento,
+    reagendarAgendamento,
     cancelarAgendamento,
     buscarRelatorioAgendamentos
   }
