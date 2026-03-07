@@ -46,6 +46,17 @@
                 </button>
               </MenuItem>
             </div>
+
+            <!-- Atalho para Gerenciar -->
+            <div class="p-2 border-t border-neutral-100 bg-neutral-50/50">
+              <NuxtLink 
+                :to="{ name: 'templates-quick-replies' }"
+                class="flex items-center justify-center gap-2 w-full py-2 px-3 text-[10px] font-bold text-neutral-500 hover:text-primary-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-neutral-100"
+              >
+                <Icon name="heroicons:cog-8-tooth" class="w-3.5 h-3.5" />
+                <span>GERENCIAR RESPOSTAS RÁPIDAS</span>
+              </NuxtLink>
+            </div>
           </MenuItems>
         </transition>
       </Menu>

@@ -3,7 +3,7 @@
     <!-- Header da Página -->
     <header class="flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold text-neutral-900">Configurações</h1>
+        <h1 class="text-3xl font-bold text-neutral-900">Gerenciar Respostas Rápidas</h1>
         <p class="text-neutral-500 mt-1">Personalize sua experiência no CRM e gerencie seus templates.</p>
       </div>
     </header>
@@ -40,6 +40,7 @@ import GerenciarRespostasRapidas from '~/components/configuracoes/GerenciarRespo
  * Atualmente centraliza o gerenciamento de Respostas Rápidas para o chat.
  */
 definePageMeta({
+  name: 'templates-quick-replies',
   layout: 'default'
 });
 

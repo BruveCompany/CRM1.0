@@ -29,24 +29,25 @@
       </div>
 
       <div class="flex-1 min-w-0">
-        <div class="flex justify-between items-start mb-0.5">
-          <h3 class="font-bold text-sm text-neutral-900 truncate pr-2">
-            {{ conversa.lead?.nome || conversa.cliente?.nome || 'Contato sem nome' }}
-          </h3>
-          <span class="text-[10px] text-neutral-400 whitespace-nowrap pt-1">
-            {{ formatTime(conversa.ultima_mensagem_em) }}
-          </span>
-        </div>
-        <p class="text-xs text-neutral-500 truncate pr-4">
+        <h3 class="font-semibold text-sm text-neutral-800 truncate mb-0.5 tracking-tight">
+          {{ conversa.lead?.nome || conversa.cliente?.nome || 'Contato sem nome' }}
+        </h3>
+        <p class="text-xs text-neutral-400 truncate pr-2 font-normal">
           {{ conversa.ultima_mensagem || 'Atendimento iniciado' }}
         </p>
       </div>
 
-      <!-- Badges (Fixado/Nao Lida) -->
-      <div class="flex flex-col items-end gap-1">
-        <Icon v-if="conversa.favorita" name="heroicons:star-solid" class="w-3.5 h-3.5 text-amber-400 drop-shadow-sm" />
-        <div v-if="conversa.nao_lidas > 0" class="flex-shrink-0 min-w-[20px] h-5 px-1 bg-primary-600 text-white rounded-full flex items-center justify-center text-[10px] font-bold">
-          {{ conversa.nao_lidas }}
+      <!-- Lado Direito: Horários e Badges -->
+      <div class="flex flex-col items-end justify-between self-stretch py-0.5">
+        <span class="text-[10px] text-neutral-400 font-medium whitespace-nowrap">
+          {{ formatTime(conversa.ultima_mensagem_em) }}
+        </span>
+        
+        <div class="flex items-center gap-1.5">
+          <Icon v-if="conversa.favorita" name="heroicons:star-solid" class="w-3.5 h-3.5 text-amber-400 drop-shadow-sm" />
+          <div v-if="conversa.nao_lidas > 0" class="flex-shrink-0 min-w-[18px] h-[18px] px-1 bg-emerald-500 text-white rounded-full flex items-center justify-center text-[9px] font-semibold">
+            {{ conversa.nao_lidas }}
+          </div>
         </div>
       </div>
     </button>

@@ -3,7 +3,18 @@
 <!-- Coluna 1: Lista de Conversas (Esquerda) -->
     <div class="w-80 border-r border-neutral-100 flex flex-col bg-neutral-50/30">
       <div class="p-4 border-b border-neutral-100 bg-white">
-        <h1 class="text-xl font-bold text-neutral-900">Chat</h1>
+        <div class="flex items-center justify-between mb-4">
+          <h1 class="text-xl font-bold text-neutral-900">Chat</h1>
+          <button 
+            @click="router.push({ name: 'templates-quick-replies' })"
+            class="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-all border border-indigo-100"
+            title="Gerenciar Respostas Rápidas"
+          >
+            <Icon name="heroicons:list-bullet" class="w-3.5 h-3.5" />
+            <span class="hidden sm:inline">Gerenciar Respostas Rápidas</span>
+            <span class="sm:hidden">Templates</span>
+          </button>
+        </div>
         <div class="mt-2 relative">
           <input 
             v-model="searchQuery"
@@ -56,8 +67,8 @@
       
       <!-- Estado Vazio -->
       <div v-else class="flex-1 flex flex-col items-center justify-center p-12 text-center bg-white">
-        <div class="w-20 h-20 bg-primary-50 rounded-full flex items-center justify-center mb-4">
-          <Icon name="heroicons:chat-bubble-left-right" class="w-10 h-10 text-primary-500" />
+        <div class="flex items-center justify-center mb-6">
+          <Icon name="lucide:message-square" class="w-16 h-16 text-indigo-500" style="stroke-width: 0.2px" />
         </div>
         <h2 class="text-xl font-bold text-neutral-900">Selecione uma conversa</h2>
         <p class="text-neutral-500 mt-2 max-w-xs">Escolha um lead na lista ao lado para iniciar ou continuar o atendimento.</p>
@@ -68,8 +79,11 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useRouter } from 'vue-router'; // Import useRouter
 import ConversationList from '~/components/chat/ConversationList.vue';
 import MessageArea from '~/components/chat/MessageArea.vue';
+
+const router = useRouter(); // Initialize router
 
 definePageMeta({
   layout: 'default'
