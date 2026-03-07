@@ -58,6 +58,7 @@ export function useAgendamento() {
   // Sistema de notificações toast (vue-toastification)
   const { notifyError, notifySuccess } = useNotification()
   const { waitForProfile } = useAuth()
+  const { triggerN8NWebhook } = useN8N()
 
   /**
    * Busca agendamentos de um profissional em um período específico
@@ -205,6 +206,10 @@ export function useAgendamento() {
 
       console.log('✅ Agendamento criado com sucesso:', data)
       notifySuccess('Agendamento criado com sucesso!')
+
+      // DISPARADOR N8N: Novo Agendamento
+      triggerN8NWebhook('appointment_created', data)
+
       return data as AgAgendamento
     } catch (err) {
       console.error('❌ Erro inesperado ao inserir agendamento:', err)
@@ -500,6 +505,13 @@ export function useAgendamento() {
     try {
       console.log('🔄 Reagendando agendamento:', id, dados)
 
+      // BUSCA ESTADO ANTERIOR PARA O N8N
+      const { data: oldData } = await supabase
+        .from('ag_agendamentos')
+        .select('*')
+        .eq('id', id)
+        .single()
+
       const payload = {
         data: dados.data,
         hora_inicio: dados.hora_inicio.includes('-03') ? dados.hora_inicio : `${dados.hora_inicio}-03`,
@@ -521,6 +533,12 @@ export function useAgendamento() {
 
       console.log('✅ Agendamento reagendado com sucesso:', data)
       notifySuccess('Agendamento movido!')
+
+      // DISPARADOR N8N: Agendamento Movido / Redimensionado
+      // Se a duração mudou, pode ser considerado resize. Se a data/hora mudou, moved.
+      // O N8N pode tratar ambos os casos.
+      triggerN8NWebhook('appointment_moved', data, oldData)
+
       return data as AgAgendamento
     } catch (err) {
       console.error('❌ Erro inesperado ao reagendar:', err)

@@ -12,6 +12,7 @@ export const useLeadDetail = (currentLeadId: Ref<string>) => {
 
     const { profile, waitForProfile } = useAuth();
     const { allLeads, leadStatuses } = useLeads();
+    const { triggerN8NWebhook } = useN8N();
 
     // state
     const lead = ref<any>(null);
@@ -389,10 +390,14 @@ export const useLeadDetail = (currentLeadId: Ref<string>) => {
                 console.warn('[EDIT] Alguns campos extras não foram salvos:', newError.message);
             }
 
+            notifySuccess('Lead atualizado com sucesso!');
+
+            // DISPARADOR N8N: Lead Editado / Mudança de Status
+            triggerN8NWebhook('lead_status_changed', formData, lead.value)
+
             isEditModalOpen.value = false;
             await syncSchedule(currentLeadId.value, formData.proximo_contato_em);
             await fetchData();
-            notifySuccess('Lead atualizado com sucesso!');
         } catch (err: any) {
             console.error('[ERRO AO SALVAR LEAD]', err.message);
             if (err.message?.includes('unique') || err.message?.includes('duplicate key')) {
@@ -405,12 +410,29 @@ export const useLeadDetail = (currentLeadId: Ref<string>) => {
 
     const updateLeadStatus = async (statusId: string) => {
         try {
+            // BUSCA ESTADO ANTERIOR PARA O N8N
+            const { data: oldLead } = await supabase
+                .from('ag_leads')
+                .select('*')
+                .eq('id', currentLeadId.value)
+                .single()
+
             const { error } = await (supabase.from('ag_leads') as any).update({ status: statusId }).eq('id', currentLeadId.value);
             if (error) throw error;
 
             if (lead.value) lead.value.status = statusId;
             const label = leadStatuses.value.find(s => s.id === statusId)?.display_name || statusId;
             console.log(`[STATUS] Lead atualizado para: "${label}" (id: ${statusId})`);
+
+            // DISPARADOR N8N: Status mudou
+            // Buscamos o dado atualizado para enviar o payload completo
+            const { data: currentLead } = await supabase
+                .from('ag_leads')
+                .select('*')
+                .eq('id', currentLeadId.value)
+                .single()
+
+            triggerN8NWebhook('lead_status_changed', currentLead, oldLead)
         } catch (err: any) {
             console.error('[ERRO AO ATUALIZAR STATUS]', err.message);
             alert(`Não foi possível atualizar o estágio: ${err.message}`);

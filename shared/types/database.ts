@@ -28,6 +28,26 @@ export type Database = {
         Insert: Omit<AgAgendamento, 'id' | 'created_at'> & { id?: number; created_at?: string }
         Update: Partial<Omit<AgAgendamento, 'id' | 'created_at'>>
       }
+      ag_leads: {
+        Row: any
+        Insert: any
+        Update: any
+      }
+      ag_lead_statuses: {
+        Row: any
+        Insert: any
+        Update: any
+      }
+      ag_n8n_integrations: {
+        Row: AgN8NIntegration
+        Insert: Omit<AgN8NIntegration, 'id' | 'created_at' | 'updated_at'> & { id?: string; created_at?: string; updated_at?: string }
+        Update: Partial<Omit<AgN8NIntegration, 'id' | 'created_at' | 'updated_at'>>
+      }
+      ag_automation_config: {
+        Row: AgAutomationConfig
+        Insert: Omit<AgAutomationConfig, 'id' | 'created_at' | 'updated_at'> & { id?: string; created_at?: string; updated_at?: string }
+        Update: Partial<Omit<AgAutomationConfig, 'id' | 'created_at' | 'updated_at'>>
+      }
     }
     Views: {
       ag_view_agendamentos_completo: {
@@ -222,4 +242,31 @@ export interface UserState {
   profile: AgProfile | null
   loading: boolean
   error: string | null
+}
+
+export interface AgN8NIntegration {
+  id: string
+  nome_integracao: string
+  descricao: string | null
+  tipo_gatilho_bruve: string
+  gatilho_detalhes_json: any
+  n8n_webhook_url: string
+  payload_template_json: any
+  ativa: boolean
+  user_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface AgAutomationConfig {
+  id: string
+  user_id: string
+  whatsapp_instance_key: string | null
+  whatsapp_status: 'disconnected' | 'pending_qr' | 'connected' | 'error'
+  whatsapp_qr_code_base64: string | null
+  whatsapp_phone_number: string | null
+  ia_prompt_sdr: string | null
+  ia_model_config_json: any
+  created_at: string
+  updated_at: string
 }

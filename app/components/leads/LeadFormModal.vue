@@ -163,6 +163,7 @@ const emit = defineEmits(['update:modelValue', 'success']);
 const { vendedores, fetchVendedores, fetchLeads } = useLeads();
 const { profile, checkIsAdmin } = useAuth();
 const { notifySuccess, notifyError } = useNotification();
+const { triggerN8NWebhook } = useN8N();
 const supabase = useSupabaseClient();
 
 const showModal = computed({
@@ -248,6 +249,10 @@ async function handleSubmit() {
     if (error) throw error;
 
     notifySuccess('Lead criado com sucesso!');
+    
+    // DISPARADOR N8N: Novo Lead
+    triggerN8NWebhook('lead_created', data)
+
     await fetchLeads();
     emit('success', data);
     showModal.value = false;

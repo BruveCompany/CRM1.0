@@ -98,6 +98,7 @@ const { profile } = useAuth();
 const { fetchProfissionais } = useProfissionais();
 const agendamentoStore = useAgendamentoStore();
 const { inserirAgendamento } = useAgendamento();
+const { triggerN8NWebhook } = useN8N();
 
 // Refs globais para o modal de agendamento
 const globalProfissionais = ref<any[]>([]);
@@ -168,6 +169,9 @@ const handleSave = async (formData: any) => {
       const { error } = await (supabase.from('ag_leads') as any).update(payload).eq('id', formData.id);
       if (error) throw error;
       notifySuccess('Lead atualizado com sucesso!');
+      
+      // DISPARADOR N8N: Lead Editado
+      triggerN8NWebhook('lead_status_changed', payload, leadToEdit.value)
     } else {
       const { data: newLead, error } = await (supabase.from('ag_leads') as any).insert([payload]).select('id').single();
       if (error) throw error;
@@ -202,6 +206,10 @@ const handleSave = async (formData: any) => {
       }
 
       notifySuccess('Lead criado com sucesso!');
+
+      // DISPARADOR N8N: Novo Lead
+      triggerN8NWebhook('lead_created', { ...payload, id: newLead.id })
+
       isCreateLeadModalOpen.value = false;
       await fetchLeads();
       await navigateTo(`/leads/${newLead.id}`);

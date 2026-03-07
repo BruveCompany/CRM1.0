@@ -113,6 +113,14 @@
               <UserGroupIcon class="w-4 h-4 stroke-[1.5]" />
               <span>Profissionais</span>
             </NuxtLink>
+            <NuxtLink 
+              to="/configuracoes/n8n" 
+              class="group flex items-center gap-3 px-4 py-2 text-sm text-gray-500 hover:text-[#4338CA] hover:bg-indigo-50/50 rounded-lg transition-all"
+              active-class="text-[#4338CA] font-medium bg-indigo-50"
+            >
+              <LinkIcon class="w-4 h-4 stroke-[1.5]" />
+              <span>Integrações N8N</span>
+            </NuxtLink>
           </div>
         </div>
 
@@ -145,7 +153,8 @@ import {
   ChatBubbleLeftRightIcon,
   ShieldCheckIcon,
   IdentificationIcon,
-  Cog6ToothIcon
+  Cog6ToothIcon,
+  LinkIcon
 } from '@heroicons/vue/24/outline'
 
 const props = defineProps<{

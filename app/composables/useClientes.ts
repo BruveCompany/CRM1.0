@@ -5,6 +5,7 @@ export const useClientes = () => {
     const clientes = useState<AgCliente[]>('global-clientes-cache', () => [])
     const lastFetch = useState<Record<string, number>>('global-clientes-fetch-timestamps', () => ({}))
     const { waitForProfile } = useAuth()
+    const { triggerN8NWebhook } = useN8N()
 
     const isCacheValid = (key: string, ttl = 300000) => {
         const last = lastFetch.value[key] || 0
@@ -38,7 +39,7 @@ export const useClientes = () => {
         email?: string,
         telefone?: string
     ) => {
-        const { error: insertError } = await supabase
+        const { data, error: insertError } = await supabase
             .from('ag_clientes')
             .insert({
                 cpf,
@@ -47,6 +48,8 @@ export const useClientes = () => {
                 email: email || null,
                 telefone: telefone || null
             } as any)
+            .select()
+            .single()
 
         if (insertError) {
             console.error('Erro ao adicionar cliente:', insertError)
@@ -59,6 +62,9 @@ export const useClientes = () => {
 
             return { success: false, message: 'Erro ao criar cliente. Tente novamente.' }
         }
+
+        // DISPARADOR N8N: Novo Cliente
+        triggerN8NWebhook('client_created', data)
 
         return { success: true }
     }
