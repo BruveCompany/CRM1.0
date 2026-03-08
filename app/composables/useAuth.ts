@@ -1,4 +1,4 @@
-import { useToast } from 'vue-toastification'
+import { useToast } from 'vue-toastification';
 
 // Singleton de módulo: compartilhado entre todas as instâncias sem ser serializado pelo SSR
 // (useState não funciona para Promises porque o Nuxt tenta serializá-las no SSR)

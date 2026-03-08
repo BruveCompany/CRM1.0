@@ -233,7 +233,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useHead } from '@unhead/vue'
-import { useToast } from 'vue-toastification'
+import { useToast } from 'vue-toastification';
 
 const toast = useToast()
 

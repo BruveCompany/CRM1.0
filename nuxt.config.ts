@@ -12,6 +12,9 @@ export default defineNuxtConfig({
     telemetry: false
   },
   modules: ['@nuxtjs/tailwindcss', '@nuxtjs/supabase', '@pinia/nuxt', '@nuxt/icon'],
+  build: {
+    transpile: ['vue-toastification']
+  },
 
   css: [
     '~/components/lead/EditModal.css'

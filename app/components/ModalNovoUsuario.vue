@@ -75,7 +75,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useToast } from 'vue-toastification'
+import { useToast } from 'vue-toastification';
 import InputPassword from './InputPassword.vue'
 
 const props = defineProps<{
