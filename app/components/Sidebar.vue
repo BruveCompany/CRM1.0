@@ -17,7 +17,7 @@
         </div>
         <div class="flex flex-col">
           <h2 class="text-sm font-bold text-neutral-900 leading-tight whitespace-nowrap tracking-tight">Painel Performance</h2>
-          <span class="text-[9px] text-neutral-400 font-medium tracking-wide leading-tight">Resultados conectados</span>
+          <span class="text-[10px] text-neutral-400 font-medium tracking-wide leading-tight">Resultados conectados</span>
         </div>
       </div>
 
