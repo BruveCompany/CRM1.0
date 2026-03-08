@@ -15,7 +15,7 @@
         <div class="flex items-center justify-center w-9 h-9 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-100 shrink-0">
           <Icon name="lucide:message-circle" class="w-5 h-5 text-white" />
         </div>
-        <div class="flex flex-col">
+        <div class="flex flex-col gap-[1px]">
           <h2 class="text-[14px] font-semibold text-neutral-900 leading-tight whitespace-nowrap tracking-tight">Painel Performance</h2>
           <span class="text-[9.5px] text-neutral-400 font-medium tracking-[0.02em] leading-tight">Resultados conectados</span>
         </div>
