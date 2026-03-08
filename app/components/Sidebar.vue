@@ -16,8 +16,8 @@
           <Icon name="lucide:message-circle" class="w-5 h-5 text-white" />
         </div>
         <div class="flex flex-col">
-          <h2 class="text-sm font-bold text-neutral-900 leading-tight whitespace-nowrap tracking-tight">Painel Consultor</h2>
-          <span class="text-[10px] text-neutral-400 font-medium tracking-wide uppercase">CRM Prime 2026</span>
+          <h2 class="text-sm font-bold text-neutral-900 leading-tight whitespace-nowrap tracking-tight">Painel Performance</h2>
+          <span class="text-[10px] text-neutral-400 font-medium tracking-wide uppercase">Resultados Conectados</span>
         </div>
       </div>
 
